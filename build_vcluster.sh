@@ -4,6 +4,7 @@
 
 mkdir /tmp/openfpm_vcluster
 mv * .[^.]* /tmp/openfpm_vcluster
+rm -rf *
 mv /tmp/openfpm_vcluster OpenFPM_vcluster
 
 mkdir OpenFPM_vcluster/src/config
