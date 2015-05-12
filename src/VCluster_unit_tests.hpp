@@ -12,6 +12,7 @@
 #include <sstream>
 #include <boost/test/included/unit_test.hpp>
 #include "timer.hpp"
+#include <random>
 
 #define VERBOSE_TEST
 
