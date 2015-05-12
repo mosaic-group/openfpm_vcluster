@@ -79,36 +79,31 @@ POST_UNINSTALL = :
 build_triplet = x86_64-unknown-linux-gnu
 host_triplet = x86_64-unknown-linux-gnu
 target_triplet = x86_64-unknown-linux-gnu
-bin_PROGRAMS = ppline$(EXEEXT)
+bin_PROGRAMS = vcluster$(EXEEXT)
 subdir = src
 DIST_COMMON = $(srcdir)/Makefile.in $(srcdir)/Makefile.am \
-	$(srcdir)/config.h.in $(top_srcdir)/depcomp
+	$(top_srcdir)/depcomp
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
-am__aclocal_m4_deps = $(top_srcdir)/m4/ax_lib_mysql.m4 \
-	$(top_srcdir)/m4/ax_check_compiler_flags.m4 \
-	$(top_srcdir)/m4/acx_pthread.m4 $(top_srcdir)/m4/ax_opencl.m4 \
-	$(top_srcdir)/m4/ax_boost_base.m4 \
-	$(top_srcdir)/m4/ax_boost_program_options.m4 \
-	$(top_srcdir)/m4/ax_boost_thread.m4 \
-	$(top_srcdir)/m4/acx_mpi.m4 $(top_srcdir)/m4/ax_openmp.m4 \
-	$(top_srcdir)/m4/ax_gcc_x86_cpuid.m4 \
-	$(top_srcdir)/m4/ax_gcc_archflag.m4 \
-	$(top_srcdir)/m4/ax_cuda.m4 $(top_srcdir)/configure.ac
+am__aclocal_m4_deps = $(top_srcdir)/m4/acx_pthread.m4 \
+	$(top_srcdir)/m4/ax_boost.m4 $(top_srcdir)/m4/acx_mpi.m4 \
+	$(top_srcdir)/m4/ax_openmp.m4 $(top_srcdir)/m4/ax_cuda.m4 \
+	$(top_srcdir)/configure.ac
 am__configure_deps = $(am__aclocal_m4_deps) $(CONFIGURE_DEPENDENCIES) \
 	$(ACLOCAL_M4)
 mkinstalldirs = $(install_sh) -d
-CONFIG_HEADER = config.h
+CONFIG_HEADER = $(top_builddir)/src/config/config.h
 CONFIG_CLEAN_FILES =
 CONFIG_CLEAN_VPATH_FILES =
 am__installdirs = "$(DESTDIR)$(bindir)"
 PROGRAMS = $(bin_PROGRAMS)
-am_ppline_OBJECTS = ppline-main.$(OBJEXT)
-ppline_OBJECTS = $(am_ppline_OBJECTS)
+am_vcluster_OBJECTS = vcluster-main.$(OBJEXT) \
+	vcluster-VCluster.$(OBJEXT)
+vcluster_OBJECTS = $(am_vcluster_OBJECTS)
 am__DEPENDENCIES_1 =
 am__DEPENDENCIES_2 = $(am__DEPENDENCIES_1)
-ppline_DEPENDENCIES = $(am__DEPENDENCIES_2)
-ppline_LINK = $(CXXLD) $(ppline_CXXFLAGS) $(CXXFLAGS) $(AM_LDFLAGS) \
-	$(LDFLAGS) -o $@
+vcluster_DEPENDENCIES = $(am__DEPENDENCIES_2)
+vcluster_LINK = $(CXXLD) $(vcluster_CXXFLAGS) $(CXXFLAGS) \
+	$(AM_LDFLAGS) $(LDFLAGS) -o $@
 AM_V_P = $(am__v_P_$(V))
 am__v_P_ = $(am__v_P_$(AM_DEFAULT_VERBOSITY))
 am__v_P_0 = false
@@ -121,7 +116,7 @@ AM_V_at = $(am__v_at_$(V))
 am__v_at_ = $(am__v_at_$(AM_DEFAULT_VERBOSITY))
 am__v_at_0 = @
 am__v_at_1 = 
-DEFAULT_INCLUDES = -I.
+DEFAULT_INCLUDES = -I. -I$(top_builddir)/src/config
 depcomp = $(SHELL) $(top_srcdir)/depcomp
 am__depfiles_maybe = depfiles
 am__mv = mv -f
@@ -142,15 +137,14 @@ AM_V_CXXLD = $(am__v_CXXLD_$(V))
 am__v_CXXLD_ = $(am__v_CXXLD_$(AM_DEFAULT_VERBOSITY))
 am__v_CXXLD_0 = @echo "  CXXLD   " $@;
 am__v_CXXLD_1 = 
-SOURCES = $(ppline_SOURCES)
-DIST_SOURCES = $(ppline_SOURCES)
+SOURCES = $(vcluster_SOURCES)
+DIST_SOURCES = $(vcluster_SOURCES)
 am__can_run_installinfo = \
   case $$AM_UPDATE_INFO_DIR in \
     n|no|NO) false;; \
     *) (install-info --version) >/dev/null 2>&1;; \
   esac
-am__tagged_files = $(HEADERS) $(SOURCES) $(TAGS_FILES) \
-	$(LISP)config.h.in
+am__tagged_files = $(HEADERS) $(SOURCES) $(TAGS_FILES) $(LISP)
 # Read a list of newline-separated strings from the standard input,
 # and print each of them once, without duplicates.  Input order is
 # *not* preserved.
@@ -170,22 +164,34 @@ am__define_uniq_tagged_files = \
 ETAGS = etags
 CTAGS = ctags
 DISTFILES = $(DIST_COMMON) $(DIST_SOURCES) $(TEXINFOS) $(EXTRA_DIST)
-ACLOCAL = ${SHELL} /home/i-bird/Desktop/MOSAIC/OpenFPM_project/OpenFPM_parallel_pipeline/missing aclocal-1.13
+ACLOCAL = ${SHELL} /home/i-bird/Desktop/MOSAIC/OpenFPM_project/OpenFPM_vcluster/missing aclocal-1.13
 AMTAR = $${TAR-tar}
 AM_DEFAULT_VERBOSITY = 1
-AUTOCONF = ${SHELL} /home/i-bird/Desktop/MOSAIC/OpenFPM_project/OpenFPM_parallel_pipeline/missing autoconf
-AUTOHEADER = ${SHELL} /home/i-bird/Desktop/MOSAIC/OpenFPM_project/OpenFPM_parallel_pipeline/missing autoheader
-AUTOMAKE = ${SHELL} /home/i-bird/Desktop/MOSAIC/OpenFPM_project/OpenFPM_parallel_pipeline/missing automake-1.13
+AUTOCONF = ${SHELL} /home/i-bird/Desktop/MOSAIC/OpenFPM_project/OpenFPM_vcluster/missing autoconf
+AUTOHEADER = ${SHELL} /home/i-bird/Desktop/MOSAIC/OpenFPM_project/OpenFPM_vcluster/missing autoheader
+AUTOMAKE = ${SHELL} /home/i-bird/Desktop/MOSAIC/OpenFPM_project/OpenFPM_vcluster/missing automake-1.13
 AWK = gawk
+BOOST_CPPFLAGS = -pthread -I/usr/include
+BOOST_DATE_TIME_LIB = -lboost_date_time
+BOOST_FILESYSTEM_LIB = -lboost_filesystem
+BOOST_IOSTREAMS_LIB = -lboost_iostreams
+BOOST_LDFLAGS = -L/usr/lib
+BOOST_PROGRAM_OPTIONS_LIB = -lboost_program_options
+BOOST_REGEX_LIB = -lboost_regex
+BOOST_SERIALIZATION_LIB = -lboost_serialization
+BOOST_SIGNALS_LIB = -lboost_signals
+BOOST_THREAD_LIB = -lboost_thread
+BOOST_UNIT_TEST_FRAMEWORK_LIB = -lboost_unit_test_framework
+BOOST_WSERIALIZATION_LIB = -lboost_wserialization
 CC = gcc
 CCDEPMODE = depmode=gcc3
 CFLAGS = -g -O2
 CPPFLAGS = 
 CUDA_CFLAGS =  -I -I -I/usr/local/cuda-5.5/include
 CUDA_LIBS =  -L -L -L/usr/local/cuda-5.5/lib64 -lcuda -lcudart
-CXX = g++
+CXX = mpic++
 CXXDEPMODE = depmode=gcc3
-CXXFLAGS =  --std=c++11  -mtune=corei7 -Wall -O3 -g3  -mavx -msse4.2 -msse4.1 -msse3 -msse2 -msse -mmmx -Wno-unused-but-set-variable
+CXXFLAGS =  --std=c++11 -march=native -mtune=native -Wno-unused-local-typedefs -Wextra -Wno-unused-parameter  -Wall -O3 -g3 -funroll-loops 
 CYGPATH_W = echo
 DEFS = -DHAVE_CONFIG_H
 DEPDIR = .deps
@@ -193,6 +199,7 @@ ECHO_C =
 ECHO_N = -n
 ECHO_T = 
 EXEEXT = 
+INCLUDES_PATH =  -I. -Iconfig -I../../OpenFPM_devices/src -I../../OpenFPM_data/src
 INSTALL = /usr/bin/install -c
 INSTALL_DATA = ${INSTALL} -m 644
 INSTALL_PROGRAM = ${INSTALL}
@@ -202,7 +209,7 @@ LDFLAGS =
 LIBOBJS = 
 LIBS = 
 LTLIBOBJS = 
-MAKEINFO = ${SHELL} /home/i-bird/Desktop/MOSAIC/OpenFPM_project/OpenFPM_parallel_pipeline/missing makeinfo
+MAKEINFO = ${SHELL} /home/i-bird/Desktop/MOSAIC/OpenFPM_project/OpenFPM_vcluster/missing makeinfo
 MKDIR_P = /usr/bin/mkdir -p
 NVCC = /usr/local/cuda-5.5/bin/nvcc
 NVCCFLAGS =    -O3 
@@ -216,17 +223,16 @@ PACKAGE_TARNAME = full-package-name
 PACKAGE_URL = 
 PACKAGE_VERSION = VERSION
 PATH_SEPARATOR = :
-PRTDIAG = 
 SET_MAKE = 
 SHELL = /bin/sh
 STRIP = 
 VERSION = VERSION
-abs_builddir = /home/i-bird/Desktop/MOSAIC/OpenFPM_project/OpenFPM_parallel_pipeline/src
-abs_srcdir = /home/i-bird/Desktop/MOSAIC/OpenFPM_project/OpenFPM_parallel_pipeline/src
-abs_top_builddir = /home/i-bird/Desktop/MOSAIC/OpenFPM_project/OpenFPM_parallel_pipeline
-abs_top_srcdir = /home/i-bird/Desktop/MOSAIC/OpenFPM_project/OpenFPM_parallel_pipeline
+abs_builddir = /home/i-bird/Desktop/MOSAIC/OpenFPM_project/OpenFPM_vcluster/src
+abs_srcdir = /home/i-bird/Desktop/MOSAIC/OpenFPM_project/OpenFPM_vcluster/src
+abs_top_builddir = /home/i-bird/Desktop/MOSAIC/OpenFPM_project/OpenFPM_vcluster
+abs_top_srcdir = /home/i-bird/Desktop/MOSAIC/OpenFPM_project/OpenFPM_vcluster
 ac_ct_CC = gcc
-ac_ct_CXX = g++
+ac_ct_CXX = 
 am__include = include
 am__leading_dot = .
 am__quote = 
@@ -252,7 +258,7 @@ host_vendor = unknown
 htmldir = ${docdir}
 includedir = ${prefix}/include
 infodir = ${datarootdir}/info
-install_sh = ${SHELL} /home/i-bird/Desktop/MOSAIC/OpenFPM_project/OpenFPM_parallel_pipeline/install-sh
+install_sh = ${SHELL} /home/i-bird/Desktop/MOSAIC/OpenFPM_project/OpenFPM_vcluster/install-sh
 libdir = ${exec_prefix}/lib
 libexecdir = ${exec_prefix}/libexec
 localedir = ${datarootdir}/locale
@@ -261,7 +267,7 @@ mandir = ${datarootdir}/man
 mkdir_p = $(MKDIR_P)
 oldincludedir = /usr/include
 pdfdir = ${docdir}
-prefix = /home/i-bird/MPI
+prefix = /usr/local
 program_transform_name = s,x,x,
 psdir = ${docdir}
 sbindir = ${exec_prefix}/sbin
@@ -276,13 +282,12 @@ target_vendor = unknown
 top_build_prefix = ../
 top_builddir = ..
 top_srcdir = ..
-LINKLIBS = $(PTHREAD_LIBS) $(OPT_LIBS) $(BOOST_LDFLAGS) $(BOOST_PROGRAM_OPTIONS_LIB) $(CUDA_LIBS) $(BOOST_THREAD_LIB)
-ppline_SOURCES = main.cpp
-ppline_CXXFLAGS = $(CUDA_CFLAGS)
-ppline_CFLAGS = $(CUDA_CFLAGS)
-ppline_LDADD = $(LINKLIBS) -L/usr/lib64/nvidia-bumblebee/
-all: config.h
-	$(MAKE) $(AM_MAKEFLAGS) all-am
+LINKLIBS = $(PTHREAD_LIBS) $(OPT_LIBS) $(BOOST_LDFLAGS)
+vcluster_SOURCES = main.cpp VCluster.cpp
+vcluster_CXXFLAGS = $(INCLUDES_PATH)
+vcluster_CFLAGS = $(CUDA_CFLAGS)
+vcluster_LDADD = $(LINKLIBS)
+all: all-am
 
 .SUFFIXES:
 .SUFFIXES: .cpp .cu .o .obj
@@ -316,21 +321,6 @@ $(top_srcdir)/configure:  $(am__configure_deps)
 $(ACLOCAL_M4):  $(am__aclocal_m4_deps)
 	cd $(top_builddir) && $(MAKE) $(AM_MAKEFLAGS) am--refresh
 $(am__aclocal_m4_deps):
-
-config.h: stamp-h1
-	@if test ! -f $@; then rm -f stamp-h1; else :; fi
-	@if test ! -f $@; then $(MAKE) $(AM_MAKEFLAGS) stamp-h1; else :; fi
-
-stamp-h1: $(srcdir)/config.h.in $(top_builddir)/config.status
-	@rm -f stamp-h1
-	cd $(top_builddir) && $(SHELL) ./config.status src/config.h
-$(srcdir)/config.h.in:  $(am__configure_deps) 
-	($(am__cd) $(top_srcdir) && $(AUTOHEADER))
-	rm -f stamp-h1
-	touch $@
-
-distclean-hdr:
-	-rm -f config.h stamp-h1
 install-binPROGRAMS: $(bin_PROGRAMS)
 	@$(NORMAL_INSTALL)
 	@list='$(bin_PROGRAMS)'; test -n "$(bindir)" || list=; \
@@ -374,9 +364,9 @@ uninstall-binPROGRAMS:
 clean-binPROGRAMS:
 	-test -z "$(bin_PROGRAMS)" || rm -f $(bin_PROGRAMS)
 
-ppline$(EXEEXT): $(ppline_OBJECTS) $(ppline_DEPENDENCIES) $(EXTRA_ppline_DEPENDENCIES) 
-	@rm -f ppline$(EXEEXT)
-	$(AM_V_CXXLD)$(ppline_LINK) $(ppline_OBJECTS) $(ppline_LDADD) $(LIBS)
+vcluster$(EXEEXT): $(vcluster_OBJECTS) $(vcluster_DEPENDENCIES) $(EXTRA_vcluster_DEPENDENCIES) 
+	@rm -f vcluster$(EXEEXT)
+	$(AM_V_CXXLD)$(vcluster_LINK) $(vcluster_OBJECTS) $(vcluster_LDADD) $(LIBS)
 
 mostlyclean-compile:
 	-rm -f *.$(OBJEXT)
@@ -384,7 +374,8 @@ mostlyclean-compile:
 distclean-compile:
 	-rm -f *.tab.c
 
-include ./$(DEPDIR)/ppline-main.Po
+include ./$(DEPDIR)/vcluster-VCluster.Po
+include ./$(DEPDIR)/vcluster-main.Po
 
 .cpp.o:
 	$(AM_V_CXX)$(CXXCOMPILE) -MT $@ -MD -MP -MF $(DEPDIR)/$*.Tpo -c -o $@ $<
@@ -400,19 +391,33 @@ include ./$(DEPDIR)/ppline-main.Po
 #	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) \
 #	$(AM_V_CXX_no)$(CXXCOMPILE) -c -o $@ `$(CYGPATH_W) '$<'`
 
-ppline-main.o: main.cpp
-	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(ppline_CXXFLAGS) $(CXXFLAGS) -MT ppline-main.o -MD -MP -MF $(DEPDIR)/ppline-main.Tpo -c -o ppline-main.o `test -f 'main.cpp' || echo '$(srcdir)/'`main.cpp
-	$(AM_V_at)$(am__mv) $(DEPDIR)/ppline-main.Tpo $(DEPDIR)/ppline-main.Po
-#	$(AM_V_CXX)source='main.cpp' object='ppline-main.o' libtool=no \
+vcluster-main.o: main.cpp
+	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(vcluster_CXXFLAGS) $(CXXFLAGS) -MT vcluster-main.o -MD -MP -MF $(DEPDIR)/vcluster-main.Tpo -c -o vcluster-main.o `test -f 'main.cpp' || echo '$(srcdir)/'`main.cpp
+	$(AM_V_at)$(am__mv) $(DEPDIR)/vcluster-main.Tpo $(DEPDIR)/vcluster-main.Po
+#	$(AM_V_CXX)source='main.cpp' object='vcluster-main.o' libtool=no \
 #	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) \
-#	$(AM_V_CXX_no)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(ppline_CXXFLAGS) $(CXXFLAGS) -c -o ppline-main.o `test -f 'main.cpp' || echo '$(srcdir)/'`main.cpp
+#	$(AM_V_CXX_no)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(vcluster_CXXFLAGS) $(CXXFLAGS) -c -o vcluster-main.o `test -f 'main.cpp' || echo '$(srcdir)/'`main.cpp
 
-ppline-main.obj: main.cpp
-	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(ppline_CXXFLAGS) $(CXXFLAGS) -MT ppline-main.obj -MD -MP -MF $(DEPDIR)/ppline-main.Tpo -c -o ppline-main.obj `if test -f 'main.cpp'; then $(CYGPATH_W) 'main.cpp'; else $(CYGPATH_W) '$(srcdir)/main.cpp'; fi`
-	$(AM_V_at)$(am__mv) $(DEPDIR)/ppline-main.Tpo $(DEPDIR)/ppline-main.Po
-#	$(AM_V_CXX)source='main.cpp' object='ppline-main.obj' libtool=no \
+vcluster-main.obj: main.cpp
+	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(vcluster_CXXFLAGS) $(CXXFLAGS) -MT vcluster-main.obj -MD -MP -MF $(DEPDIR)/vcluster-main.Tpo -c -o vcluster-main.obj `if test -f 'main.cpp'; then $(CYGPATH_W) 'main.cpp'; else $(CYGPATH_W) '$(srcdir)/main.cpp'; fi`
+	$(AM_V_at)$(am__mv) $(DEPDIR)/vcluster-main.Tpo $(DEPDIR)/vcluster-main.Po
+#	$(AM_V_CXX)source='main.cpp' object='vcluster-main.obj' libtool=no \
 #	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) \
-#	$(AM_V_CXX_no)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(ppline_CXXFLAGS) $(CXXFLAGS) -c -o ppline-main.obj `if test -f 'main.cpp'; then $(CYGPATH_W) 'main.cpp'; else $(CYGPATH_W) '$(srcdir)/main.cpp'; fi`
+#	$(AM_V_CXX_no)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(vcluster_CXXFLAGS) $(CXXFLAGS) -c -o vcluster-main.obj `if test -f 'main.cpp'; then $(CYGPATH_W) 'main.cpp'; else $(CYGPATH_W) '$(srcdir)/main.cpp'; fi`
+
+vcluster-VCluster.o: VCluster.cpp
+	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(vcluster_CXXFLAGS) $(CXXFLAGS) -MT vcluster-VCluster.o -MD -MP -MF $(DEPDIR)/vcluster-VCluster.Tpo -c -o vcluster-VCluster.o `test -f 'VCluster.cpp' || echo '$(srcdir)/'`VCluster.cpp
+	$(AM_V_at)$(am__mv) $(DEPDIR)/vcluster-VCluster.Tpo $(DEPDIR)/vcluster-VCluster.Po
+#	$(AM_V_CXX)source='VCluster.cpp' object='vcluster-VCluster.o' libtool=no \
+#	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) \
+#	$(AM_V_CXX_no)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(vcluster_CXXFLAGS) $(CXXFLAGS) -c -o vcluster-VCluster.o `test -f 'VCluster.cpp' || echo '$(srcdir)/'`VCluster.cpp
+
+vcluster-VCluster.obj: VCluster.cpp
+	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(vcluster_CXXFLAGS) $(CXXFLAGS) -MT vcluster-VCluster.obj -MD -MP -MF $(DEPDIR)/vcluster-VCluster.Tpo -c -o vcluster-VCluster.obj `if test -f 'VCluster.cpp'; then $(CYGPATH_W) 'VCluster.cpp'; else $(CYGPATH_W) '$(srcdir)/VCluster.cpp'; fi`
+	$(AM_V_at)$(am__mv) $(DEPDIR)/vcluster-VCluster.Tpo $(DEPDIR)/vcluster-VCluster.Po
+#	$(AM_V_CXX)source='VCluster.cpp' object='vcluster-VCluster.obj' libtool=no \
+#	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) \
+#	$(AM_V_CXX_no)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(vcluster_CXXFLAGS) $(CXXFLAGS) -c -o vcluster-VCluster.obj `if test -f 'VCluster.cpp'; then $(CYGPATH_W) 'VCluster.cpp'; else $(CYGPATH_W) '$(srcdir)/VCluster.cpp'; fi`
 
 ID: $(am__tagged_files)
 	$(am__define_uniq_tagged_files); mkid -fID $$unique
@@ -498,7 +503,7 @@ distdir: $(DISTFILES)
 	done
 check-am: all-am
 check: check-am
-all-am: Makefile $(PROGRAMS) config.h
+all-am: Makefile $(PROGRAMS)
 installdirs:
 	for dir in "$(DESTDIR)$(bindir)"; do \
 	  test -z "$$dir" || $(MKDIR_P) "$$dir"; \
@@ -541,7 +546,7 @@ distclean: distclean-am
 	-rm -rf ./$(DEPDIR)
 	-rm -f Makefile
 distclean-am: clean-am distclean-compile distclean-generic \
-	distclean-hdr distclean-tags
+	distclean-tags
 
 dvi: dvi-am
 
@@ -602,21 +607,21 @@ ps-am:
 
 uninstall-am: uninstall-binPROGRAMS
 
-.MAKE: all install-am install-strip
+.MAKE: install-am install-strip
 
 .PHONY: CTAGS GTAGS TAGS all all-am check check-am clean \
 	clean-binPROGRAMS clean-generic cscopelist-am ctags ctags-am \
-	distclean distclean-compile distclean-generic distclean-hdr \
-	distclean-tags distdir dvi dvi-am html html-am info info-am \
-	install install-am install-binPROGRAMS install-data \
-	install-data-am install-dvi install-dvi-am install-exec \
-	install-exec-am install-html install-html-am install-info \
-	install-info-am install-man install-pdf install-pdf-am \
-	install-ps install-ps-am install-strip installcheck \
-	installcheck-am installdirs maintainer-clean \
-	maintainer-clean-generic mostlyclean mostlyclean-compile \
-	mostlyclean-generic pdf pdf-am ps ps-am tags tags-am uninstall \
-	uninstall-am uninstall-binPROGRAMS
+	distclean distclean-compile distclean-generic distclean-tags \
+	distdir dvi dvi-am html html-am info info-am install \
+	install-am install-binPROGRAMS install-data install-data-am \
+	install-dvi install-dvi-am install-exec install-exec-am \
+	install-html install-html-am install-info install-info-am \
+	install-man install-pdf install-pdf-am install-ps \
+	install-ps-am install-strip installcheck installcheck-am \
+	installdirs maintainer-clean maintainer-clean-generic \
+	mostlyclean mostlyclean-compile mostlyclean-generic pdf pdf-am \
+	ps ps-am tags tags-am uninstall uninstall-am \
+	uninstall-binPROGRAMS
 
 
 .cu.o :

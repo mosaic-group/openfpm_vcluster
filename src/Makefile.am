@@ -1,11 +1,11 @@
 
-LINKLIBS = $(PTHREAD_LIBS) $(OPT_LIBS) $(BOOST_LDFLAGS) $(BOOST_PROGRAM_OPTIONS_LIB) $(CUDA_LIBS) $(BOOST_THREAD_LIB)
+LINKLIBS = $(PTHREAD_LIBS) $(OPT_LIBS) $(BOOST_LDFLAGS)
 
-bin_PROGRAMS = ppline
-ppline_SOURCES = main.cpp
-ppline_CXXFLAGS = $(CUDA_CFLAGS)
-ppline_CFLAGS = $(CUDA_CFLAGS)
-ppline_LDADD = $(LINKLIBS) -L/usr/lib64/nvidia-bumblebee/
+bin_PROGRAMS = vcluster
+vcluster_SOURCES = main.cpp VCluster.cpp
+vcluster_CXXFLAGS = $(INCLUDES_PATH)
+vcluster_CFLAGS = $(CUDA_CFLAGS)
+vcluster_LDADD = $(LINKLIBS)
 
 .cu.o :
 	$(NVCC) $(NVCCFLAGS) -o $@ -c $<
