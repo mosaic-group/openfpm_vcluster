@@ -19,4 +19,3 @@ make
 
 mpirun -np 2 ./src/vcluster
 mpirun -np 4 ./src/vcluster
-mpirun -np 16 ./src/vcluster
