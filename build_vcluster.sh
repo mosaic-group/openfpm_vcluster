@@ -9,7 +9,7 @@ mv /tmp/openfpm_vcluster OpenFPM_vcluster
 mkdir OpenFPM_vcluster/src/config
 
 git clone git@ppmcore.mpi-cbg.de:incardon/openfpm_devices.git OpenFPM_devices
-git clone git@ppmcore.mpi-cbg.de:incardon/openfpm_devices.git OpenFPM_data
+git clone git@ppmcore.mpi-cbg.de:incardon/openfpm_vcluster.git OpenFPM_data
 
 cd "$1/OpenFPM_vcluster"
 
