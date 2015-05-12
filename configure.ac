@@ -75,7 +75,7 @@ fi
 
 ##### CHECK FOR BOOST ##############
 
-AX_BOOST([1.52],[],[])
+AX_BOOST([1.48],[],[])
 
 ####### Checking for GPU support
 
