@@ -67,11 +67,17 @@ AC_ARG_ENABLE(memcheck,
 )
 
 
-
 AC_MSG_RESULT($mem_check)
 if test x"$mem_check" = x"yes"; then
 	AC_DEFINE([MEMLEAK_CHECK],[],[Memory check])
 fi
+
+####################################
+
+DEFAULT_LIB=""
+# At least for glibc, clock_gettime is in librt.  But don't pull that
+# in if it still doesn't give us the function we want.
+AC_CHECK_LIB(rt, clock_gettime,[DEFAULT_LIB+=" -lrt "],[],[])
 
 ##### CHECK FOR BOOST ##############
 
@@ -111,6 +117,7 @@ AM_CONDITIONAL(BUILDCUDA, test x$gpu_support = x"yes")
 
 AC_SUBST(NVCCFLAGS)
 AC_SUBST(INCLUDES_PATH)
+AC_SUBST(DEFAULT_LIB)
 
 # Checks for typedefs, structures, and compiler characteristics.
 

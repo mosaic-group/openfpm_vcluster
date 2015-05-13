@@ -100,7 +100,7 @@ am_vcluster_OBJECTS = vcluster-main.$(OBJEXT) \
 	vcluster-VCluster.$(OBJEXT)
 vcluster_OBJECTS = $(am_vcluster_OBJECTS)
 am__DEPENDENCIES_1 =
-am__DEPENDENCIES_2 = $(am__DEPENDENCIES_1)
+am__DEPENDENCIES_2 = $(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
 vcluster_DEPENDENCIES = $(am__DEPENDENCIES_2)
 vcluster_LINK = $(CXXLD) $(vcluster_CXXFLAGS) $(CXXFLAGS) \
 	$(AM_LDFLAGS) $(LDFLAGS) -o $@
@@ -193,6 +193,7 @@ CXX = mpic++
 CXXDEPMODE = depmode=gcc3
 CXXFLAGS =  --std=c++11 -march=native -mtune=native -Wno-unused-local-typedefs -Wextra -Wno-unused-parameter  -Wall -O3 -g3 -funroll-loops 
 CYGPATH_W = echo
+DEFAULT_LIB =  -lrt 
 DEFS = -DHAVE_CONFIG_H
 DEPDIR = .deps
 ECHO_C = 
@@ -282,7 +283,7 @@ target_vendor = unknown
 top_build_prefix = ../
 top_builddir = ..
 top_srcdir = ..
-LINKLIBS = $(PTHREAD_LIBS) $(OPT_LIBS) $(BOOST_LDFLAGS)
+LINKLIBS = $(DEFAULT_LIB) $(PTHREAD_LIBS) $(OPT_LIBS) $(BOOST_LDFLAGS)
 vcluster_SOURCES = main.cpp VCluster.cpp
 vcluster_CXXFLAGS = $(INCLUDES_PATH)
 vcluster_CFLAGS = $(CUDA_CFLAGS)
