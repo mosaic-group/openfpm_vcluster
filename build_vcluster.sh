@@ -14,6 +14,7 @@ git clone git@ppmcore.mpi-cbg.de:incardon/openfpm_data.git OpenFPM_data
 cd "$1/OpenFPM_vcluster"
 
 if [$2 eq "gin"]
+then
  echo "Compiling on gin\n"
  module load gcc/4.9.2
  module load openmpi/1.8.1
