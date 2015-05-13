@@ -13,6 +13,8 @@ git clone git@ppmcore.mpi-cbg.de:incardon/openfpm_data.git OpenFPM_data
 
 cd "$1/OpenFPM_vcluster"
 
+echo "Compiling on $2"
+
 if [$2 eq "gin"]
 then
  echo "Compiling on gin\n"
