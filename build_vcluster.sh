@@ -18,7 +18,7 @@ cd "$1/OpenFPM_vcluster"
 
 echo "Compiling on $2"
 
-if [$2 eq "gin"] || [$2 eq "wetcluster"]
+if [ "$2" == "gin" -o "$2" == "wetcluster" ]
 then
  echo "Compiling on gin\n"
  module load gcc/4.9.2
