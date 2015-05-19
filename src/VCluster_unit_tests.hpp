@@ -26,7 +26,7 @@ size_t global_step = 0;
 
 // Alloc the buffer to receive the messages
 
-void * msg_alloc(size_t msg_i ,size_t total_msg, size_t total_p, size_t i, void * ptr)
+void * msg_alloc(size_t msg_i ,size_t total_msg, size_t total_p, size_t i,size_t ri, void * ptr)
 {
 	openfpm::vector<openfpm::vector<unsigned char>> * v = static_cast<openfpm::vector<openfpm::vector<unsigned char>> *>(ptr);
 
@@ -44,7 +44,7 @@ void * msg_alloc(size_t msg_i ,size_t total_msg, size_t total_p, size_t i, void 
 size_t id = 0;
 openfpm::vector<size_t> prc_recv;
 
-void * msg_alloc2(size_t msg_i ,size_t total_msg, size_t total_p, size_t i, void * ptr)
+void * msg_alloc2(size_t msg_i ,size_t total_msg, size_t total_p, size_t i, size_t ri, void * ptr)
 {
 	openfpm::vector<openfpm::vector<unsigned char>> * v = static_cast<openfpm::vector<openfpm::vector<unsigned char>> *>(ptr);
 

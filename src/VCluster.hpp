@@ -241,7 +241,7 @@ public:
 	 *
 	 */
 
-	template<typename T> void sendrecvMultipleMessages(openfpm::vector< size_t > & prc, openfpm::vector< T > & data, void * (* msg_alloc)(size_t,size_t,size_t,size_t,void *), void * ptr_arg, long int opt=NONE)
+	template<typename T> void sendrecvMultipleMessages(openfpm::vector< size_t > & prc, openfpm::vector< T > & data, void * (* msg_alloc)(size_t,size_t,size_t,size_t,size_t,void *), void * ptr_arg, long int opt=NONE)
 	{
 		// resize map with the number of processors
 		map.resize(size);
@@ -305,7 +305,7 @@ public:
 	 *
 	 */
 
-	void sendrecvMultipleMessages(size_t n_send, size_t * map, size_t sz[], size_t prc[] , void * ptr[], void * (* msg_alloc)(size_t,size_t,size_t,size_t,void *), void * ptr_arg, long int opt)
+	void sendrecvMultipleMessages(size_t n_send, size_t * map, size_t sz[], size_t prc[] , void * ptr[], void * (* msg_alloc)(size_t,size_t,size_t,size_t,size_t,void *), void * ptr_arg, long int opt)
 	{
 		req.clear();
 		req.add();
@@ -369,7 +369,7 @@ public:
 
 		for (size_t i = 0 ; i < n_proc_com ; i++)
 		{
-			void * ptr = msg_alloc(proc_com.get(i),total_msg,n_proc_com,proc_com.get(n_proc_com+i),ptr_arg);
+			void * ptr = msg_alloc(proc_com.get(i),total_msg,n_proc_com,proc_com.get(n_proc_com+i),i,ptr_arg);
 
 			req.add();
 			MPI_SAFE_CALL(MPI_Irecv(ptr,proc_com.get(i),MPI_BYTE,proc_com.get(i+n_proc_com),MSG_SEND_RECV,MPI_COMM_WORLD,&req.last()));
