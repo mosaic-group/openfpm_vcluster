@@ -2,6 +2,9 @@
 
 # Make a directory in /tmp/OpenFPM_data
 
+echo "Directory: $1"
+echo "Machine: $2"
+
 mkdir /tmp/openfpm_vcluster
 mv * .[^.]* /tmp/openfpm_vcluster
 mv /tmp/openfpm_vcluster OpenFPM_vcluster
