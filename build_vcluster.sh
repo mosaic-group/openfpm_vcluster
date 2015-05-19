@@ -28,9 +28,9 @@ make
 
 if [$2 eq "wetcluster"]
 then
- bsub -K -q gpu mpirun -np 2 ./src/vcluster
- bsub -K -q gpu mpirun -np 4 ./src/vcluster
+# bsub -K -q gpu mpirun -np 2 ./src/vcluster
+# bsub -K -q gpu mpirun -np 4 ./src/vcluster
 else
- mpirun -np 2 ./src/vcluster
- mpirun -np 4 ./src/vcluster
+# mpirun -np 2 ./src/vcluster
+# mpirun -np 4 ./src/vcluster
 fi
