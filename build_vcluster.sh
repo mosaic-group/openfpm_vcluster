@@ -18,12 +18,26 @@ cd "$1/OpenFPM_vcluster"
 
 echo "Compiling on $2"
 
-if [ "$2" == "gin" -o "$2" == "wetcluster" ]
+if [ "$2" == "gin" ]
 then
  echo "Compiling on gin\n"
  module load gcc/4.9.2
  module load openmpi/1.8.1
 fi
+
+if [ "$2" == "wetcluster" ]
+then
+ echo "Compiling on wetcluster\n"
+ module load gcc/4.9.2
+ module load openmpi/1.8.1
+ module load boost/1.5.4
+ COMPILE_OPTIONS = '--with-boost="/sw/apps/boost/1.54.0/"'
+fi
+
+sh ./autogen.sh
+sh ./configure $(COMPILE_OPTIONS)  CXX=mpic++
+make
+
 
 sh ./autogen.sh
 sh ./configure CXX=mpic++
@@ -31,9 +45,11 @@ make
 
 if [$2 eq "wetcluster"]
 then
-# bsub -K -q gpu mpirun -np 2 ./src/vcluster
-# bsub -K -q gpu mpirun -np 4 ./src/vcluster
+ bsub -K -n 2 mpirun -np 2 ./src/vcluster
+ if [ "$?" = "0" ]; then exit 1 ; fi
 else
+ echo "VCLUSTER\n"
 # mpirun -np 2 ./src/vcluster
 # mpirun -np 4 ./src/vcluster
 fi
+
