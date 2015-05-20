@@ -48,10 +48,13 @@ exit(0)\n"
 
 ## Run on the cluster
  bsub -o output_run2.%J -K -n 2 "module load openmpi/1.8.1 ; module load gcc/4.9.2;  mpirun -np 2 ./src/vcluster"
- if [ \"\$?\" != "0" ]; then exit 1 ; fi
+ echo "\$?"
+# if [ \"\$?\" != "0" ]; then exit 1 ; fi
  bsub -o output_run4.%J -K -n 4 "module load openmpi/1.8.1 ; module load gcc/4.9.2;  mpirun -np 4 ./src/vcluster"
- if [ \"\$?\" != "0" ]; then exit 1 ; fi
+ echo "\$?"
+# if [ \"\$?\" != "0" ]; then exit 1 ; fi
  bsub -o output_run8.%J -K -n 8 "module load openmpi/1.8.1 ; module load gcc/4.9.2;  mpirun -np 8 ./src/vcluster"
+ echo "\$?"
 fi
 
 
