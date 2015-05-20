@@ -54,10 +54,10 @@ exit(0)\n"
 
  echo $script | sed -r 's/\\n/\n/g' > compile_script
 
- bsub -o output.%J -K -n 1 -J compile sh ./compile_script
+ bsub -o output_compile.%J -K -n 1 -J compile sh ./compile_script
 
 ## Run on the cluster
- bsub -o output.%J -K -n 2 mpirun -np 2 ./src/vcluster
+ bsub -o output_run.%J -K -n 2 "module load openmpi/1.8.1 ; module load gcc/4.9.2;  mpirun -np 2 ./src/vcluster"
 fi
 
 
