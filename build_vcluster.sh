@@ -16,8 +16,6 @@ git clone git@ppmcore.mpi-cbg.de:incardon/openfpm_data.git OpenFPM_data
 
 cd "$1/OpenFPM_vcluster"
 
-echo "Compiling on $2"
-
 if [ "$2" == "gin" ]
 then
  echo "Compiling on gin\n"
@@ -25,15 +23,15 @@ then
  module load openmpi/1.8.1
 fi
 
-if [ $2 == "wetcluster" ]
-then
- bsub -K -n 2 mpirun -np 2 ./src/vcluster
- if [ "$?" = "0" ]; then exit 1 ; fi
-else
- echo "VCLUSTER\n"
+#if [ $2 == "wetcluster" ]
+#then
+# bsub -K -n 2 mpirun -np 2 ./src/vcluster
+# if [ "$?" = "0" ]; then exit 1 ; fi
+#else
+# echo "VCLUSTER\n"
 # mpirun -np 2 ./src/vcluster
 # mpirun -np 4 ./src/vcluster
-fi
+#fi
 
 if [ "$2" == "wetcluster" ]
 then
