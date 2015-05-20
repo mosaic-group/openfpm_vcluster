@@ -21,9 +21,7 @@ then
  echo "Compiling on gin\n"
  module load gcc/4.9.2
  module load openmpi/1.8.1
-fi
-
-if [ "$2" == "wetcluster" ]
+else if [ "$2" == "wetcluster" ]
 then
  echo "Compiling on wetcluster"
 
@@ -53,6 +51,15 @@ exit(0)\n"
  if [ $? -ne 0 ]; then exit 1 ; fi
  bsub -o output_run8.%J -K -n 8 "module load openmpi/1.8.1 ; module load gcc/4.9.2;  mpirun -np 8 ./src/vcluster"
  if [ $? -ne 0 ]; then exit 1 ; fi
+else
+ echo "Compiling general"
+ sh ./autogen.sh
+ sh ./configure  CXX=mpic++\n
+ make
+
+ mpirun -np 2 ./src/vcluster
+ mpirun -np 4 ./src/vcluster
+
 fi
 
 
