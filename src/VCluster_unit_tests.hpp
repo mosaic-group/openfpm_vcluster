@@ -17,7 +17,7 @@
 #define VERBOSE_TEST
 
 #define N_TRY 2
-#define N_LOOP 8
+#define N_LOOP 128
 #define BUFF_STEP 524288
 
 BOOST_AUTO_TEST_SUITE( VCluster_test )
