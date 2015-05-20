@@ -23,16 +23,6 @@ then
  module load openmpi/1.8.1
 fi
 
-#if [ $2 == "wetcluster" ]
-#then
-# bsub -K -n 2 mpirun -np 2 ./src/vcluster
-# if [ "$?" = "0" ]; then exit 1 ; fi
-#else
-# echo "VCLUSTER\n"
-# mpirun -np 2 ./src/vcluster
-# mpirun -np 4 ./src/vcluster
-#fi
-
 if [ "$2" == "wetcluster" ]
 then
  echo "Compiling on wetcluster"
@@ -57,7 +47,11 @@ exit(0)\n"
  bsub -o output_compile.%J -K -n 1 -J compile sh ./compile_script
 
 ## Run on the cluster
- bsub -o output_run.%J -K -n 2 "module load openmpi/1.8.1 ; module load gcc/4.9.2;  mpirun -np 2 ./src/vcluster"
+ bsub -o output_run2.%J -K -n 2 "module load openmpi/1.8.1 ; module load gcc/4.9.2;  mpirun -np 2 ./src/vcluster"
+ if [ \"\$?\" != "0" ]; then exit 1 ; fi
+ bsub -o output_run4.%J -K -n 4 "module load openmpi/1.8.1 ; module load gcc/4.9.2;  mpirun -np 4 ./src/vcluster"
+ if [ \"\$?\" != "0" ]; then exit 1 ; fi
+ bsub -o output_run8.%J -K -n 8 "module load openmpi/1.8.1 ; module load gcc/4.9.2;  mpirun -np 8 ./src/vcluster"
 fi
 
 
