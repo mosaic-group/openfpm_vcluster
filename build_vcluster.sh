@@ -51,6 +51,14 @@ exit(0)\n"
  if [ $? -ne 0 ]; then exit 1 ; fi
  bsub -o output_run8.%J -K -n 8 "module load openmpi/1.8.1 ; module load gcc/4.9.2;  mpirun -np 8 ./src/vcluster"
  if [ $? -ne 0 ]; then exit 1 ; fi
+ bsub -o output_run16.%J -K -n 16 "module load openmpi/1.8.1 ; module load gcc/4.9.2;  mpirun -np 16 ./src/vcluster"
+ if [ $? -ne 0 ]; then exit 1 ; fi
+ bsub -o output_run32.%J -K -n 32 "module load openmpi/1.8.1 ; module load gcc/4.9.2;  mpirun -np 32 ./src/vcluster"
+ if [ $? -ne 0 ]; then exit 1 ; fi
+ bsub -o output_run32.%J -K -n 64 "module load openmpi/1.8.1 ; module load gcc/4.9.2;  mpirun -np 64 ./src/vcluster"
+ if [ $? -ne 0 ]; then exit 1 ; fi
+ bsub -o output_run32.%J -K -n 128 "module load openmpi/1.8.1 ; module load gcc/4.9.2;  mpirun -np 128 ./src/vcluster"
+ if [ $? -ne 0 ]; then exit 1 ; fi
 else
  echo "Compiling general"
  sh ./autogen.sh
