@@ -30,7 +30,7 @@ then
  echo "Compiling on wetcluster\n"
  module load gcc/4.9.2
  module load openmpi/1.8.1
- module load boost/1.5.4
+ module load boost/1.54.0
  COMPILE_OPTIONS = '--with-boost="/sw/apps/boost/1.54.0/"'
 fi
 
