@@ -35,12 +35,7 @@ then
 fi
 
 sh ./autogen.sh
-sh ./configure $(COMPILE_OPTIONS)  CXX=mpic++
-make
-
-
-sh ./autogen.sh
-sh ./configure CXX=mpic++
+sh ./configure "$(COMPILE_OPTIONS)"  CXX=mpic++
 make
 
 if [ $2 == "wetcluster" ]
