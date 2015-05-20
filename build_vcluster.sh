@@ -56,8 +56,8 @@ exit(0)\n"
 
  bsub  -K -n 1 -J compile sh ./compile_script
 
-# bsub -K -n 2 mpirun -np 2 ./src/vcluster
-# if [ "$?" = "0" ]; then exit 1 ; fi
+## Run on the cluster
+ bsub -K -n 2 mpirun -np 2 ./src/vcluster
 fi
 
 
