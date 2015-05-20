@@ -16,7 +16,7 @@
 
 #define VERBOSE_TEST
 
-#define N_TRY 4
+#define N_TRY 2
 #define N_LOOP 128
 #define BUFF_STEP 524288
 
@@ -171,7 +171,7 @@ BOOST_AUTO_TEST_CASE( VCluster_use_sendrecv)
 			vcl.reduce(size_send_recv);
 			vcl.execute();
 
-			if (vcl.getProcessUnitID() == 0 && s == N_TRY - 1)
+			if (vcl.getProcessUnitID() == 0)
 				std::cout << "(All to All: )Buffer size: " << (j+1)*BUFF_STEP << "    Bandwidth (Average): " << size_send_recv / vcl.getProcessingUnits() / clk / 1e6 << " MB/s  " << "    Bandwidth (Total): " << size_send_recv / clk / 1e6 << "\n";
 #endif
 
@@ -250,7 +250,7 @@ BOOST_AUTO_TEST_CASE( VCluster_use_sendrecv)
 			vcl.execute();
 			clk /= vcl.getProcessingUnits();
 
-			if (vcl.getProcessUnitID() == 0 && s == N_TRY - 1)
+			if (vcl.getProcessUnitID() == 0)
 				std::cout << "(Random Pattern: ) Buffer size: " << (j+1)*BUFF_STEP << "    Bandwidth (Average): " << size_send_recv / vcl.getProcessingUnits() / clk / 1e6 << " MB/s  " << "    Bandwidth (Total): " << size_send_recv / clk / 1e6 <<  " MB/s    Clock: " << clk <<  "\n";
 #endif
 
