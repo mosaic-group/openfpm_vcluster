@@ -43,7 +43,7 @@ sh ./autogen.sh
 sh ./configure CXX=mpic++
 make
 
-if [$2 eq "wetcluster"]
+if [ $2 == "wetcluster" ]
 then
  bsub -K -n 2 mpirun -np 2 ./src/vcluster
  if [ "$?" = "0" ]; then exit 1 ; fi
