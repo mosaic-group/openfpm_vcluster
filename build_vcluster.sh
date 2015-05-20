@@ -21,13 +21,13 @@ then
  echo "Compiling on gin\n"
  module load gcc/4.9.2
  module load openmpi/1.8.1
-else if [ "$2" == "wetcluster" ]
+elif [ "$2" == "wetcluster" ]
 then
  echo "Compiling on wetcluster"
 
 ## produce the module path
 
-export MODULEPATH="/sw/apps/modules/modulefiles:$MODULEPATH"
+ export MODULEPATH="/sw/apps/modules/modulefiles:$MODULEPATH"
 
  script="module load gcc/4.9.2\n 
 module load openmpi/1.8.1\n
