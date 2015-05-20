@@ -54,8 +54,7 @@ exit(0)\n"
 
  echo $script | sed -r 's/\\n/\n/g' > compile_script
 
-# bsub  "cd \"$1/OpenFPM_vcluster\"\n
-#                          sh ./compile_script"
+ bsub  -K -n 1 -J compile sh ./compile_script
 
 # bsub -K -n 2 mpirun -np 2 ./src/vcluster
 # if [ "$?" = "0" ]; then exit 1 ; fi

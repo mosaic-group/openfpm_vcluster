@@ -285,7 +285,7 @@ top_builddir = ..
 top_srcdir = ..
 LINKLIBS = $(DEFAULT_LIB) $(PTHREAD_LIBS) $(OPT_LIBS) $(BOOST_LDFLAGS)
 vcluster_SOURCES = main.cpp VCluster.cpp
-vcluster_CXXFLAGS = $(INCLUDES_PATH)
+vcluster_CXXFLAGS = $(INCLUDES_PATH) $(BOOST_CPPFLAGS)
 vcluster_CFLAGS = $(CUDA_CFLAGS)
 vcluster_LDADD = $(LINKLIBS)
 all: all-am
