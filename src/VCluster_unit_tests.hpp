@@ -17,7 +17,7 @@
 #define VERBOSE_TEST
 
 #define N_TRY 2
-#define N_LOOP 128
+#define N_LOOP 8
 #define BUFF_STEP 524288
 
 BOOST_AUTO_TEST_SUITE( VCluster_test )
@@ -30,8 +30,10 @@ void * msg_alloc(size_t msg_i ,size_t total_msg, size_t total_p, size_t i,size_t
 {
 	openfpm::vector<openfpm::vector<unsigned char>> * v = static_cast<openfpm::vector<openfpm::vector<unsigned char>> *>(ptr);
 
-	BOOST_REQUIRE_EQUAL(total_p,global_v_cluster->getProcessingUnits()-1);
-	v->resize(total_p + 1);
+	if (global_v_cluster->getProcessingUnits() <= 8)
+		BOOST_REQUIRE_EQUAL(total_p,global_v_cluster->getProcessingUnits()-1);
+	else
+		BOOST_REQUIRE_EQUAL(total_p,8);
 
 	BOOST_REQUIRE_EQUAL(msg_i, (global_step + 1)*BUFF_STEP);
 	v->get(i).resize(msg_i);
@@ -138,21 +140,22 @@ BOOST_AUTO_TEST_CASE( VCluster_use_sendrecv)
 
 			openfpm::vector<size_t> prc;
 
-			for (size_t i = 0 ; i < n_proc ; i++)
+			for (size_t i = 0 ; i < 8  && i < n_proc ; i++)
 			{
-				if (i != vcl.getProcessUnitID())
+				size_t p_id = (i + 1 + vcl.getProcessUnitID()) % n_proc;
+				if (p_id != vcl.getProcessUnitID())
 				{
-					prc.add(i);
+					prc.add(p_id);
 					message.add();
 					std::ostringstream msg;
-					msg << "Hello from " << vcl.getProcessUnitID() << " to " << i;
+					msg << "Hello from " << vcl.getProcessUnitID() << " to " << p_id;
 					std::string str(msg.str());
 					message.last().resize((j+1)*BUFF_STEP);
 					memset(message.last().getPointer(),0,(j+1)*BUFF_STEP);
 					std::copy(str.c_str(),&(str.c_str())[msg.str().size()],&(message.last().get(0)));
 					// resize also recv_message
-					recv_message.get(i).resize((j+1)*BUFF_STEP);
-					memset(recv_message.get(i).getPointer(),0,(j+1)*BUFF_STEP);
+					recv_message.get(p_id).resize((j+1)*BUFF_STEP);
+					memset(recv_message.get(p_id).getPointer(),0,(j+1)*BUFF_STEP);
 				}
 			}
 
@@ -161,6 +164,7 @@ BOOST_AUTO_TEST_CASE( VCluster_use_sendrecv)
 			t.start();
 #endif
 
+			recv_message.resize(n_proc);
 			vcl.sendrecvMultipleMessages(prc,message,msg_alloc,&recv_message);
 
 #ifdef VERBOSE_TEST
@@ -176,28 +180,33 @@ BOOST_AUTO_TEST_CASE( VCluster_use_sendrecv)
 #endif
 
 			// Check the message
-
-			for (size_t i = 0 ; i < recv_message.size() ; i++)
+			for (size_t i = 0 ; i < 8  && i < n_proc ; i++)
 			{
-				if (i != vcl.getProcessUnitID())
+				long int p_id = vcl.getProcessUnitID() - i - 1;
+				if (p_id < 0)
+					p_id += n_proc;
+				else
+					p_id = p_id % n_proc;
+
+				if (p_id != vcl.getProcessUnitID())
 				{
 					std::ostringstream msg;
-					msg << "Hello from " << i << " to " << vcl.getProcessUnitID();
+					msg << "Hello from " << p_id << " to " << vcl.getProcessUnitID();
 					std::string str(msg.str());
-					BOOST_REQUIRE_EQUAL(std::equal(str.c_str(),str.c_str() + str.size() ,&(recv_message.get(i).get(0))),true);
+					BOOST_REQUIRE_EQUAL(std::equal(str.c_str(),str.c_str() + str.size() ,&(recv_message.get(p_id).get(0))),true);
 				}
 				else
 				{
-					BOOST_REQUIRE_EQUAL(0,recv_message.get(i).size());
+					BOOST_REQUIRE_EQUAL(0,recv_message.get(p_id).size());
 				}
 			}
 		}
 
 		std::srand(global_v_cluster->getProcessUnitID());
 		std::default_random_engine eg;
-		std::uniform_int_distribution<int> d(0,2);
+		std::uniform_int_distribution<int> d(0,n_proc/8);
 
-		// Check random pattern 1%3
+		// Check random pattern
 
 		for (size_t j = 0 ; j < N_LOOP ; j++)
 		{
@@ -214,7 +223,7 @@ BOOST_AUTO_TEST_CASE( VCluster_use_sendrecv)
 			for (size_t i = 0 ; i < n_proc ; i++)
 			{
 				// randomly with witch processor communicate
-				if (d(eg) == vcl.getProcessUnitID())
+				if (d(eg) == 0)
 				{
 					prc.add(i);
 					o_send.add(i);
@@ -244,7 +253,7 @@ BOOST_AUTO_TEST_CASE( VCluster_use_sendrecv)
 			t.stop();
 			double clk = t.getwct();
 
-			size_t size_send_recv = (prc.size() + recv_message.size()) * (j+1)*BUFF_STEP * (vcl.getProcessingUnits()-1);
+			size_t size_send_recv = (prc.size() + recv_message.size()) * (j+1)*BUFF_STEP;
 			vcl.reduce(size_send_recv);
 			vcl.reduce(clk);
 			vcl.execute();
