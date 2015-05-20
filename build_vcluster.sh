@@ -54,7 +54,7 @@ exit(0)\n"
 else
  echo "Compiling general"
  sh ./autogen.sh
- sh ./configure  CXX=mpic++\n
+ sh ./configure  CXX=mpic++
  make
 
  mpirun -np 2 ./src/vcluster
