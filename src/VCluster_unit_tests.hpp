@@ -77,6 +77,18 @@ BOOST_AUTO_TEST_CASE( VCluster_use_reductions)
 	float f = 1;
 	double d = 1;
 
+	unsigned char uc_max = vcl.getProcessUnitID();
+	char c_max = vcl.getProcessUnitID();
+	short s_max = vcl.getProcessUnitID();
+	unsigned short us_max = vcl.getProcessUnitID();
+	int i_max = vcl.getProcessUnitID();
+	unsigned int ui_max = vcl.getProcessUnitID();
+	long int li_max = vcl.getProcessUnitID();
+	unsigned long int uli_max = vcl.getProcessUnitID();
+	float f_max = vcl.getProcessUnitID();
+	double d_max = vcl.getProcessUnitID();
+
+	// Sum reductions
 	if ( vcl.getProcessingUnits() < 128 )
 		vcl.reduce(c);
 	if ( vcl.getProcessingUnits() < 256 )
@@ -93,25 +105,43 @@ BOOST_AUTO_TEST_CASE( VCluster_use_reductions)
 	vcl.reduce(uli);
 	vcl.reduce(f);
 	vcl.reduce(d);
+
+	// Max reduction
+	if ( vcl.getProcessingUnits() < 128 )
+		vcl.max(c_max);
+	if ( vcl.getProcessingUnits() < 256 )
+		vcl.max(uc_max);
+	if ( vcl.getProcessingUnits() < 32768 )
+		vcl.reduce(s_max);
+	if ( vcl.getProcessingUnits() < 65536 )
+		vcl.reduce(us_max);
+	if ( vcl.getProcessingUnits() < 2147483648 )
+		vcl.reduce(i_max);
+	if ( vcl.getProcessingUnits() < 4294967296 )
+		vcl.reduce(ui_max);
+	vcl.reduce(li_max);
+	vcl.reduce(uli_max);
+	vcl.reduce(f_max);
+	vcl.reduce(d_max);
 	vcl.execute();
 
 	if ( vcl.getProcessingUnits() < 128 )
-	{BOOST_REQUIRE_EQUAL(c,vcl.getProcessingUnits());}
+	{BOOST_REQUIRE_EQUAL(c_max,vcl.getProcessingUnits()-1);}
 	if ( vcl.getProcessingUnits() < 256 )
-	{BOOST_REQUIRE_EQUAL(uc,vcl.getProcessingUnits());}
+	{BOOST_REQUIRE_EQUAL(uc_max,vcl.getProcessingUnits()-1);}
 	if ( vcl.getProcessingUnits() < 32768 )
-	{BOOST_REQUIRE_EQUAL(s,vcl.getProcessingUnits());}
+	{BOOST_REQUIRE_EQUAL(s_max,vcl.getProcessingUnits()-1);}
 	if ( vcl.getProcessingUnits() < 65536 )
-	{BOOST_REQUIRE_EQUAL(us,vcl.getProcessingUnits());}
+	{BOOST_REQUIRE_EQUAL(us_max,vcl.getProcessingUnits()-1);}
 	if ( vcl.getProcessingUnits() < 2147483648 )
-	{BOOST_REQUIRE_EQUAL(i,vcl.getProcessingUnits());}
+	{BOOST_REQUIRE_EQUAL(i_max,vcl.getProcessingUnits()-1);}
 	if ( vcl.getProcessingUnits() < 4294967296 )
-	{BOOST_REQUIRE_EQUAL(ui,vcl.getProcessingUnits());}
+	{BOOST_REQUIRE_EQUAL(ui_max,vcl.getProcessingUnits()-1);}
 
-	BOOST_REQUIRE_EQUAL(li,vcl.getProcessingUnits());
-	BOOST_REQUIRE_EQUAL(uli,vcl.getProcessingUnits());
-	BOOST_REQUIRE_EQUAL(f,vcl.getProcessingUnits());
-	BOOST_REQUIRE_EQUAL(d,vcl.getProcessingUnits());
+	BOOST_REQUIRE_EQUAL(li_max,vcl.getProcessingUnits()-1);
+	BOOST_REQUIRE_EQUAL(uli_max,vcl.getProcessingUnits()-1);
+	BOOST_REQUIRE_EQUAL(f_max,vcl.getProcessingUnits()-1);
+	BOOST_REQUIRE_EQUAL(d_max,vcl.getProcessingUnits()-1);
 }
 
 
@@ -170,13 +200,15 @@ BOOST_AUTO_TEST_CASE( VCluster_use_sendrecv)
 #ifdef VERBOSE_TEST
 			t.stop();
 			double clk = t.getwct();
+			double clk_max = clk;
 
-			size_t size_send_recv = 2 * (j+1)*BUFF_STEP * (vcl.getProcessingUnits()-1);
+			size_t size_send_recv = 2 * (j+1)*BUFF_STEP * (prc.size());
 			vcl.reduce(size_send_recv);
+			vcl.max(clk_max);
 			vcl.execute();
 
 			if (vcl.getProcessUnitID() == 0)
-				std::cout << "(All to All: )Buffer size: " << (j+1)*BUFF_STEP << "    Bandwidth (Average): " << size_send_recv / vcl.getProcessingUnits() / clk / 1e6 << " MB/s  " << "    Bandwidth (Total): " << size_send_recv / clk / 1e6 << "\n";
+				std::cout << "(All to All: )Buffer size: " << (j+1)*BUFF_STEP << "    Bandwidth (Average): " << size_send_recv / vcl.getProcessingUnits() / clk / 1e6 << " MB/s  " << "    Bandwidth (Total): " << size_send_recv / clk / 1e6 << " MB/s    Clock: " << clk << "   Clock MAX: " << clk_max <<"\n";
 #endif
 
 			// Check the message
@@ -252,15 +284,17 @@ BOOST_AUTO_TEST_CASE( VCluster_use_sendrecv)
 #ifdef VERBOSE_TEST
 			t.stop();
 			double clk = t.getwct();
+			double clk_max = clk;
 
 			size_t size_send_recv = (prc.size() + recv_message.size()) * (j+1)*BUFF_STEP;
 			vcl.reduce(size_send_recv);
 			vcl.reduce(clk);
+			vcl.max(clk_max);
 			vcl.execute();
 			clk /= vcl.getProcessingUnits();
 
 			if (vcl.getProcessUnitID() == 0)
-				std::cout << "(Random Pattern: ) Buffer size: " << (j+1)*BUFF_STEP << "    Bandwidth (Average): " << size_send_recv / vcl.getProcessingUnits() / clk / 1e6 << " MB/s  " << "    Bandwidth (Total): " << size_send_recv / clk / 1e6 <<  " MB/s    Clock: " << clk <<  "\n";
+				std::cout << "(Random Pattern: ) Buffer size: " << (j+1)*BUFF_STEP << "    Bandwidth (Average): " << size_send_recv / vcl.getProcessingUnits() / clk / 1e6 << " MB/s  " << "    Bandwidth (Total): " << size_send_recv / clk / 1e6 <<  " MB/s    Clock: " << clk << "   Clock MAX: " << clk_max << "\n";
 #endif
 
 			// Check the message

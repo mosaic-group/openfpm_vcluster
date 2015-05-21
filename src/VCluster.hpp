@@ -209,6 +209,23 @@ public:
 		MPI_IallreduceW<T>::reduce(num,MPI_SUM,req.last());
 	}
 
+	/*! \brief Get the maximum number across all processors (or reduction with insinity norm)
+	 *
+	 * \param num to reduce
+	 *
+	 */
+
+	template<typename T> void max(T & num)
+	{
+		// reduce over MPI
+
+		// Create one request
+		req.add();
+
+		// reduce
+		MPI_IallreduceW<T>::reduce(num,MPI_MAX,req.last());
+	}
+
 	// vector of pointers of send buffers
 	openfpm::vector<void *> ptr_send;
 
