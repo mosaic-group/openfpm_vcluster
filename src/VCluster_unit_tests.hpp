@@ -112,17 +112,17 @@ BOOST_AUTO_TEST_CASE( VCluster_use_reductions)
 	if ( vcl.getProcessingUnits() < 256 )
 		vcl.max(uc_max);
 	if ( vcl.getProcessingUnits() < 32768 )
-		vcl.reduce(s_max);
+		vcl.max(s_max);
 	if ( vcl.getProcessingUnits() < 65536 )
-		vcl.reduce(us_max);
+		vcl.max(us_max);
 	if ( vcl.getProcessingUnits() < 2147483648 )
-		vcl.reduce(i_max);
+		vcl.max(i_max);
 	if ( vcl.getProcessingUnits() < 4294967296 )
-		vcl.reduce(ui_max);
-	vcl.reduce(li_max);
-	vcl.reduce(uli_max);
-	vcl.reduce(f_max);
-	vcl.reduce(d_max);
+		vcl.max(ui_max);
+	vcl.max(li_max);
+	vcl.max(uli_max);
+	vcl.max(f_max);
+	vcl.max(d_max);
 	vcl.execute();
 
 	if ( vcl.getProcessingUnits() < 128 )
