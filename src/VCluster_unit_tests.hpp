@@ -17,7 +17,7 @@
 #define VERBOSE_TEST
 
 #define N_TRY 2
-#define N_LOOP 67108864
+#define N_LOOP 128/*67108864*/
 #define BUFF_STEP 524288
 
 BOOST_AUTO_TEST_SUITE( VCluster_test )
@@ -30,11 +30,6 @@ size_t global_rank;
 void * msg_alloc(size_t msg_i ,size_t total_msg, size_t total_p, size_t i,size_t ri, void * ptr)
 {
 	openfpm::vector<openfpm::vector<unsigned char>> * v = static_cast<openfpm::vector<openfpm::vector<unsigned char>> *>(ptr);
-
-	// Debug
-
-	if (global_rank == 48)
-		std::cout << "Total message: " << total_p << " from: " << msg_i << "\n";
 
 	if (global_v_cluster->getProcessingUnits() <= 8)
 		BOOST_REQUIRE_EQUAL(total_p,global_v_cluster->getProcessingUnits()-1);
@@ -190,10 +185,15 @@ BOOST_AUTO_TEST_CASE( VCluster_use_sendrecv)
 					message.last().resize(j);
 					memset(message.last().getPointer(),0,j);
 					std::copy(str.c_str(),&(str.c_str())[msg.str().size()],&(message.last().get(0)));
-					// resize also recv_message
-					recv_message.get(p_id).resize(j);
-					memset(recv_message.get(p_id).getPointer(),0,j);
 				}
+			}
+
+
+			// The pattern is not really random preallocate the receive buffer
+			for (size_t i = 0 ; i < 8  && i < n_proc ; i++)
+			{
+				long int p_id = vcl.getProcessUnitID() - i - 1;
+				recv_message(p_id).resize(j);
 			}
 
 #ifdef VERBOSE_TEST
@@ -389,10 +389,14 @@ BOOST_AUTO_TEST_CASE( VCluster_use_sendrecv)
 					message.last().resize(j);
 					memset(message.last().getPointer(),0,j);
 					std::copy(str.c_str(),&(str.c_str())[msg.str().size()],&(message.last().get(0)));
-					// resize also recv_message
-					recv_message.get(p_id).resize(j);
-					memset(recv_message.get(p_id).getPointer(),0,j);
 				}
+			}
+
+			// The pattern is not really random preallocate the receive buffer
+			for (size_t i = 0 ; i < 8  && i < n_proc ; i++)
+			{
+				long int p_id = (- (i+1) * ps + (long int)vcl.getProcessUnitID()) % n_proc;
+				recv_message(p_id).resize(j);
 			}
 
 #ifdef VERBOSE_TEST
