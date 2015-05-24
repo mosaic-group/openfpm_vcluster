@@ -16,8 +16,8 @@
 
 #define VERBOSE_TEST
 
-#define N_TRY 2
-#define N_LOOP 128
+#define N_TRY 4
+#define N_LOOP 67108864
 #define BUFF_STEP 524288
 
 BOOST_AUTO_TEST_SUITE( VCluster_test )
@@ -35,7 +35,7 @@ void * msg_alloc(size_t msg_i ,size_t total_msg, size_t total_p, size_t i,size_t
 	else
 		BOOST_REQUIRE_EQUAL(total_p,8);
 
-	BOOST_REQUIRE_EQUAL(msg_i, (global_step + 1)*BUFF_STEP);
+	BOOST_REQUIRE_EQUAL(msg_i, global_step);
 	v->get(i).resize(msg_i);
 
 	return &(v->get(i).get(0));
@@ -53,7 +53,7 @@ void * msg_alloc2(size_t msg_i ,size_t total_msg, size_t total_p, size_t i, size
 	v->resize(total_p);
 	prc_recv.resize(total_p);
 
-	BOOST_REQUIRE_EQUAL(msg_i, (global_step + 1)*BUFF_STEP);
+	BOOST_REQUIRE_EQUAL(msg_i, global_step);
 
 	id++;
 	v->get(id-1).resize(msg_i);
@@ -156,11 +156,11 @@ BOOST_AUTO_TEST_CASE( VCluster_use_sendrecv)
 
 	size_t n_proc = vcl.getProcessingUnits();
 
-	// Checking All to All pattern
+	// Checking short communication pattern
 
 	for (size_t s = 0 ; s < N_TRY ; s++)
 	{
-		for (size_t j = 0 ; j < N_LOOP ; j++)
+		for (size_t j = 32 ; j < N_LOOP ; j*=2)
 		{
 			global_step = j;
 			// send message
@@ -180,12 +180,12 @@ BOOST_AUTO_TEST_CASE( VCluster_use_sendrecv)
 					std::ostringstream msg;
 					msg << "Hello from " << vcl.getProcessUnitID() << " to " << p_id;
 					std::string str(msg.str());
-					message.last().resize((j+1)*BUFF_STEP);
-					memset(message.last().getPointer(),0,(j+1)*BUFF_STEP);
+					message.last().resize(j);
+					memset(message.last().getPointer(),0,j);
 					std::copy(str.c_str(),&(str.c_str())[msg.str().size()],&(message.last().get(0)));
 					// resize also recv_message
-					recv_message.get(p_id).resize((j+1)*BUFF_STEP);
-					memset(recv_message.get(p_id).getPointer(),0,(j+1)*BUFF_STEP);
+					recv_message.get(p_id).resize(j);
+					memset(recv_message.get(p_id).getPointer(),0,j);
 				}
 			}
 
@@ -202,13 +202,13 @@ BOOST_AUTO_TEST_CASE( VCluster_use_sendrecv)
 			double clk = t.getwct();
 			double clk_max = clk;
 
-			size_t size_send_recv = 2 * (j+1)*BUFF_STEP * (prc.size());
+			size_t size_send_recv = 2 * j * (prc.size());
 			vcl.reduce(size_send_recv);
 			vcl.max(clk_max);
 			vcl.execute();
 
 			if (vcl.getProcessUnitID() == 0)
-				std::cout << "(All to All: )Buffer size: " << (j+1)*BUFF_STEP << "    Bandwidth (Average): " << size_send_recv / vcl.getProcessingUnits() / clk / 1e6 << " MB/s  " << "    Bandwidth (Total): " << size_send_recv / clk / 1e6 << " MB/s    Clock: " << clk << "   Clock MAX: " << clk_max <<"\n";
+				std::cout << "(Short pattern: )Buffer size: " << j << "    Bandwidth (Average): " << size_send_recv / vcl.getProcessingUnits() / clk / 1e6 << " MB/s  " << "    Bandwidth (Total): " << size_send_recv / clk / 1e6 << " MB/s    Clock: " << clk << "   Clock MAX: " << clk_max <<"\n";
 #endif
 
 			// Check the message
@@ -238,9 +238,9 @@ BOOST_AUTO_TEST_CASE( VCluster_use_sendrecv)
 		std::default_random_engine eg;
 		std::uniform_int_distribution<int> d(0,n_proc/8);
 
-		// Check random pattern
+		// Check random pattern (maximum 16 processors)
 
-		for (size_t j = 0 ; j < N_LOOP ; j++)
+		for (size_t j = 32 ; j < N_LOOP && n_proc < 16 ; j*=2)
 		{
 			global_step = j;
 			// original send
@@ -265,8 +265,7 @@ BOOST_AUTO_TEST_CASE( VCluster_use_sendrecv)
 					std::string str(msg.str());
 					message.last().resize(str.size());
 					std::copy(str.c_str(),&(str.c_str())[msg.str().size()],&(message.last().get(0)));
-					// Resize the message to j+1 BUFF_STEP
-					message.last().resize((j+1)*BUFF_STEP);
+					message.last().resize(j);
 				}
 			}
 
@@ -286,7 +285,7 @@ BOOST_AUTO_TEST_CASE( VCluster_use_sendrecv)
 			double clk = t.getwct();
 			double clk_max = clk;
 
-			size_t size_send_recv = (prc.size() + recv_message.size()) * (j+1)*BUFF_STEP;
+			size_t size_send_recv = (prc.size() + recv_message.size()) * j;
 			vcl.reduce(size_send_recv);
 			vcl.reduce(clk);
 			vcl.max(clk_max);
@@ -294,7 +293,7 @@ BOOST_AUTO_TEST_CASE( VCluster_use_sendrecv)
 			clk /= vcl.getProcessingUnits();
 
 			if (vcl.getProcessUnitID() == 0)
-				std::cout << "(Random Pattern: ) Buffer size: " << (j+1)*BUFF_STEP << "    Bandwidth (Average): " << size_send_recv / vcl.getProcessingUnits() / clk / 1e6 << " MB/s  " << "    Bandwidth (Total): " << size_send_recv / clk / 1e6 <<  " MB/s    Clock: " << clk << "   Clock MAX: " << clk_max << "\n";
+				std::cout << "(Random Pattern: ) Buffer size: " << j << "    Bandwidth (Average): " << size_send_recv / vcl.getProcessingUnits() / clk / 1e6 << " MB/s  " << "    Bandwidth (Total): " << size_send_recv / clk / 1e6 <<  " MB/s    Clock: " << clk << "   Clock MAX: " << clk_max << "\n";
 #endif
 
 			// Check the message
@@ -322,8 +321,7 @@ BOOST_AUTO_TEST_CASE( VCluster_use_sendrecv)
 				std::string str(msg.str());
 				message.last().resize(str.size());
 				std::copy(str.c_str(),&(str.c_str())[msg.str().size()],&(message.last().get(0)));
-				// Resize the message to j+1 BUFF_STEP
-				message.last().resize((j+1)*BUFF_STEP);
+				message.last().resize(j);
 			}
 
 			id = 0;
@@ -353,6 +351,85 @@ BOOST_AUTO_TEST_CASE( VCluster_use_sendrecv)
 				}
 				// Check that we find always a match
 				BOOST_REQUIRE_EQUAL(j != prc_recv.size(),true);
+			}
+		}
+
+		// Check long communication pattern
+
+		for (size_t j = 32 ; j < N_LOOP ; j*=2)
+		{
+			global_step = j;
+			// Processor step
+			size_t ps = n_proc / 8 + 1;
+
+			// send message
+			openfpm::vector<openfpm::vector<unsigned char>> message;
+			// recv message
+			openfpm::vector<openfpm::vector<unsigned char>> recv_message(n_proc);
+
+			openfpm::vector<size_t> prc;
+
+			for (size_t i = 0 ; i < 8  && i < n_proc ; i++)
+			{
+				size_t p_id = ((i+1) * ps + vcl.getProcessUnitID()) % n_proc;
+				if (p_id != vcl.getProcessUnitID())
+				{
+					prc.add(p_id);
+					message.add();
+					std::ostringstream msg;
+					msg << "Hello from " << vcl.getProcessUnitID() << " to " << p_id;
+					std::string str(msg.str());
+					message.last().resize(j);
+					memset(message.last().getPointer(),0,j);
+					std::copy(str.c_str(),&(str.c_str())[msg.str().size()],&(message.last().get(0)));
+					// resize also recv_message
+					recv_message.get(p_id).resize(j);
+					memset(recv_message.get(p_id).getPointer(),0,j);
+				}
+			}
+
+#ifdef VERBOSE_TEST
+			timer t;
+			t.start();
+#endif
+
+			recv_message.resize(n_proc);
+			vcl.sendrecvMultipleMessages(prc,message,msg_alloc,&recv_message);
+
+#ifdef VERBOSE_TEST
+			t.stop();
+			double clk = t.getwct();
+			double clk_max = clk;
+
+			size_t size_send_recv = 2 * j * (prc.size());
+			vcl.reduce(size_send_recv);
+			vcl.max(clk_max);
+			vcl.execute();
+
+			if (vcl.getProcessUnitID() == 0)
+				std::cout << "(Long pattern: )Buffer size: " << j << "    Bandwidth (Average): " << size_send_recv / vcl.getProcessingUnits() / clk / 1e6 << " MB/s  " << "    Bandwidth (Total): " << size_send_recv / clk / 1e6 << " MB/s    Clock: " << clk << "   Clock MAX: " << clk_max <<"\n";
+#endif
+
+			// Check the message
+			for (size_t i = 0 ; i < 8  && i < n_proc ; i++)
+			{
+				long int p_id = vcl.getProcessUnitID() - i - 1;
+				if (p_id < 0)
+					p_id += n_proc;
+				else
+					p_id = p_id % n_proc;
+
+				if (p_id != vcl.getProcessUnitID())
+				{
+					std::ostringstream msg;
+					msg << "Hello from " << p_id << " to " << vcl.getProcessUnitID();
+					std::string str(msg.str());
+					BOOST_REQUIRE_EQUAL(std::equal(str.c_str(),str.c_str() + str.size() ,&(recv_message.get(p_id).get(0))),true);
+				}
+				else
+				{
+					BOOST_REQUIRE_EQUAL(0,recv_message.get(p_id).size());
+				}
 			}
 		}
 	}

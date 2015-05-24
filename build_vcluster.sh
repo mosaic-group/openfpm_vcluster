@@ -59,9 +59,37 @@ exit(0)\n"
  if [ $? -ne 0 ]; then exit 1 ; fi
  bsub -o output_run32.%J -K -n 128 "module load openmpi/1.8.1 ; module load gcc/4.9.2;  mpirun -np 128 ./src/vcluster"
  if [ $? -ne 0 ]; then exit 1 ; fi
+elif [ "$2" == "taurus" ]
+then
+ echo "Compiling on taurus"
+
+ module load openmpi gcc/4.8.0
+ module load openmpi/1.8.3
+ module load boost/1.55.0-gnu4.8
+
+ sh ./autogen.sh
+ sh ./configure  CXX=mpic++
+ make
+
+ script="#!/bin/bash\n
+\n
+module load openmpi/1.8.5\n
+ulimit -l unlimited\n
+ulimit -s unlimited\n
+/sw/taurus/libraries/openmpi/1.8.5/bin/mpirun -np 16 src/vcluster\n"
+
+ echo $script | sed -r 's/\\n/\n/g' > run_script
+ chmod a+x run_script
+
+ srun --nodes=1 --ntasks-per-node=16 --time=04:00:00 --mem-per-cpu=1900 --partition=sandy run_script
+ srun --nodes=2 --ntasks-per-node=16 --time=04:00:00 --mem-per-cpu=1900 --partition=sandy run_script
+ srun --nodes=4 --ntasks-per-node=16 --time=04:00:00 --mem-per-cpu=1900 --partition=sandy run_script
+ srun --nodes=8 --nstaks-per-node=16 --time=04:00:00 --mem-per-cpu=1900 --partition=sansy run_script
+ srun --nodes=16 --nstaks-per-node=16 --time=04:00:00 --mem-per-cpu=1900 --partition=sansy run_script
+
 else
  echo "Compiling general"
- sh ./autogen.sh
+ sh ./autogen.sh\n
  sh ./configure  CXX=mpic++
  make
 
