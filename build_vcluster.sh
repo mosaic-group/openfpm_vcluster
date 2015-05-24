@@ -63,17 +63,19 @@ elif [ "$2" == "taurus" ]
 then
  echo "Compiling on taurus"
 
- module load openmpi gcc/4.8.0
- module load openmpi/1.8.3
+ module load openmpi gcc/4.8.2
+ module load openmpi/1.8.5
  module load boost/1.55.0-gnu4.8
 
  sh ./autogen.sh
  sh ./configure  CXX=mpic++
  make
+ if [ $? -ne 0 ]; then exit 1 ; fi
 
  script="#!/bin/bash\n
 \n
 module load openmpi/1.8.5\n
+module load gcc/4.8.2\n
 ulimit -l unlimited\n
 ulimit -s unlimited\n
 /sw/taurus/libraries/openmpi/1.8.5/bin/mpirun -np 16 src/vcluster\n"
@@ -82,10 +84,15 @@ ulimit -s unlimited\n
  chmod a+x run_script
 
  srun --nodes=1 --ntasks-per-node=16 --time=04:00:00 --mem-per-cpu=1900 --partition=sandy run_script
- srun --nodes=2 --ntasks-per-node=16 --time=04:00:00 --mem-per-cpu=1900 --partition=sandy run_script
- srun --nodes=4 --ntasks-per-node=16 --time=04:00:00 --mem-per-cpu=1900 --partition=sandy run_script
- srun --nodes=8 --nstaks-per-node=16 --time=04:00:00 --mem-per-cpu=1900 --partition=sansy run_script
- srun --nodes=16 --nstaks-per-node=16 --time=04:00:00 --mem-per-cpu=1900 --partition=sansy run_script
+ if [ $? -ne 0 ]; then exit 1 ; fi
+# srun --nodes=2 --ntasks-per-node=16 --time=04:00:00 --mem-per-cpu=1900 --partition=sandy run_script
+# if [ $? -ne 0 ]; then exit 1 ; fi
+# srun --nodes=4 --ntasks-per-node=16 --time=04:00:00 --mem-per-cpu=1900 --partition=sandy run_script
+# if [ $? -ne 0 ]; then exit 1 ; fi
+# srun --nodes=8 --nstaks-per-node=16 --time=04:00:00 --mem-per-cpu=1900 --partition=sansy run_script
+# if [ $? -ne 0 ]; then exit 1 ; fi
+# srun --nodes=16 --nstaks-per-node=16 --time=04:00:00 --mem-per-cpu=1900 --partition=sansy run_script
+# if [ $? -ne 0 ]; then exit 1 ; fi
 
 else
  echo "Compiling general"
