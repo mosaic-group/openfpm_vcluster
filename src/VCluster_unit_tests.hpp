@@ -193,7 +193,7 @@ BOOST_AUTO_TEST_CASE( VCluster_use_sendrecv)
 			for (size_t i = 0 ; i < 8  && i < n_proc ; i++)
 			{
 				long int p_id = vcl.getProcessUnitID() - i - 1;
-				recv_message(p_id).resize(j);
+				recv_message.get(p_id).resize(j);
 			}
 
 #ifdef VERBOSE_TEST
@@ -396,7 +396,7 @@ BOOST_AUTO_TEST_CASE( VCluster_use_sendrecv)
 			for (size_t i = 0 ; i < 8  && i < n_proc ; i++)
 			{
 				long int p_id = (- (i+1) * ps + (long int)vcl.getProcessUnitID()) % n_proc;
-				recv_message(p_id).resize(j);
+				recv_message.get(p_id).resize(j);
 			}
 
 #ifdef VERBOSE_TEST
