@@ -85,8 +85,9 @@ ulimit -s unlimited\n
  echo $script | sed -r 's/\\n/\n/g' > run_script
  chmod a+x run_script
 
- srun --nodes=1 --ntasks-per-node=16 --time=04:00:00 --mem-per-cpu=1900 --partition=sandy run_script
- if [ $? -ne 0 ]; then exit 1 ; fi
+ salloc --nodes=1 --ntasks-per-node=16 --time=04:00:00 --mem-per-cpu=1900 --partition=sandy mpirun -np 16 src/vcluster
+# srun --nodes=1 --ntasks-per-node=16 --time=04:00:00 --mem-per-cpu=1900 --partition=sandy run_script
+# if [ $? -ne 0 ]; then exit 1 ; fi
 # srun --nodes=2 --ntasks-per-node=16 --time=04:00:00 --mem-per-cpu=1900 --partition=sandy run_script
 # if [ $? -ne 0 ]; then exit 1 ; fi
 # srun --nodes=4 --ntasks-per-node=16 --time=04:00:00 --mem-per-cpu=1900 --partition=sandy run_script

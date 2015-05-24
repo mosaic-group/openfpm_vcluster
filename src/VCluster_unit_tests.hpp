@@ -413,7 +413,7 @@ BOOST_AUTO_TEST_CASE( VCluster_use_sendrecv)
 			// Check the message
 			for (size_t i = 0 ; i < 8  && i < n_proc ; i++)
 			{
-				long int p_id = vcl.getProcessUnitID() - i - 1;
+				long int p_id = ((i+1) * ps + vcl.getProcessUnitID()) % n_proc;
 				if (p_id < 0)
 					p_id += n_proc;
 				else
