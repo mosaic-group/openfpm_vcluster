@@ -87,7 +87,7 @@ then
 
 else
  echo "Compiling general"
- sh ./autogen.sh\n
+ sh ./autogen.sh
  sh ./configure  CXX=mpic++
  make
 
