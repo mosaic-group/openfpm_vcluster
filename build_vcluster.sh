@@ -74,28 +74,16 @@ then
  make
  if [ $? -ne 0 ]; then exit 1 ; fi
 
- script="#!/bin/bash\n
-\n
-module load openmpi/1.8.5\n
-module load gcc/4.8.2\n
-ulimit -l unlimited\n
-ulimit -s unlimited\n
-/sw/taurus/libraries/openmpi/1.8.5/bin/mpirun -np 16 src/vcluster\n"
-
- echo $script | sed -r 's/\\n/\n/g' > run_script
- chmod a+x run_script
-
  salloc --nodes=1 --ntasks-per-node=16 --time=04:00:00 --mem-per-cpu=1900 --partition=sandy mpirun -np 16 src/vcluster
-# srun --nodes=1 --ntasks-per-node=16 --time=04:00:00 --mem-per-cpu=1900 --partition=sandy run_script
-# if [ $? -ne 0 ]; then exit 1 ; fi
-# srun --nodes=2 --ntasks-per-node=16 --time=04:00:00 --mem-per-cpu=1900 --partition=sandy run_script
-# if [ $? -ne 0 ]; then exit 1 ; fi
-# srun --nodes=4 --ntasks-per-node=16 --time=04:00:00 --mem-per-cpu=1900 --partition=sandy run_script
-# if [ $? -ne 0 ]; then exit 1 ; fi
-# srun --nodes=8 --nstaks-per-node=16 --time=04:00:00 --mem-per-cpu=1900 --partition=sansy run_script
-# if [ $? -ne 0 ]; then exit 1 ; fi
-# srun --nodes=16 --nstaks-per-node=16 --time=04:00:00 --mem-per-cpu=1900 --partition=sansy run_script
-# if [ $? -ne 0 ]; then exit 1 ; fi
+ if [ $? -ne 0 ]; then exit 1 ; fi
+ salloc --nodes=2 --ntasks-per-node=16 --time=04:00:00 --mem-per-cpu=1900 --partition=sandy mpirun -np 32 src/vcluster
+ if [ $? -ne 0 ]; then exit 1 ; fi
+ salloc --nodes=4 --ntasks-per-node=16 --time=04:00:00 --mem-per-cpu=1900 --partition=sandy mpirun -np 64 src/vcluster
+ if [ $? -ne 0 ]; then exit 1 ; fi
+ salloc --nodes=8 --ntasks-per-node=16 --time=04:00:00 --mem-per-cpu=1900 --partition=sandy mpirun -np 128 src/vcluster
+ if [ $? -ne 0 ]; then exit 1 ; fi
+ salloc --nodes=16 --ntasks-per-node=16 --time=04:00:00 --mem-per-cpu=1900 --partition=sandy mpirun -np 256 src/vcluster
+ if [ $? -ne 0 ]; then exit 1 ; fi
 
 else
  echo "Compiling general"
