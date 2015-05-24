@@ -360,7 +360,7 @@ BOOST_AUTO_TEST_CASE( VCluster_use_sendrecv)
 		{
 			global_step = j;
 			// Processor step
-			size_t ps = n_proc / 8 + 1;
+			size_t ps = n_proc / (8 + 1);
 
 			// send message
 			openfpm::vector<openfpm::vector<unsigned char>> message;
