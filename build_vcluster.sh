@@ -64,9 +64,9 @@ then
  echo "Compiling on taurus"
 
  echo "$PATH"
+ module load boost/1.55.0-gnu4.8
  module load openmpi/1.8.5
  module load gcc/4.8.2
-# module load boost/1.55.0-gnu4.8
 
  which mpic++
 
