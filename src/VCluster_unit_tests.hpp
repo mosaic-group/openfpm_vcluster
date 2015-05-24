@@ -23,12 +23,18 @@
 BOOST_AUTO_TEST_SUITE( VCluster_test )
 
 size_t global_step = 0;
+size_t global_rank;
 
 // Alloc the buffer to receive the messages
 
 void * msg_alloc(size_t msg_i ,size_t total_msg, size_t total_p, size_t i,size_t ri, void * ptr)
 {
 	openfpm::vector<openfpm::vector<unsigned char>> * v = static_cast<openfpm::vector<openfpm::vector<unsigned char>> *>(ptr);
+
+	// Debug
+
+	if (global_rank == 48)
+		std::cout << "Total message: " << total_p << " from: " << msg_i << "\n";
 
 	if (global_v_cluster->getProcessingUnits() <= 8)
 		BOOST_REQUIRE_EQUAL(total_p,global_v_cluster->getProcessingUnits()-1);
@@ -154,6 +160,7 @@ BOOST_AUTO_TEST_CASE( VCluster_use_sendrecv)
 
 	// send/recv messages
 
+	global_rank = vcl.getProcessUnitID();
 	size_t n_proc = vcl.getProcessingUnits();
 
 	// Checking short communication pattern
