@@ -64,11 +64,10 @@ then
  echo "Compiling on taurus"
 
  echo "$PATH"
- module load boost/1.55.0-gnu4.8
- module load openmpi/1.8.5
+ module load boost/1.57.0-intel2013-sp1
+ module load intel/2015.2.164
  module load gcc/4.8.2
-
- which mpic++
+ module load openmpi/1.8.5
 
  sh ./autogen.sh
  sh ./configure  CXX=mpic++
