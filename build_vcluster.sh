@@ -68,6 +68,8 @@ then
  module load gcc/4.8.2
  module load boost/1.55.0-gnu4.8
 
+ which mpic++
+
  sh ./autogen.sh
  sh ./configure  CXX=mpic++
  make
