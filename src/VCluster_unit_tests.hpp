@@ -17,7 +17,7 @@
 #define VERBOSE_TEST
 
 #define N_TRY 2
-#define N_LOOP 128/*67108864*/
+#define N_LOOP 67108864
 #define BUFF_STEP 524288
 
 BOOST_AUTO_TEST_SUITE( VCluster_test )
@@ -188,12 +188,18 @@ BOOST_AUTO_TEST_CASE( VCluster_use_sendrecv)
 				}
 			}
 
-
+			recv_message.resize(n_proc);
 			// The pattern is not really random preallocate the receive buffer
 			for (size_t i = 0 ; i < 8  && i < n_proc ; i++)
 			{
 				long int p_id = vcl.getProcessUnitID() - i - 1;
-				recv_message.get(p_id).resize(j);
+				if (p_id < 0)
+					p_id += n_proc;
+				else
+					p_id = p_id % n_proc;
+
+				if (p_id != vcl.getProcessUnitID())
+					recv_message.get(p_id).resize(j);
 			}
 
 #ifdef VERBOSE_TEST
@@ -201,7 +207,6 @@ BOOST_AUTO_TEST_CASE( VCluster_use_sendrecv)
 			t.start();
 #endif
 
-			recv_message.resize(n_proc);
 			vcl.sendrecvMultipleMessages(prc,message,msg_alloc,&recv_message);
 
 #ifdef VERBOSE_TEST
@@ -392,11 +397,18 @@ BOOST_AUTO_TEST_CASE( VCluster_use_sendrecv)
 				}
 			}
 
+			recv_message.resize(n_proc);
 			// The pattern is not really random preallocate the receive buffer
 			for (size_t i = 0 ; i < 8  && i < n_proc ; i++)
 			{
 				long int p_id = (- (i+1) * ps + (long int)vcl.getProcessUnitID()) % n_proc;
-				recv_message.get(p_id).resize(j);
+				if (p_id < 0)
+					p_id += n_proc;
+				else
+					p_id = p_id % n_proc;
+
+				if (p_id != vcl.getProcessUnitID())
+					recv_message.get(p_id).resize(j);
 			}
 
 #ifdef VERBOSE_TEST
@@ -404,7 +416,6 @@ BOOST_AUTO_TEST_CASE( VCluster_use_sendrecv)
 			t.start();
 #endif
 
-			recv_message.resize(n_proc);
 			vcl.sendrecvMultipleMessages(prc,message,msg_alloc,&recv_message);
 
 #ifdef VERBOSE_TEST
