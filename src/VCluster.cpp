@@ -18,6 +18,7 @@ void init_global_v_cluster(int *argc, char ***argv)
 class init_glob_v_cluster
 {
 public:
+
 	~init_glob_v_cluster()
 	{
 		delete global_v_cluster;
@@ -26,5 +27,3 @@ public:
 
 // Deallocate at the end
 init_glob_v_cluster v_cls;
-
-bool global_mpi_initialization = false;

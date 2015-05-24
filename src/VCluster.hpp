@@ -58,9 +58,6 @@ class exec_exception: public std::exception
   }
 };
 
-// Flag that define the mpi initialization
-extern bool global_mpi_initialization;
-
 /*! \brief This class is virtualize the cluster as a set of processing unit
  *         and communication unit
  *
@@ -128,18 +125,11 @@ public:
 	// Finalize the MPI program
 	~Vcluster()
 	{
-		MPI_Finalize();
 	}
 
 	//! \brief Virtual cluster constructor
 	Vcluster(int *argc, char ***argv)
 	{
-		// Initialize MPI
-		if (global_mpi_initialization == false)
-		{
-			MPI_Init(argc,argv);
-			global_mpi_initialization = true;
-		}
 
 		//! Get the total number of process
 		//! and the rank of this process
