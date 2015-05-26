@@ -316,6 +316,7 @@ public:
 	{
 		req.clear();
 		req.add();
+		stat.add();
 
 		proc_com.resize(1);
 
