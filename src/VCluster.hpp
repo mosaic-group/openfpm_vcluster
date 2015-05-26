@@ -406,7 +406,12 @@ public:
 	{
 		int err = 0;
 
+		// if req == 0 return
+		if (req.size() == 0)
+			return;
+
 		// Wait for all the requests
+		stat.resize(req.size());
 		err = MPI_Waitall(req.size(),&req.get(0),&stat.get(0));
 
 		// MPI error get the message and abort MPI

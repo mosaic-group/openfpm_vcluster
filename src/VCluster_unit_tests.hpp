@@ -198,7 +198,7 @@ BOOST_AUTO_TEST_CASE( VCluster_use_sendrecv)
 				else
 					p_id = p_id % n_proc;
 
-				if (p_id != vcl.getProcessUnitID())
+				if (p_id != (long int)vcl.getProcessUnitID())
 					recv_message.get(p_id).resize(j);
 			}
 
@@ -232,7 +232,7 @@ BOOST_AUTO_TEST_CASE( VCluster_use_sendrecv)
 				else
 					p_id = p_id % n_proc;
 
-				if (p_id != vcl.getProcessUnitID())
+				if (p_id != (long int)vcl.getProcessUnitID())
 				{
 					std::ostringstream msg;
 					msg << "Hello from " << p_id << " to " << vcl.getProcessUnitID();
@@ -407,7 +407,7 @@ BOOST_AUTO_TEST_CASE( VCluster_use_sendrecv)
 				else
 					p_id = p_id % n_proc;
 
-				if (p_id != vcl.getProcessUnitID())
+				if (p_id != (long int)vcl.getProcessUnitID())
 					recv_message.get(p_id).resize(j);
 			}
 
@@ -433,7 +433,7 @@ BOOST_AUTO_TEST_CASE( VCluster_use_sendrecv)
 #endif
 
 			// Check the message
-			for (long int i = 0 ; i < 8  && i < n_proc ; i++)
+			for (long int i = 0 ; i < 8  && i < (long int)n_proc ; i++)
 			{
 				long int p_id = (- (i+1) * ps + (long int)vcl.getProcessUnitID());
 				if (p_id < 0)
@@ -441,7 +441,7 @@ BOOST_AUTO_TEST_CASE( VCluster_use_sendrecv)
 				else
 					p_id = p_id % n_proc;
 
-				if (p_id != vcl.getProcessUnitID())
+				if (p_id != (long int)vcl.getProcessUnitID())
 				{
 					std::ostringstream msg;
 					msg << "Hello from " << p_id << " to " << vcl.getProcessUnitID();
