@@ -401,7 +401,7 @@ BOOST_AUTO_TEST_CASE( VCluster_use_sendrecv)
 			// The pattern is not really random preallocate the receive buffer
 			for (size_t i = 0 ; i < 8  && i < n_proc ; i++)
 			{
-				long int p_id = (- (i+1) * ps + (long int)vcl.getProcessUnitID()) % n_proc;
+				long int p_id = (- (i+1) * ps + (long int)vcl.getProcessUnitID());
 				if (p_id < 0)
 					p_id += n_proc;
 				else
@@ -435,7 +435,7 @@ BOOST_AUTO_TEST_CASE( VCluster_use_sendrecv)
 			// Check the message
 			for (long int i = 0 ; i < 8  && i < n_proc ; i++)
 			{
-				long int p_id = (- (i+1) * ps + (long int)vcl.getProcessUnitID()) % n_proc;
+				long int p_id = (- (i+1) * ps + (long int)vcl.getProcessUnitID());
 				if (p_id < 0)
 					p_id += n_proc;
 				else
