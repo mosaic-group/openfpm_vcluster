@@ -14,16 +14,8 @@ void init_global_v_cluster(int *argc, char ***argv)
 		global_v_cluster = new Vcluster(argc,argv);
 }
 
-// Deallocator object, it deallocate the global_v_cluster at the end of the program
-class init_glob_v_cluster
-{
-public:
+// Global MPI initialization
+bool global_mpi_init = false;
 
-	~init_glob_v_cluster()
-	{
-		delete global_v_cluster;
-	};
-};
-
-// Deallocate at the end
-init_glob_v_cluster v_cls;
+// number of vcluster instances
+size_t n_vcluster = 0;

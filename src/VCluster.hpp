@@ -22,6 +22,9 @@
 	}\
 }
 
+extern size_t n_vcluster;
+extern bool global_mpi_init;
+
 ///////////////////// Post functions /////////////
 
 template<typename T> void assign(T * ptr1, T * ptr2)
@@ -125,11 +128,24 @@ public:
 	// Finalize the MPI program
 	~Vcluster()
 	{
+		n_vcluster--;
+
+		// if there are no other vcluster instances finalize
+		if (n_vcluster == 0)
+			MPI_Finalize();
 	}
 
 	//! \brief Virtual cluster constructor
 	Vcluster(int *argc, char ***argv)
 	{
+		n_vcluster++;
+
+		// Check if MPI is already initialized
+		if (global_mpi_init == false)
+		{
+			MPI_Init(argc,argv);
+			global_mpi_init = true;
+		}
 
 		//! Get the total number of process
 		//! and the rank of this process
