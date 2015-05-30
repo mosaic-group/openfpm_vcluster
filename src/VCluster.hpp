@@ -7,10 +7,11 @@
 #include "Vector/map_vector.hpp"
 #include "MPI_IallreduceW.hpp"
 #include <exception>
-#include <Vector/map_vector.hpp>
+#include "Vector/map_vector.hpp"
 
 #define MSG_LENGTH 1024
 #define MSG_SEND_RECV 1025
+#define SEND_SPARSE 1026
 #define NONE 1
 #define NEED_ALL_SIZE 2
 
@@ -241,10 +242,42 @@ public:
 	// sending map
 	openfpm::vector<size_t> map;
 
+	// Distributed processor graph
+	MPI_Comm proc_comm_graph;
 
-	/*! \brief Send and receive multiple messages
+	/*! \brief
 	 *
-	 * It send multiple (to more than one) messages and receive
+	 * Set the near processor of this processors
+	 *
+	 */
+
+	openfpm::vector<size_t> NN_proc;
+
+	void setLocality(openfpm::vector<size_t> NN_proc)
+	{
+		// Number of sources in the graph, and sources processors
+		size_t sources = NN_proc.size();
+		openfpm::vector<int> src_proc;
+
+		// number of destination in the graph
+		size_t dest = NN_proc.size();
+		openfpm::vector<int> dest_proc;
+
+		// insert in sources and out sources
+		for (size_t i = 0; i < NN_proc.size() ; i++)
+		{
+			src_proc.add(NN_proc.get(i));
+			dest_proc.add(NN_proc.get(i));
+			// Copy the vector
+			this->NN_proc.get(i) = NN_proc.get(i);
+		}
+
+		MPI_Dist_graph_create_adjacent(MPI_COMM_WORLD,sources,&src_proc.get(0),(const int *)MPI_UNWEIGHTED,dest,&dest_proc.get(0),(const int *)MPI_UNWEIGHTED,MPI_INFO_NULL,true,&proc_comm_graph);
+	}
+
+	/*! \brief Send and receive multiple messages within local processors
+	 *
+	 * It send multiple messages and receive
 	 * other multiple messages, all the processor must call this
 	 * function
 	 *
@@ -253,9 +286,15 @@ public:
 	 * \param v vector containing the data to send
 	 *
 	 * \param msg_alloc This is a call-back with the purpose of allocate space
-	 *        for the incoming message and give back a valid pointer, the 3 parameters
-	 *        in the call-back are  , total message to receive, i processor id from witch
-	 *        to receive
+	 *        for the incoming message and give back a valid pointer, the 6 parameters
+	 *        in the call-back are in order:
+	 *        1) message size required to receive from i
+	 *        2) total message size to receive from all the processors
+	 *        3) the total number of processor want to communicate with you
+	 *        4) processor id
+	 *        5) ri request id (it is an id that goes from 0 to total_p, and is unique
+	 *           every time message_alloc is called)
+	 *        6) void pointer parameter for additional data to pass to the call-back
 	 *
 	 * \param opt options, NONE or NEED_ALL_SIZE, with NEED_ALL_SIZE the allocation
 	 *        callback will not be called until all the message size will be
@@ -264,7 +303,53 @@ public:
 	 *
 	 */
 
-	template<typename T> void sendrecvMultipleMessages(openfpm::vector< size_t > & prc, openfpm::vector< T > & data, void * (* msg_alloc)(size_t,size_t,size_t,size_t,size_t,void *), void * ptr_arg, long int opt=NONE)
+	template<typename T> void sendrecvMultipleMessagesNBX(openfpm::vector< size_t > & prc, openfpm::vector< T > & data, void * (* msg_alloc)(size_t,size_t,size_t,size_t,size_t,void *), void * ptr_arg, long int opt=NONE)
+	{
+		// resize the pointer list
+		ptr_send.resize(prc.size());
+		sz_send.resize(prc.size());
+
+		for (size_t i = 0 ; i < prc.size() ; i++)
+		{
+			ptr_send.get(i) = data.get(i).getPointer();
+			sz_send.get(i) = data.get(i).size() * sizeof(typename T::value_type);
+		}
+
+		sendrecvMultipleMessagesNBX(prc.size(),(size_t *)sz_send.getPointer(),(size_t *)prc.getPointer(),(void **)ptr_send.getPointer(),msg_alloc,ptr_arg,opt);
+	}
+
+
+	/*! \brief Send and receive multiple messages
+	 *
+	 * It send multiple messages and receive
+	 * other multiple messages, all the processor must call this
+	 * function
+	 *
+	 * \param prc list of processors with which it should communicate
+	 *
+	 * \param nn_prc near processors
+	 *
+	 * \param v vector containing the data to send
+	 *
+	 * \param msg_alloc This is a call-back with the purpose of allocate space
+	 *        for the incoming message and give back a valid pointer, the 6 parameters
+	 *        in the call-back are in order:
+	 *        1) message size required to receive from i
+	 *        2) total message size to receive from all the processors
+	 *        3) the total number of processor want to communicate with you
+	 *        4) processor id
+	 *        5) ri request id (it is an id that goes from 0 to total_p, and is unique
+	 *           every time message_alloc is called)
+	 *        6) void pointer parameter for additional data to pass to the call-back
+	 *
+	 * \param opt options, NONE or NEED_ALL_SIZE, with NEED_ALL_SIZE the allocation
+	 *        callback will not be called until all the message size will be
+	 *        gathered, [usefull for example with you want to allocate one big buffer
+	 *        to gather all the messages]
+	 *
+	 */
+
+	template<typename T> void sendrecvMultipleMessagesPCX(openfpm::vector< size_t > & prc, openfpm::vector< T > & data, void * (* msg_alloc)(size_t,size_t,size_t,size_t,size_t,void *), void * ptr_arg, long int opt=NONE)
 	{
 		// resize map with the number of processors
 		map.resize(size);
@@ -286,7 +371,109 @@ public:
 			sz_send.get(i) = data.get(i).size() * sizeof(typename T::value_type);
 		}
 
-		sendrecvMultipleMessages(prc.size(),(size_t *)map.getPointer(),(size_t *)sz_send.getPointer(),(size_t *)prc.getPointer(),(void **)ptr_send.getPointer(),msg_alloc,ptr_arg,opt);
+		sendrecvMultipleMessagesPCX(prc.size(),(size_t *)map.getPointer(),(size_t *)sz_send.getPointer(),(size_t *)prc.getPointer(),(void **)ptr_send.getPointer(),msg_alloc,ptr_arg,opt);
+	}
+
+	/*! \brief Send and receive multiple messages local
+	 *
+	 * It send multiple messages to the near processor the and receive
+	 * other multiple messages from the, all the processor must call this
+	 * function
+	 *
+	 * \param n_send number of send this processor must do
+	 *
+	 * \param sz the array contain the size of the message for each processor
+	 *        (zeros must be omitted)
+	 *
+	 *        [Example] for the previous patter 5 10 15 4 mean processor 1
+	 *        message size 5 byte, processor 6 message size 10 , ......
+	 *
+	 * \param prc list of processor with which it should communicate
+	 *        [Example] for the previous case should be
+	 *        1 6 7 8 (prc and mp contain the same information in different
+	 *        format, giving both reduce the computation)
+	 *
+	 * \param ptr array that contain the messages pointers
+	 *
+	 * \param msg_alloc This is a call-back with the purpose of allocate space
+	 *        for the incoming message and give back a valid pointer, the 6 parameters
+	 *        in the call-back are in order:
+	 *        1) message size required to receive from i
+	 *        2) total message size to receive from all the processors
+	 *        3) the total number of processor want to communicate with you
+	 *        4) processor id
+	 *        5) ri request id (it is an id that goes from 0 to total_p, and is unique
+	 *           every time message_alloc is called)
+	 *        6) void pointer parameter for additional data to pass to the call-back
+	 *
+	 * \param opt options, NONE (ignored in this moment)
+	 *
+	 */
+
+	void sendrecvMultipleMessagesNBX(size_t n_send , size_t sz[], size_t prc[] , void * ptr[], void * (* msg_alloc)(size_t,size_t,size_t,size_t,size_t,void *), void * ptr_arg, long int opt)
+	{
+		req.clear();
+		// Do MPI_Issend
+
+		for (size_t i = 0 ; i < n_send ; i++)
+		{
+			req.add();
+			MPI_SAFE_CALL(MPI_Issend(ptr[i], sz[i], MPI_BYTE, prc[i], SEND_SPARSE, MPI_COMM_WORLD,&req.last()));
+		}
+
+		size_t rid = 0;
+		int flag = false;
+
+		bool reached_bar_req = false;
+		MPI_Request bar_req;
+
+		// Wait that all the send are acknowledge
+		do
+		{
+			// flag that notify that this processor reach the barrier
+			// Barrier request
+
+			MPI_Status stat_t;
+			int stat = false;
+			MPI_SAFE_CALL(MPI_Iprobe(MPI_ANY_SOURCE,SEND_SPARSE,MPI_COMM_WORLD,&stat,&stat_t));
+
+			// If I have received a message
+
+			if (stat == true)
+			{
+				// Get the message size
+				int msize;
+				MPI_SAFE_CALL(MPI_Get_count(&stat_t,MPI_BYTE,&msize));
+
+				// Get the pointer to receive the message
+				void * ptr = msg_alloc(msize,0,0,stat_t.MPI_SOURCE,rid,ptr_arg);
+
+				rid++;
+
+				MPI_SAFE_CALL(MPI_Recv(ptr,msize,MPI_BYTE,stat_t.MPI_SOURCE,SEND_SPARSE,MPI_COMM_WORLD,&stat_t));
+			}
+
+			// Check the status of all the MPI_issend and call the barrier if finished
+
+			if (reached_bar_req == false)
+			{
+				int flag = false;
+				MPI_SAFE_CALL(MPI_Testall(req.size(),&req.get(0),&flag,MPI_STATUSES_IGNORE));
+
+				// If all send has been completed
+				if (flag == true)
+				{MPI_SAFE_CALL(MPI_Ibarrier(MPI_COMM_WORLD,&bar_req));reached_bar_req = true;}
+			}
+
+			// Check if all processor reach the async barrier
+			if (reached_bar_req)
+				MPI_Test(&bar_req,&flag,MPI_STATUSES_IGNORE);
+		} while (flag == false);
+
+		// Remove the executed request
+
+		req.clear();
+		stat.clear();
 	}
 
 	/*! \brief Send and receive multiple messages
@@ -328,7 +515,7 @@ public:
 	 *
 	 */
 
-	void sendrecvMultipleMessages(size_t n_send, size_t * map, size_t sz[], size_t prc[] , void * ptr[], void * (* msg_alloc)(size_t,size_t,size_t,size_t,size_t,void *), void * ptr_arg, long int opt)
+	void sendrecvMultipleMessagesPCX(size_t n_send, size_t * map, size_t sz[], size_t prc[] , void * ptr[], void * (* msg_alloc)(size_t,size_t,size_t,size_t,size_t,void *), void * ptr_arg, long int opt)
 	{
 		req.clear();
 		req.add();
