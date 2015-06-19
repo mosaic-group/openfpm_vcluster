@@ -283,7 +283,7 @@ public:
 	 *
 	 * \param prc list of processors with which it should communicate
 	 *
-	 * \param v vector containing the data to send
+	 * \param v vector containing the data to send (it is allowed to have 0 size vector)
 	 *
 	 * \param msg_alloc This is a call-back with the purpose of allocate space
 	 *        for the incoming message and give back a valid pointer, the 6 parameters
@@ -417,8 +417,11 @@ public:
 
 		for (size_t i = 0 ; i < n_send ; i++)
 		{
-			req.add();
-			MPI_SAFE_CALL(MPI_Issend(ptr[i], sz[i], MPI_BYTE, prc[i], SEND_SPARSE, MPI_COMM_WORLD,&req.last()));
+			if (sz[i] != 0)
+			{
+				req.add();
+				MPI_SAFE_CALL(MPI_Issend(ptr[i], sz[i], MPI_BYTE, prc[i], SEND_SPARSE, MPI_COMM_WORLD,&req.last()));
+			}
 		}
 
 		size_t rid = 0;
