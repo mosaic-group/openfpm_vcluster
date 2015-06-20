@@ -30,9 +30,9 @@ void * msg_alloc(size_t msg_i ,size_t total_msg, size_t total_p, size_t i,size_t
 	openfpm::vector<openfpm::vector<unsigned char>> * v = static_cast<openfpm::vector<openfpm::vector<unsigned char>> *>(ptr);
 
 	if (global_v_cluster->getProcessingUnits() <= 8)
-		if (totp_check) BOOST_REQUIRE_EQUAL(total_p,global_v_cluster->getProcessingUnits()-1);
+	{if (totp_check) BOOST_REQUIRE_EQUAL(total_p,global_v_cluster->getProcessingUnits()-1);}
 	else
-		if (totp_check) BOOST_REQUIRE_EQUAL(total_p,8);
+	{if (totp_check) BOOST_REQUIRE_EQUAL(total_p,8);}
 
 	BOOST_REQUIRE_EQUAL(msg_i, global_step);
 	v->get(i).resize(msg_i);

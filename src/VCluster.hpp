@@ -461,7 +461,10 @@ public:
 			if (reached_bar_req == false)
 			{
 				int flag = false;
-				MPI_SAFE_CALL(MPI_Testall(req.size(),&req.get(0),&flag,MPI_STATUSES_IGNORE));
+				if (req.size() != 0)
+				{MPI_SAFE_CALL(MPI_Testall(req.size(),&req.get(0),&flag,MPI_STATUSES_IGNORE));}
+				else
+					flag = true;
 
 				// If all send has been completed
 				if (flag == true)
