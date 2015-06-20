@@ -45,13 +45,13 @@ exit(0)\n"
  bsub -o output_compile.%J -K -n 1 -J compile sh ./compile_script
 
 ## Run on the cluster
- bsub -o output_run2.%J -K -n 2 "module load openmpi/1.8.1 ; module load gcc/4.9.2;  mpirun -np 2 ./src/vcluster"
+ bsub -o output_run2.%J -K -n 2 -R "span[hosts=1]" "module load openmpi/1.8.1 ; module load gcc/4.9.2;  mpirun -np 2 ./src/vcluster"
  if [ $? -ne 0 ]; then exit 1 ; fi
- bsub -o output_run4.%J -K -n 4 "module load openmpi/1.8.1 ; module load gcc/4.9.2;  mpirun -np 4 ./src/vcluster"
+ bsub -o output_run4.%J -K -n 4 -R "span[hosts=1]" "module load openmpi/1.8.1 ; module load gcc/4.9.2;  mpirun -np 4 ./src/vcluster"
  if [ $? -ne 0 ]; then exit 1 ; fi
- bsub -o output_run8.%J -K -n 8 "module load openmpi/1.8.1 ; module load gcc/4.9.2;  mpirun -np 8 ./src/vcluster"
+ bsub -o output_run8.%J -K -n 8 -R "span[hosts=1]" "module load openmpi/1.8.1 ; module load gcc/4.9.2;  mpirun -np 8 ./src/vcluster"
  if [ $? -ne 0 ]; then exit 1 ; fi
- bsub -o output_run12.%J -K -n 12 "module load openmpi/1.8.1 ; module load gcc/4.9.2;  mpirun -np 12 ./src/vcluster"
+ bsub -o output_run12.%J -K -n 12 -R "span[hosts=1]" "module load openmpi/1.8.1 ; module load gcc/4.9.2;  mpirun -np 12 ./src/vcluster"
  if [ $? -ne 0 ]; then exit 1 ; fi
 # bsub -o output_run32.%J -K -n 32 "module load openmpi/1.8.1 ; module load gcc/4.9.2;  mpirun -np 32 ./src/vcluster"
 # if [ $? -ne 0 ]; then exit 1 ; fi
