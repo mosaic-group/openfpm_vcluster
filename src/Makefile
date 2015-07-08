@@ -97,7 +97,7 @@ CONFIG_CLEAN_VPATH_FILES =
 am__installdirs = "$(DESTDIR)$(bindir)"
 PROGRAMS = $(bin_PROGRAMS)
 am_vcluster_OBJECTS = vcluster-main.$(OBJEXT) \
-	vcluster-VCluster.$(OBJEXT)
+	vcluster-VCluster.$(OBJEXT) vcluster-HeapMemory.$(OBJEXT)
 vcluster_OBJECTS = $(am_vcluster_OBJECTS)
 am__DEPENDENCIES_1 =
 am__DEPENDENCIES_2 = $(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
@@ -284,7 +284,7 @@ top_build_prefix = ../
 top_builddir = ..
 top_srcdir = ..
 LINKLIBS = $(DEFAULT_LIB) $(PTHREAD_LIBS) $(OPT_LIBS) $(BOOST_LDFLAGS)
-vcluster_SOURCES = main.cpp VCluster.cpp
+vcluster_SOURCES = main.cpp VCluster.cpp ../../OpenFPM_devices/src/memory/HeapMemory.cpp
 vcluster_CXXFLAGS = $(INCLUDES_PATH) $(BOOST_CPPFLAGS)
 vcluster_CFLAGS = $(CUDA_CFLAGS)
 vcluster_LDADD = $(LINKLIBS)
@@ -375,6 +375,7 @@ mostlyclean-compile:
 distclean-compile:
 	-rm -f *.tab.c
 
+include ./$(DEPDIR)/vcluster-HeapMemory.Po
 include ./$(DEPDIR)/vcluster-VCluster.Po
 include ./$(DEPDIR)/vcluster-main.Po
 
@@ -419,6 +420,20 @@ vcluster-VCluster.obj: VCluster.cpp
 #	$(AM_V_CXX)source='VCluster.cpp' object='vcluster-VCluster.obj' libtool=no \
 #	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) \
 #	$(AM_V_CXX_no)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(vcluster_CXXFLAGS) $(CXXFLAGS) -c -o vcluster-VCluster.obj `if test -f 'VCluster.cpp'; then $(CYGPATH_W) 'VCluster.cpp'; else $(CYGPATH_W) '$(srcdir)/VCluster.cpp'; fi`
+
+vcluster-HeapMemory.o: ../../OpenFPM_devices/src/memory/HeapMemory.cpp
+	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(vcluster_CXXFLAGS) $(CXXFLAGS) -MT vcluster-HeapMemory.o -MD -MP -MF $(DEPDIR)/vcluster-HeapMemory.Tpo -c -o vcluster-HeapMemory.o `test -f '../../OpenFPM_devices/src/memory/HeapMemory.cpp' || echo '$(srcdir)/'`../../OpenFPM_devices/src/memory/HeapMemory.cpp
+	$(AM_V_at)$(am__mv) $(DEPDIR)/vcluster-HeapMemory.Tpo $(DEPDIR)/vcluster-HeapMemory.Po
+#	$(AM_V_CXX)source='../../OpenFPM_devices/src/memory/HeapMemory.cpp' object='vcluster-HeapMemory.o' libtool=no \
+#	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) \
+#	$(AM_V_CXX_no)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(vcluster_CXXFLAGS) $(CXXFLAGS) -c -o vcluster-HeapMemory.o `test -f '../../OpenFPM_devices/src/memory/HeapMemory.cpp' || echo '$(srcdir)/'`../../OpenFPM_devices/src/memory/HeapMemory.cpp
+
+vcluster-HeapMemory.obj: ../../OpenFPM_devices/src/memory/HeapMemory.cpp
+	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(vcluster_CXXFLAGS) $(CXXFLAGS) -MT vcluster-HeapMemory.obj -MD -MP -MF $(DEPDIR)/vcluster-HeapMemory.Tpo -c -o vcluster-HeapMemory.obj `if test -f '../../OpenFPM_devices/src/memory/HeapMemory.cpp'; then $(CYGPATH_W) '../../OpenFPM_devices/src/memory/HeapMemory.cpp'; else $(CYGPATH_W) '$(srcdir)/../../OpenFPM_devices/src/memory/HeapMemory.cpp'; fi`
+	$(AM_V_at)$(am__mv) $(DEPDIR)/vcluster-HeapMemory.Tpo $(DEPDIR)/vcluster-HeapMemory.Po
+#	$(AM_V_CXX)source='../../OpenFPM_devices/src/memory/HeapMemory.cpp' object='vcluster-HeapMemory.obj' libtool=no \
+#	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) \
+#	$(AM_V_CXX_no)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(vcluster_CXXFLAGS) $(CXXFLAGS) -c -o vcluster-HeapMemory.obj `if test -f '../../OpenFPM_devices/src/memory/HeapMemory.cpp'; then $(CYGPATH_W) '../../OpenFPM_devices/src/memory/HeapMemory.cpp'; else $(CYGPATH_W) '$(srcdir)/../../OpenFPM_devices/src/memory/HeapMemory.cpp'; fi`
 
 ID: $(am__tagged_files)
 	$(am__define_uniq_tagged_files); mkid -fID $$unique

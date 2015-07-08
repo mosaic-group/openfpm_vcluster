@@ -67,6 +67,12 @@ void * msg_alloc3(size_t msg_i ,size_t total_msg, size_t total_p, size_t i, size
 	v->add();
 	prc_recv.add();
 
+	if (msg_i != global_step)
+	{
+		int debug = 0;
+		debug++;
+	}
+
 	BOOST_REQUIRE_EQUAL(msg_i, global_step);
 
 	v->last().resize(msg_i);
@@ -207,12 +213,13 @@ template<unsigned int ip> void test()
 
 			for (size_t i = 0 ; i < n_proc ; i++)
 			{
-				// randomly with witch processor communicate
+				// randomly with which processor communicate
 				if (d(eg) == 0)
 				{
 					prc.add(i);
 					o_send.add(i);
 					message.add();
+					message.last().fill(0);
 					std::ostringstream msg;
 					msg << "Hello from " << vcl.getProcessUnitID() << " to " << i;
 					std::string str(msg.str());

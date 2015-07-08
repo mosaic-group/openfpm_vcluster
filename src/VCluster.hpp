@@ -1,27 +1,30 @@
 #ifndef VCLUSTER
 #define VCLUSTER
 
+#include "config.h"
 #include <mpi.h>
+#include "MPI_wrapper/MPI_util.hpp"
 #include "VCluster_object.hpp"
 #include "VCluster_object_array.hpp"
 #include "Vector/map_vector.hpp"
-#include "MPI_IallreduceW.hpp"
+#include "MPI_wrapper/MPI_IallreduceW.hpp"
+#include "MPI_wrapper/MPI_IrecvW.hpp"
+#include "MPI_wrapper/MPI_IsendW.hpp"
 #include <exception>
 #include "Vector/map_vector.hpp"
+#ifdef DEBUG
+#include "util/check_no_pointers.hpp"
+#include "util.hpp"
+#endif
 
 #define MSG_LENGTH 1024
 #define MSG_SEND_RECV 1025
-#define SEND_SPARSE 1026
+#define SEND_SPARSE 4096
 #define NONE 1
 #define NEED_ALL_SIZE 2
 
-#define MPI_SAFE_CALL(call) {\
-	int err = call;\
-	if (MPI_SUCCESS != err) {\
-		std::cerr << "MPI error: "<< __FILE__ << " " << __LINE__ << "\n";\
-		error_handler(err);\
-	}\
-}
+#define SERIVCE_MESSAGE_TAG 16384
+#define SEND_RECV_BASE 8192
 
 extern size_t n_vcluster;
 extern bool global_mpi_init;
@@ -72,6 +75,22 @@ class exec_exception: public std::exception
 
 class Vcluster
 {
+	//! NBX has a potential pitfall that must be addressed
+	//! NBX Send all the messages and than probe for incoming messages
+	//! If there is an incoming message it receive it producing
+	//! an acknowledge notification on the sending processor.
+	//! when all the sends has been acknowledged the processor call the MPI_Ibarrier
+	//! when all the processor call MPI_Ibarrier all send has been received.
+	//! While the processors are waiting for the MPI_Ibarrier to complete on all processor
+	//! they are still have to probe for incoming message, Unfortunately some processor
+	//! can receive acnoledge from the MPI_Ibarrier before others and this mean that some
+	//! processor can exit the probing status before others, these processor can in theory
+	//! start new communications while the other processor are still in probing status producing
+	//! a wrong send/recv association to
+	//! resolve this problem an incremental NBX_cnt is used as message TAG to distinguish that the
+	//! messages come from other send or subsequent NBX procedures
+	size_t NBX_cnt = 0;
+
 	// temporal vector used for meta-communication
 	// ( or meta-data before the real communication )
 	openfpm::vector<size_t> proc_com;
@@ -109,20 +128,6 @@ class Vcluster
 	 *
 	 */
 	std::vector<red> r;
-
-
-	void error_handler(int error_code)
-	{
-	   char error_string[BUFSIZ];
-	   int length_of_error_string, error_class;
-
-	   MPI_Error_class(error_code, &error_class);
-	   MPI_Error_string(error_class, error_string, &length_of_error_string);
-	   std::cerr << getProcessUnitID() << ": " << error_string;
-	   MPI_Error_string(error_code, error_string, &length_of_error_string);
-	   std::cerr << getProcessUnitID() << ": " << error_string;
-	}
-
 
 public:
 
@@ -167,6 +172,59 @@ public:
 		}
 	}
 
+#ifdef DEBUG
+
+	/*! \brief Check for wrong types
+	 *
+	 * In general we do not know if a type T make sense to be sent or not, but if it has pointer
+	 * inside it does not. This function check if the basic type T has a method called noPointers,
+	 * This function in general notify if T has internally pointers. If T has pointer an error
+	 * is printed, is T does not have the method a WARNING is printed
+	 *
+	 * \tparam T type to check
+	 *
+	 */
+	template<typename T> void checkType()
+	{
+		// if T is a primitive like int, long int, float, double, ... make sense
+		// (pointers, l-references and r-references are not fundamentals)
+		if (std::is_fundamental<T>::value == true)
+			return;
+
+		// if it is a pointer make no sense
+		if (std::is_pointer<T>::value == true)
+			std::cerr << "Error: " << __FILE__ << ":" << __LINE__ << " the type " << demangle(typeid(T).name()) << " is a pointer, sending pointers values has no sense\n";
+
+		// if it is an l-value reference make no send
+		if (std::is_lvalue_reference<T>::value == true)
+			std::cerr << "Error: " << __FILE__ << ":" << __LINE__ << " the type " << demangle(typeid(T).name()) << " is a pointer, sending pointers values has no sense\n";
+
+		// if it is an r-value reference make no send
+		if (std::is_rvalue_reference<T>::value == true)
+			std::cerr << "Error: " << __FILE__ << ":" << __LINE__ << " the type " << demangle(typeid(T).name()) << " is a pointer, sending pointers values has no sense\n";
+
+		// ... if not, check that T has a method called noPointers
+		switch (check_no_pointers<T>::value())
+		{
+			case PNP::UNKNOWN:
+			{
+				std::cerr << "Warning: " << __FILE__ << ":" << __LINE__ << " impossible to check the type " << demangle(typeid(T).name()) << " please consider to add a static method \"void noPointers()\" \n" ;
+				break;
+			}
+			case PNP::POINTERS:
+			{
+				std::cerr << "Error: " << __FILE__ << ":" << __LINE__ << " the type " << demangle(typeid(T).name()) << " has pointers inside, sending pointers values has no sense\n";
+				break;
+			}
+			default:
+			{
+
+			}
+		}
+	}
+
+#endif
+
 	//! Get the total number of processing units
 	size_t getProcessingUnits()
 	{
@@ -207,6 +265,10 @@ public:
 
 	template<typename T> void reduce(T & num)
 	{
+#ifdef DEBUG
+		checkType<T>();
+#endif
+
 		// reduce over MPI
 
 		// Create one request
@@ -224,6 +286,9 @@ public:
 
 	template<typename T> void max(T & num)
 	{
+#ifdef DEBUG
+		checkType<T>();
+#endif
 		// reduce over MPI
 
 		// Create one request
@@ -305,6 +370,9 @@ public:
 
 	template<typename T> void sendrecvMultipleMessagesNBX(openfpm::vector< size_t > & prc, openfpm::vector< T > & data, void * (* msg_alloc)(size_t,size_t,size_t,size_t,size_t,void *), void * ptr_arg, long int opt=NONE)
 	{
+#ifdef DEBUG
+		checkType<typename T::value_type>();
+#endif
 		// resize the pointer list
 		ptr_send.resize(prc.size());
 		sz_send.resize(prc.size());
@@ -351,6 +419,9 @@ public:
 
 	template<typename T> void sendrecvMultipleMessagesPCX(openfpm::vector< size_t > & prc, openfpm::vector< T > & data, void * (* msg_alloc)(size_t,size_t,size_t,size_t,size_t,void *), void * ptr_arg, long int opt=NONE)
 	{
+#ifdef DEBUG
+		checkType<typename T::value_type>();
+#endif
 		// resize map with the number of processors
 		map.resize(size);
 
@@ -420,7 +491,7 @@ public:
 			if (sz[i] != 0)
 			{
 				req.add();
-				MPI_SAFE_CALL(MPI_Issend(ptr[i], sz[i], MPI_BYTE, prc[i], SEND_SPARSE, MPI_COMM_WORLD,&req.last()));
+				MPI_SAFE_CALL(MPI_Issend(ptr[i], sz[i], MPI_BYTE, prc[i], SEND_SPARSE + NBX_cnt, MPI_COMM_WORLD,&req.last()));
 			}
 		}
 
@@ -438,10 +509,9 @@ public:
 
 			MPI_Status stat_t;
 			int stat = false;
-			MPI_SAFE_CALL(MPI_Iprobe(MPI_ANY_SOURCE,SEND_SPARSE,MPI_COMM_WORLD,&stat,&stat_t));
+			MPI_SAFE_CALL(MPI_Iprobe(MPI_ANY_SOURCE,SEND_SPARSE + NBX_cnt,MPI_COMM_WORLD,&stat,&stat_t));
 
-			// If I have received a message
-
+			// If I have an incoming message and is related to this NBX communication
 			if (stat == true)
 			{
 				// Get the message size
@@ -453,7 +523,7 @@ public:
 
 				rid++;
 
-				MPI_SAFE_CALL(MPI_Recv(ptr,msize,MPI_BYTE,stat_t.MPI_SOURCE,SEND_SPARSE,MPI_COMM_WORLD,&stat_t));
+				MPI_SAFE_CALL(MPI_Recv(ptr,msize,MPI_BYTE,stat_t.MPI_SOURCE,SEND_SPARSE+NBX_cnt,MPI_COMM_WORLD,&stat_t));
 			}
 
 			// Check the status of all the MPI_issend and call the barrier if finished
@@ -480,6 +550,9 @@ public:
 
 		req.clear();
 		stat.clear();
+
+		// Circular counter
+		NBX_cnt = (NBX_cnt + 1) % 1024;
 	}
 
 	/*! \brief Send and receive multiple messages
@@ -559,7 +632,7 @@ public:
 		}
 
 		stat.resize(req.size());
-		MPI_SAFE_CALL(MPI_Waitall(req.size(),&req.get(0),&stat.get(0)));
+		if (req.size() != 0) {MPI_SAFE_CALL(MPI_Waitall(req.size(),&req.get(0),&stat.get(0)));}
 
 		// Use proc_com to get the processor id that try to communicate
 
@@ -601,7 +674,7 @@ public:
 		}
 
 		stat.resize(req.size());
-		MPI_SAFE_CALL(MPI_Waitall(req.size(),&req.get(0),&stat.get(0)));
+		if (req.size() != 0) {MPI_SAFE_CALL(MPI_Waitall(req.size(),&req.get(0),&stat.get(0)));}
 
 		// Remove the executed request
 
@@ -609,7 +682,67 @@ public:
 		stat.clear();
 	}
 
-	/*! \brief Execute all the request
+	/*! \brief Send data to a processor
+	 *
+	 * \warning In order to avoid deadlock every send must be coupled with a recv
+	 *          in case you want to send data without knowledge from the other side
+	 *          consider to use sendRecvMultipleMessages
+	 *
+	 * \warning operation are async execute must be called to ensure they are executed
+	 *
+	 * \see sendRecvMultipleMessages
+	 *
+	 * \param proc processor id
+	 * \param tag id
+	 * \param v buffer to send
+	 *
+	 */
+	template<typename T> bool send(size_t proc, size_t tag, openfpm::vector<T> & v)
+	{
+#ifdef DEBUG
+		checkType<T>();
+#endif
+
+		// send over MPI
+
+		// Create one request
+		req.add();
+
+		// reduce
+		MPI_IsendW<T>::send(proc,SEND_RECV_BASE + tag,v,req.last());
+	}
+
+	/*! \brief Recv data from a processor
+	 *
+	 * \warning In order to avoid deadlock every recv must be coupled with a send
+	 *          in case you want to send data without knowledge from the other side
+	 *          consider to use sendRecvMultipleMessages
+	 *
+	 * \warning operation are async execute must be called to ensure they are executed
+	 *
+	 * \see sendRecvMultipleMessages
+	 *
+	 * \param proc processor id
+	 * \param tag id
+	 * \param v buffer to send
+	 *
+	 */
+	template<typename T> bool recv(size_t proc, size_t tag, openfpm::vector<T> & v)
+	{
+#ifdef DEBUG
+		checkType<T>();
+#endif
+
+		// recv over MPI
+
+		// Create one request
+		req.add();
+
+		// reduce
+		MPI_IrecvW<T>::recv(proc,SEND_RECV_BASE + tag,v,req.last());
+	}
+
+	/*! \brief Execute all the requests
 	 *
 	 */
 	void execute()
@@ -640,6 +773,8 @@ public:
 		req.clear();
 		stat.clear();
 	}
+
+
 };
 
 void init_global_v_cluster(int *argc, char ***argv);

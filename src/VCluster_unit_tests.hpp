@@ -14,8 +14,19 @@
 #include "timer.hpp"
 #include <random>
 #include "VCluster_unit_test_util.hpp"
+#include "Point_test.hpp"
 
 BOOST_AUTO_TEST_SUITE( VCluster_test )
+
+/*! \brief calculate the x mob m
+ *
+ * \param x
+ * \param m
+ *
+ */
+int mod(int x, int m) {
+    return (x%m + m)%m;
+}
 
 BOOST_AUTO_TEST_CASE( VCluster_use_reductions)
 {
@@ -100,6 +111,99 @@ BOOST_AUTO_TEST_CASE( VCluster_use_reductions)
 	BOOST_REQUIRE_EQUAL(d_max,vcl.getProcessingUnits()-1);
 }
 
+#define N_V_ELEMENTS 16
+#define P_STRIDE 17
+
+BOOST_AUTO_TEST_CASE(VCluster_send_recv)
+{
+	unsigned char uc = 1;
+	char c = 1;
+	short s = 1;
+	unsigned short us = 1;
+	int i = 1;
+	unsigned int ui = 1;
+	long int li = 1;
+	unsigned long int uli = 1;
+	float f = 1;
+	double d = 1;
+
+	Vcluster & vcl = *global_v_cluster;
+
+	// check an all to all patter with the primitives
+
+	typedef Point_test<float> p;
+
+	Point_test<float> pt;
+	openfpm::vector<Point_test<float>> v_send;
+
+	pt.setx(vcl.getProcessUnitID());
+	pt.sety(vcl.getProcessUnitID());
+	pt.setz(vcl.getProcessUnitID());
+	pt.sets(vcl.getProcessUnitID());
+
+	pt.setv(0,vcl.getProcessUnitID());
+	pt.setv(1,vcl.getProcessUnitID());
+	pt.setv(2,vcl.getProcessUnitID());
+
+	pt.sett(0,0,vcl.getProcessUnitID());
+	pt.sett(0,1,vcl.getProcessUnitID());
+	pt.sett(0,2,vcl.getProcessUnitID());
+	pt.sett(1,0,vcl.getProcessUnitID());
+	pt.sett(1,1,vcl.getProcessUnitID());
+	pt.sett(1,2,vcl.getProcessUnitID());
+	pt.sett(2,0,vcl.getProcessUnitID());
+	pt.sett(2,1,vcl.getProcessUnitID());
+	pt.sett(2,2,vcl.getProcessUnitID());
+
+
+	// ADD n elements
+	for (size_t i = 0 ; i < N_V_ELEMENTS ; i++)
+		v_send.add(pt);
+
+	// Send to 8 processors
+	for (size_t i = 0 ; i < 8 ; i++)
+		vcl.send( mod(vcl.getProcessUnitID() + i * P_STRIDE, vcl.getProcessingUnits()) ,i,v_send);
+
+	openfpm::vector<openfpm::vector<Point_test<float>> > pt_buf;
+	pt_buf.resize(8);
+
+	// Recv from 8 processors
+	for (size_t i = 0 ; i < 8 ; i++)
+	{
+		pt_buf.get(i).resize(N_V_ELEMENTS);
+		vcl.recv( mod( (vcl.getProcessUnitID() - i * P_STRIDE), vcl.getProcessingUnits()) ,i,pt_buf.get(i));
+	}
+
+	vcl.execute();
+
+	// Check the received buffers (carefull at negative modulo)
+	for (size_t i = 0 ; i < 8 ; i++)
+	{
+		for (size_t j = 0 ; j < N_V_ELEMENTS ; j++)
+		{
+			Point_test<float> pt = pt_buf.get(i).get(j);
+
+			size_t p_recv = mod( (vcl.getProcessUnitID() - i * P_STRIDE), vcl.getProcessingUnits());
+
+			BOOST_REQUIRE_EQUAL(pt.template get<p::x>(),p_recv);
+			BOOST_REQUIRE_EQUAL(pt.template get<p::y>(),p_recv);
+			BOOST_REQUIRE_EQUAL(pt.template get<p::z>(),p_recv);
+			BOOST_REQUIRE_EQUAL(pt.template get<p::s>(),p_recv);
+			BOOST_REQUIRE_EQUAL(pt.template get<p::v>()[0],p_recv);
+			BOOST_REQUIRE_EQUAL(pt.template get<p::v>()[1],p_recv);
+			BOOST_REQUIRE_EQUAL(pt.template get<p::v>()[2],p_recv);
+			BOOST_REQUIRE_EQUAL(pt.template get<p::t>()[0][0],p_recv);
+			BOOST_REQUIRE_EQUAL(pt.template get<p::t>()[0][1],p_recv);
+			BOOST_REQUIRE_EQUAL(pt.template get<p::t>()[0][2],p_recv);
+			BOOST_REQUIRE_EQUAL(pt.template get<p::t>()[1][0],p_recv);
+			BOOST_REQUIRE_EQUAL(pt.template get<p::t>()[1][1],p_recv);
+			BOOST_REQUIRE_EQUAL(pt.template get<p::t>()[1][2],p_recv);
+			BOOST_REQUIRE_EQUAL(pt.template get<p::t>()[2][0],p_recv);
+			BOOST_REQUIRE_EQUAL(pt.template get<p::t>()[2][1],p_recv);
+			BOOST_REQUIRE_EQUAL(pt.template get<p::t>()[2][2],p_recv);
+		}
+	}
+}
 
 BOOST_AUTO_TEST_CASE( VCluster_use_sendrecv)
 {
