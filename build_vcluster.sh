@@ -85,7 +85,7 @@ then
  if [ $? -ne 0 ]; then exit 1 ; fi
  salloc --nodes=8 --ntasks-per-node=16 --time=00:05:00 --mem-per-cpu=1900 --partition=sandy mpirun -np 128 src/vcluster
  if [ $? -ne 0 ]; then exit 1 ; fi
- salloc --nodes=16 --ntasks-per-node=16 --time=00:05:00 --mem-per-cpu=1900 --partition=sandy mpirun -np 256 src/vcluster
+ salloc --nodes=16 --ntasks-per-node=16 --time=00:10:00 --mem-per-cpu=1900 --partition=sandy mpirun -np 256 src/vcluster
  if [ $? -ne 0 ]; then exit 1 ; fi
 
 else

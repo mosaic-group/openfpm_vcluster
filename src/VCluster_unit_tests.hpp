@@ -30,7 +30,6 @@ int mod(int x, int m) {
 
 BOOST_AUTO_TEST_CASE( VCluster_use_reductions)
 {
-	init_global_v_cluster(&boost::unit_test::framework::master_test_suite().argc,&boost::unit_test::framework::master_test_suite().argv);
 	Vcluster & vcl = *global_v_cluster;
 
 	unsigned char uc = 1;
@@ -219,7 +218,6 @@ BOOST_AUTO_TEST_CASE(VCluster_send_recv)
 BOOST_AUTO_TEST_CASE( VCluster_use_sendrecv)
 {
 	std::cout << "VCluster unit test start" << "\n";
-	init_global_v_cluster(&boost::unit_test::framework::master_test_suite().argc,&boost::unit_test::framework::master_test_suite().argv);
 
 	totp_check = true;
 	test<PCX>();
