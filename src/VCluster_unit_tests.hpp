@@ -131,6 +131,17 @@ BOOST_AUTO_TEST_CASE(VCluster_send_recv)
 
 	// check an all to all patter with the primitives
 
+/*	for (size_t k = 0 ; k < vcl.getProcessingUnits() ; k++)
+	{
+		vcl.send(k,uc);
+		vcl.send(k,c);
+		vcl.send(k,s);
+		vcl.send(k,us);
+		vcl.send(k,i)
+	}*/
+
+	// check Long distance pattern with vectors
+
 	typedef Point_test<float> p;
 
 	Point_test<float> pt;
