@@ -89,7 +89,7 @@ class Vcluster
 	//! a wrong send/recv association to
 	//! resolve this problem an incremental NBX_cnt is used as message TAG to distinguish that the
 	//! messages come from other send or subsequent NBX procedures
-	size_t NBX_cnt = 0;
+	size_t NBX_cnt;
 
 	// temporal vector used for meta-communication
 	// ( or meta-data before the real communication )
@@ -143,6 +143,7 @@ public:
 
 	//! \brief Virtual cluster constructor
 	Vcluster(int *argc, char ***argv)
+	:NBX_cnt(0)
 	{
 		n_vcluster++;
 
