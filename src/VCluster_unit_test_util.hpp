@@ -11,6 +11,8 @@
 #define VERBOSE_TEST
 
 #include "VCluster.hpp"
+#include "Point_test.hpp"
+#include "Vector/vector_test_util.hpp"
 
 #define NBX 1
 #define PCX 2
@@ -18,10 +20,21 @@
 #define N_TRY 2
 #define N_LOOP 67108864
 #define BUFF_STEP 524288
+#define P_STRIDE 17
 
 bool totp_check;
 size_t global_step = 0;
 size_t global_rank;
+
+/*! \brief calculate the x mob m
+ *
+ * \param x
+ * \param m
+ *
+ */
+int mod(int x, int m) {
+    return (x%m + m)%m;
+}
 
 // Alloc the buffer to receive the messages
 
@@ -406,6 +419,103 @@ template<unsigned int ip> void test()
 	}
 }
 
+/*! \brief Test vectors send for complex structures
+ *
+ * \param n test size
+ * \param vcl VCluster
+ *
+ */
+void test_send_recv_complex(const size_t n, Vcluster & vcl)
+{
+	// Point test typedef
+	typedef Point_test<float> p;
 
+	openfpm::vector<Point_test<float>> v_send = allocate_openfpm_fill(n,vcl.getProcessUnitID());
+
+	// Send to 8 processors
+	for (size_t i = 0 ; i < 8 ; i++)
+		vcl.send( mod(vcl.getProcessUnitID() + i * P_STRIDE, vcl.getProcessingUnits()) ,i,v_send);
+
+	openfpm::vector<openfpm::vector<Point_test<float>> > pt_buf;
+	pt_buf.resize(8);
+
+	// Recv from 8 processors
+	for (size_t i = 0 ; i < 8 ; i++)
+	{
+		pt_buf.get(i).resize(n);
+		vcl.recv( mod( (vcl.getProcessUnitID() - i * P_STRIDE), vcl.getProcessingUnits()) ,i,pt_buf.get(i));
+	}
+
+	vcl.execute();
+
+	// Check the received buffers (careful at negative modulo)
+	for (size_t i = 0 ; i < 8 ; i++)
+	{
+		for (size_t j = 0 ; j < n ; j++)
+		{
+			Point_test<float> pt = pt_buf.get(i).get(j);
+
+			size_t p_recv = mod( (vcl.getProcessUnitID() - i * P_STRIDE), vcl.getProcessingUnits());
+
+			BOOST_REQUIRE_EQUAL(pt.template get<p::x>(),p_recv);
+			BOOST_REQUIRE_EQUAL(pt.template get<p::y>(),p_recv);
+			BOOST_REQUIRE_EQUAL(pt.template get<p::z>(),p_recv);
+			BOOST_REQUIRE_EQUAL(pt.template get<p::s>(),p_recv);
+			BOOST_REQUIRE_EQUAL(pt.template get<p::v>()[0],p_recv);
+			BOOST_REQUIRE_EQUAL(pt.template get<p::v>()[1],p_recv);
+			BOOST_REQUIRE_EQUAL(pt.template get<p::v>()[2],p_recv);
+			BOOST_REQUIRE_EQUAL(pt.template get<p::t>()[0][0],p_recv);
+			BOOST_REQUIRE_EQUAL(pt.template get<p::t>()[0][1],p_recv);
+			BOOST_REQUIRE_EQUAL(pt.template get<p::t>()[0][2],p_recv);
+			BOOST_REQUIRE_EQUAL(pt.template get<p::t>()[1][0],p_recv);
+			BOOST_REQUIRE_EQUAL(pt.template get<p::t>()[1][1],p_recv);
+			BOOST_REQUIRE_EQUAL(pt.template get<p::t>()[1][2],p_recv);
+			BOOST_REQUIRE_EQUAL(pt.template get<p::t>()[2][0],p_recv);
+			BOOST_REQUIRE_EQUAL(pt.template get<p::t>()[2][1],p_recv);
+			BOOST_REQUIRE_EQUAL(pt.template get<p::t>()[2][2],p_recv);
+		}
+	}
+}
+
+/*! \brief Test vectors send for complex structures
+ *
+ * \tparam T primitives
+ *
+ * \param n size
+ *
+ */
+template<typename T> void test_send_recv_primitives(size_t n, Vcluster & vcl)
+{
+	openfpm::vector<T> v_send = allocate_openfpm_primitive<T>(n,vcl.getProcessUnitID());
+
+	// Send to 8 processors
+	for (size_t i = 0 ; i < 8 ; i++)
+		vcl.send( mod(vcl.getProcessUnitID() + i * P_STRIDE, vcl.getProcessingUnits()) ,i,v_send);
+
+	openfpm::vector<openfpm::vector<T> > pt_buf;
+	pt_buf.resize(8);
+
+	// Recv from 8 processors
+	for (size_t i = 0 ; i < 8 ; i++)
+	{
+		pt_buf.get(i).resize(n);
+		vcl.recv( mod( (vcl.getProcessUnitID() - i * P_STRIDE), vcl.getProcessingUnits()) ,i,pt_buf.get(i));
+	}
+
+	vcl.execute();
+
+	// Check the received buffers (careful at negative modulo)
+	for (size_t i = 0 ; i < 8 ; i++)
+	{
+		for (size_t j = 0 ; j < n ; j++)
+		{
+			T pt = pt_buf.get(i).get(j);
+
+			size_t p_recv = mod( (vcl.getProcessUnitID() - i * P_STRIDE), vcl.getProcessingUnits());
+
+			BOOST_REQUIRE_EQUAL(pt,p_recv);
+		}
+	}
+}
 
 #endif /* VCLUSTER_UNIT_TEST_UTIL_HPP_ */
