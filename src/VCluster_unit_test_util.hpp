@@ -511,7 +511,7 @@ template<typename T> void test_send_recv_primitives(size_t n, Vcluster & vcl)
 		{
 			T pt = pt_buf.get(i).get(j);
 
-			size_t p_recv = mod( (vcl.getProcessUnitID() - i * P_STRIDE), vcl.getProcessingUnits());
+			T p_recv = mod( (vcl.getProcessUnitID() - i * P_STRIDE), vcl.getProcessingUnits());
 
 			BOOST_REQUIRE_EQUAL(pt,p_recv);
 		}

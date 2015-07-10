@@ -150,6 +150,7 @@ public:
 		// Check if MPI is already initialized
 		if (global_mpi_init == false)
 		{
+
 			MPI_Init(argc,argv);
 			global_mpi_init = true;
 		}
