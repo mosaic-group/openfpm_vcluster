@@ -88,7 +88,7 @@ public:
 	 * \param nbx
 	 * \param send request
 	 */
-	void NBXreport(size_t nbx, openfpm::vector<MPI_Request> & req)
+	void NBXreport(size_t nbx, openfpm::vector<MPI_Request> & req, bool reach_b, MPI_Status bar_stat)
 	{
 		// req and s_log must match
 
@@ -126,6 +126,15 @@ public:
 				f << "Received from: " << r_log.get(j).MPI_SOURCE << " with tag " << r_log.get(j).MPI_TAG << "\n";
 			}
 
+			// Barrier status
+
+			if (reach_b == true)
+				f << "Barrier status: active\n";
+			else
+				f << "Barrier status: inactive\n";
+
+
+
 			f << "======================================================================\n";
 			f.flush();
 
@@ -158,7 +167,7 @@ public:
 	inline void openLog(size_t rank)	{}
 	inline void logRecv(MPI_Status & stat)	{}
 	inline void logSend(size_t prc)	{}
-	inline void NBXreport(size_t nbx, openfpm::vector<MPI_Request> & req)	{}
+	inline void NBXreport(size_t nbx, openfpm::vector<MPI_Request> & req, bool reach_b, MPI_Status bar_stat)	{}
 	inline void clear() {};
 };
 

@@ -556,12 +556,15 @@ public:
 				{MPI_SAFE_CALL(MPI_Ibarrier(MPI_COMM_WORLD,&bar_req));reached_bar_req = true;}
 			}
 
-			// Check if all processor reach the async barrier
+			// barrier status
+			MPI_Status bar_stat;
+
+			// Check if all processor reached the async barrier
 			if (reached_bar_req)
-			{MPI_SAFE_CALL(MPI_Test(&bar_req,&flag,MPI_STATUSES_IGNORE))};
+			{MPI_SAFE_CALL(MPI_Test(&bar_req,&flag,&bar_stat))};
 
 			// produce a report if communication get stuck
-			log.NBXreport(NBX_cnt,req);
+			log.NBXreport(NBX_cnt,req,reached_bar_req,bar_stat);
 
 		} while (flag == false);
 
