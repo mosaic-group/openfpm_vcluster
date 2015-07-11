@@ -70,6 +70,7 @@ then
  module load gcc/4.8.2
  module load boost/1.55.0-gnu4.8
  module unload bullxmpi
+ source ~/.bashrc
 
  sh ./autogen.sh
  sh ./configure --enable-verbose CXX=mpic++
