@@ -58,8 +58,12 @@ public:
 	 */
 	void openLog(size_t rank)
 	{
+		int result;
+		char p_name[MPI_MAX_PROCESSOR_NAME];
+		MPI_Get_processor_name(p_name, &result );
+
 		std::stringstream str;
-		str << "vcluster_log_" << rank;
+		str << "vcluster_log_" << p_name << "_" << rank;
 		f.open(str.str());
 	}
 
