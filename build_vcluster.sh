@@ -73,7 +73,7 @@ then
  module load openmpi/1.8.5
 
  sh ./autogen.sh
- sh ./configure  CXX=mpic++
+ sh ./configure --enable-verbose CXX=mpic++
  make
  if [ $? -ne 0 ]; then exit 1 ; fi
 

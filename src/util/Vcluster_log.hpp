@@ -156,8 +156,10 @@ class Vcluster_log
 public:
 	inline void start(size_t log_delay)	{}
 	inline void openLog(size_t rank)	{}
-	inline void logStatus(MPI_Status & stat)	{}
+	inline void logRecv(MPI_Status & stat)	{}
+	inline void logSend(size_t prc)	{}
 	inline void NBXreport(size_t nbx, openfpm::vector<MPI_Request> & req)	{}
+	inline void clear() {};
 };
 
 #endif
