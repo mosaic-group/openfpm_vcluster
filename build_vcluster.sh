@@ -79,13 +79,13 @@ then
 
  salloc -n16 --time=00:05:00 --mem-per-cpu=1900 --partition=sandy mpirun -np 16 src/vcluster
  if [ $? -ne 0 ]; then exit 1 ; fi
- salloc -n=32 --time=00:05:00 --mem-per-cpu=1900 --partition=sandy mpirun -np 32 src/vcluster
+ salloc -n32 --time=00:05:00 --mem-per-cpu=1900 --partition=sandy mpirun -np 32 src/vcluster
  if [ $? -ne 0 ]; then exit 1 ; fi
- salloc -n=64 --time=00:05:00 --mem-per-cpu=1900 --partition=sandy mpirun -np 64 src/vcluster
+ salloc -n64 --time=00:05:00 --mem-per-cpu=1900 --partition=sandy mpirun -np 64 src/vcluster
  if [ $? -ne 0 ]; then exit 1 ; fi
- salloc -n=128 --time=00:05:00 --mem-per-cpu=1900 --partition=sandy mpirun -np 128 src/vcluster
+ salloc -n128 --time=00:05:00 --mem-per-cpu=1900 --partition=sandy mpirun -np 128 src/vcluster
  if [ $? -ne 0 ]; then exit 1 ; fi
- salloc -n=256 --time=00:5:00 --mem-per-cpu=1900 --partition=sandy  mpirun -np 256 src/vcluster
+ salloc -n256 --time=00:5:00 --mem-per-cpu=1900 --partition=sandy  mpirun -np 256 src/vcluster
  if [ $? -ne 0 ]; then exit 1 ; fi
 
 else
