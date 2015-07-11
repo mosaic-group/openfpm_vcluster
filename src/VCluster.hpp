@@ -16,6 +16,7 @@
 #include "util/check_no_pointers.hpp"
 #include "util.hpp"
 #endif
+#include "util/Vcluster_log.hpp"
 
 #define MSG_LENGTH 1024
 #define MSG_SEND_RECV 1025
@@ -75,6 +76,8 @@ class exec_exception: public std::exception
 
 class Vcluster
 {
+	Vcluster_log log;
+
 	//! NBX has a potential pitfall that must be addressed
 	//! NBX Send all the messages and than probe for incoming messages
 	//! If there is an incoming message it receive it producing
@@ -172,6 +175,9 @@ public:
 		{
 			map_scatter.get(i) = 1;
 		}
+
+		// open the log file
+		log.openLog(rank);
 	}
 
 #ifdef DEBUG
@@ -494,6 +500,7 @@ public:
 			{
 				req.add();
 				MPI_SAFE_CALL(MPI_Issend(ptr[i], sz[i], MPI_BYTE, prc[i], SEND_SPARSE + NBX_cnt, MPI_COMM_WORLD,&req.last()));
+				log.logSend(prc[i]);
 			}
 		}
 
@@ -503,9 +510,12 @@ public:
 		bool reached_bar_req = false;
 		MPI_Request bar_req;
 
+		log.start(10);
+
 		// Wait that all the send are acknowledge
 		do
 		{
+
 			// flag that notify that this processor reach the barrier
 			// Barrier request
 
@@ -522,6 +532,9 @@ public:
 
 				// Get the pointer to receive the message
 				void * ptr = msg_alloc(msize,0,0,stat_t.MPI_SOURCE,rid,ptr_arg);
+
+				// Log the receiving request
+				log.logRecv(stat_t);
 
 				rid++;
 
@@ -545,13 +558,18 @@ public:
 
 			// Check if all processor reach the async barrier
 			if (reached_bar_req)
-				MPI_Test(&bar_req,&flag,MPI_STATUSES_IGNORE);
+			{MPI_SAFE_CALL(MPI_Test(&bar_req,&flag,MPI_STATUSES_IGNORE))};
+
+			// produce a report if communication get stuck
+			log.NBXreport(NBX_cnt,req);
+
 		} while (flag == false);
 
 		// Remove the executed request
 
 		req.clear();
 		stat.clear();
+		log.clear();
 
 		// Circular counter
 		NBX_cnt = (NBX_cnt + 1) % 1024;

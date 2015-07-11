@@ -18,6 +18,13 @@
 
 BOOST_AUTO_TEST_SUITE( VCluster_test )
 
+BOOST_AUTO_TEST_CASE (Vcluster_robustness)
+{
+	Vcluster & vcl = *global_v_cluster;
+
+	vcl.execute();
+}
+
 BOOST_AUTO_TEST_CASE( VCluster_use_reductions)
 {
 	Vcluster & vcl = *global_v_cluster;

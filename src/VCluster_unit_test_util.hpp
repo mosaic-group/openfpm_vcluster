@@ -171,6 +171,7 @@ template<unsigned int ip> void test()
 
 #ifdef VERBOSE_TEST
 			t.stop();
+
 			double clk = t.getwct();
 			double clk_max = clk;
 

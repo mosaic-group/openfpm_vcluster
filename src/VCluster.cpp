@@ -14,6 +14,11 @@ void init_global_v_cluster(int *argc, char ***argv)
 		global_v_cluster = new Vcluster(argc,argv);
 }
 
+void delete_global_v_cluster()
+{
+	delete global_v_cluster;
+}
+
 // Global MPI initialization
 bool global_mpi_init = false;
 

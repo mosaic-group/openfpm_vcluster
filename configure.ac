@@ -25,6 +25,25 @@ AC_PROG_CXX
 
 AC_CANONICAL_HOST
 
+###### Check for verbose
+
+AC_MSG_CHECKING(whether to build with verbose print)
+verbose=no
+AC_ARG_ENABLE(verbose,
+	AC_HELP_STRING(
+	    [--enable-verbose],
+	    [enable verbose print (def=no)]
+	),
+  	verbose="$enableval"
+)
+
+
+
+AC_MSG_RESULT($verbose)
+if test x"$verbose" = x"yes"; then
+	AC_DEFINE([VERBOSE_TEST],[],[Verbose test])
+fi
+
 ###### Check for debug compilation
 
 AC_MSG_CHECKING(whether to build with debug information)
