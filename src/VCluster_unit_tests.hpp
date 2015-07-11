@@ -132,9 +132,9 @@ BOOST_AUTO_TEST_CASE( VCluster_use_sendrecv)
 {
 	std::cout << "VCluster unit test start" << "\n";
 
-	totp_check = true;
-	test<NBX>();
 	totp_check = false;
+	test<NBX>();
+	totp_check = true;
 	test<PCX>();
 
 	std::cout << "VCluster unit test stop" << "\n";
