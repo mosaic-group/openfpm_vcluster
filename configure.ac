@@ -100,7 +100,7 @@ AC_CHECK_LIB(rt, clock_gettime,[DEFAULT_LIB+=" -lrt "],[],[])
 
 ##### CHECK FOR BOOST ##############
 
-AX_BOOST([1.41],[],[])
+AX_BOOST([1.52],[],[])
 
 ####### Checking for GPU support
 

@@ -453,6 +453,10 @@ public:
 		sendrecvMultipleMessagesPCX(prc.size(),(size_t *)map.getPointer(),(size_t *)sz_send.getPointer(),(size_t *)prc.getPointer(),(void **)ptr_send.getPointer(),msg_alloc,ptr_arg,opt);
 	}
 
+	MPI_Request bar_req;
+	// barrier status
+	MPI_Status bar_stat;
+
 	/*! \brief Send and receive multiple messages local
 	 *
 	 * It send multiple messages to the near processor the and receive
@@ -508,7 +512,6 @@ public:
 		int flag = false;
 
 		bool reached_bar_req = false;
-		MPI_Request bar_req;
 
 		log.start(10);
 
@@ -555,9 +558,6 @@ public:
 				if (flag == true)
 				{MPI_SAFE_CALL(MPI_Ibarrier(MPI_COMM_WORLD,&bar_req));reached_bar_req = true;}
 			}
-
-			// barrier status
-			MPI_Status bar_stat;
 
 			// Check if all processor reached the async barrier
 			if (reached_bar_req)
