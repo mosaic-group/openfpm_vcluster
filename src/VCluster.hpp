@@ -453,6 +453,7 @@ public:
 		sendrecvMultipleMessagesPCX(prc.size(),(size_t *)map.getPointer(),(size_t *)sz_send.getPointer(),(size_t *)prc.getPointer(),(void **)ptr_send.getPointer(),msg_alloc,ptr_arg,opt);
 	}
 
+	// barrier request
 	MPI_Request bar_req;
 	// barrier status
 	MPI_Status bar_stat;
