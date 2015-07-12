@@ -14,7 +14,7 @@
 #include "Vector/map_vector.hpp"
 #ifdef DEBUG
 #include "util/check_no_pointers.hpp"
-#include "util.hpp"
+#include "util/util_debug.hpp"
 #endif
 #include "util/Vcluster_log.hpp"
 
@@ -720,8 +720,10 @@ public:
 	 * \param tag id
 	 * \param v buffer to send
 	 *
+	 * \return true if succeed false otherwise
+	 *
 	 */
-	template<typename T> bool send(size_t proc, size_t tag, openfpm::vector<T> & v)
+	template<typename T, typename ly, typename Mem, typename gr> bool send(size_t proc, size_t tag, openfpm::vector<T,ly,Mem,gr> & v)
 	{
 #ifdef DEBUG
 		checkType<T>();
@@ -732,8 +734,10 @@ public:
 		// Create one request
 		req.add();
 
-		// reduce
+		// send
 		MPI_IsendW<T>::send(proc,SEND_RECV_BASE + tag,v,req.last());
+
+		return true;
 	}
 
 	/*! \brief Recv data from a processor
@@ -750,6 +754,8 @@ public:
 	 * \param tag id
 	 * \param v buffer to send
 	 *
+	 * \return true if succeed false otherwise
+	 *
 	 */
 	template<typename T> bool recv(size_t proc, size_t tag, openfpm::vector<T> & v)
 	{
@@ -762,8 +768,10 @@ public:
 		// Create one request
 		req.add();
 
-		// reduce
+		// receive
 		MPI_IrecvW<T>::recv(proc,SEND_RECV_BASE + tag,v,req.last());
+
+		return true;
 	}
 
 	/*! \brief Execute all the requests
