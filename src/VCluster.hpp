@@ -496,6 +496,11 @@ public:
 
 	void sendrecvMultipleMessagesNBX(size_t n_send , size_t sz[], size_t prc[] , void * ptr[], void * (* msg_alloc)(size_t,size_t,size_t,size_t,size_t,void *), void * ptr_arg, long int opt)
 	{
+		if (stat.size() != 0 || req.size() != 0)
+			std::cerr << "Error: " << __FILE__ << ":" << __LINE__ << " this function must be called when no other requests are in progress \n";
+
+
+		stat.clear();
 		req.clear();
 		// Do MPI_Issend
 
@@ -620,7 +625,12 @@ public:
 
 	void sendrecvMultipleMessagesPCX(size_t n_send, size_t * map, size_t sz[], size_t prc[] , void * ptr[], void * (* msg_alloc)(size_t,size_t,size_t,size_t,size_t,void *), void * ptr_arg, long int opt)
 	{
+		if (stat.size() != 0 || req.size() != 0)
+			std::cerr << "Error: " << __FILE__ << ":" << __LINE__ << " this function must be called when no other requests are in progress \n";
+
+		stat.clear();
 		req.clear();
+
 		req.add();
 		stat.add();
 
@@ -735,7 +745,7 @@ public:
 		req.add();
 
 		// send
-		MPI_IsendW<T>::send(proc,SEND_RECV_BASE + tag,v,req.last());
+		MPI_IsendW<T,ly,Mem,gr>::send(proc,SEND_RECV_BASE + tag,v,req.last());
 
 		return true;
 	}
@@ -757,7 +767,7 @@ public:
 	 * \return true if succeed false otherwise
 	 *
 	 */
-	template<typename T> bool recv(size_t proc, size_t tag, openfpm::vector<T> & v)
+	template<typename T, typename ly, typename Mem, typename gr> bool recv(size_t proc, size_t tag, openfpm::vector<T,ly,Mem,gr> & v)
 	{
 #ifdef DEBUG
 		checkType<T>();

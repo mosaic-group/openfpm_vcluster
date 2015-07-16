@@ -187,8 +187,8 @@ CC = gcc
 CCDEPMODE = depmode=gcc3
 CFLAGS = -g -O2
 CPPFLAGS = 
-CUDA_CFLAGS =  -I -I -I/usr/local/cuda-5.5/include
-CUDA_LIBS =  -L -L -L/usr/local/cuda-5.5/lib64 -lcuda -lcudart
+CUDA_CFLAGS =  -I -I -I/usr/local/cuda/include
+CUDA_LIBS =  -L -L -L/usr/local/cuda/lib64 -lcuda -lcudart
 CXX = mpic++
 CXXDEPMODE = depmode=gcc3
 CXXFLAGS =  --std=c++11 -march=native -mtune=native -Wno-unused-local-typedefs -Wextra -Wno-unused-parameter  -Wall -O3 -g3 -funroll-loops 
@@ -212,7 +212,7 @@ LIBS =
 LTLIBOBJS = 
 MAKEINFO = ${SHELL} /home/i-bird/Desktop/MOSAIC/OpenFPM_project/OpenFPM_vcluster/missing makeinfo
 MKDIR_P = /usr/bin/mkdir -p
-NVCC = /usr/local/cuda-5.5/bin/nvcc
+NVCC = /usr/local/cuda/bin/nvcc
 NVCCFLAGS =    -O3 
 NVCC_EXIST = yes
 OBJEXT = o
