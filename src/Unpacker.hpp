@@ -88,7 +88,7 @@ public:
 #ifdef DEBUG
 		std::cerr << "Warning: " << __FILE__ << ":" << __LINE__ << " impossible to check the type " << demangle(typeid(T).name()) << " please consider to add a static method \"void noPointers()\" \n" ;
 #endif
-		memcpy(&obj,(T *)ext.getPointer(ps.un_ele),sizeof(T));
+		memcpy(&obj,(T *)ext.getPointer(ps.reqPack()),sizeof(T));
 
 		ps.incReq();
 	}
@@ -236,7 +236,7 @@ public:
 		typedef openfpm::vector<prp_object,openfpm::device_cpu<prp_object>,PtrMemory,openfpm::grow_policy_identity> stype;
 
 		// Create an object over the preallocated memory (No allocation is produced)
-		PtrMemory & ptr = *(new PtrMemory(mem.getPointer(ps.un_ele),stype::calculateMem(obj.size(),0)));
+		PtrMemory & ptr = *(new PtrMemory(mem.getPointer(ps.reqPack()),stype::calculateMem(obj.size(),0)));
 
 		// Create an object over a pointer (No allocation is produced)
 		stype src;
