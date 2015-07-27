@@ -4,14 +4,32 @@
 
 #include <mpi.h>
 
-/*! \brief Set of wrapping classing for MPI_Iallreduce
+/*! \brief Set of wrapping classing for MPI_Irecv
  *
- * The purpose of these classes is to correctly choose the right call based on the type we want to reduce
+ * The purpose of these classes is to correctly choose the right call based on the type we want to receive
  *
  */
 
+/*! \brief General recv for general buffer
+ *
+ * \param proc processor from which to receive
+ * \param tag
+ * \param buf buffer where to store the data
+ * \param sz size to receive
+ * \param req MPI request
+ *
+ */
 
-/*! \brief General send
+class MPI_IrecvWB
+{
+public:
+	static inline void recv(size_t proc , size_t tag ,void * buf, size_t sz, MPI_Request & req)
+	{
+		MPI_SAFE_CALL(MPI_Irecv(buf,sz,MPI_BYTE, proc, tag , MPI_COMM_WORLD,&req));
+	}
+};
+
+/*! \brief General recv for vector of
  *
  * \tparam any type
  *

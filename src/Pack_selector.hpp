@@ -9,8 +9,6 @@
 
 //! Primitive packing
 #define PACKER_PRIMITIVE 1
-//! Object packing
-#define PACKER_OBJECTS 2
 //! Encapsulated Object packing
 #define PACKER_ENCAP_OBJECTS 3
 //! Vector of objects packing
@@ -101,7 +99,7 @@ struct Pack_selector_impl
 {
 	enum
 	{
-		value = Pack_selector_known_type_impl< T, is_grid<T>::value * 2 + is_vector<T>::value >::value
+		value = Pack_selector_known_type_impl< T, 4*is_encap<T>::value + is_grid<T>::value * 2 + is_vector<T>::value >::value
 	};
 };
 

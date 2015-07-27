@@ -216,7 +216,7 @@ public:
 		{
 			case PNP::UNKNOWN:
 			{
-				std::cerr << "Warning: " << __FILE__ << ":" << __LINE__ << " impossible to check the type " << demangle(typeid(T).name()) << " please consider to add a static method \"void noPointers()\" \n" ;
+				std::cerr << "Warning: " << __FILE__ << ":" << __LINE__ << " impossible to check the type " << demangle(typeid(T).name()) << " please consider to add a static method \"static bool noPointers()\" \n" ;
 				break;
 			}
 			case PNP::POINTERS:
@@ -722,7 +722,38 @@ public:
 	 *          in case you want to send data without knowledge from the other side
 	 *          consider to use sendRecvMultipleMessages
 	 *
-	 * \warning operation are async execute must be called to ensure they are executed
+	 * \warning operation is asynchronous execute must be called to ensure they are executed
+	 *
+	 * \see sendRecvMultipleMessages
+	 *
+	 * \param proc processor id
+	 * \param tag id
+	 * \param mem buffer with the data to send
+	 * \param sz size
+	 *
+	 * \return true if succeed false otherwise
+	 *
+	 */
+	bool send(size_t proc, size_t tag, void * mem, size_t sz)
+	{
+		// send over MPI
+
+		// Create one request
+		req.add();
+
+		// send
+		MPI_IsendWB::send(proc,SEND_RECV_BASE + tag,mem,sz,req.last());
+
+		return true;
+	}
+
+	/*! \brief Send data to a processor
+	 *
+	 * \warning In order to avoid deadlock every send must be coupled with a recv
+	 *          in case you want to send data without knowledge from the other side
+	 *          consider to use sendRecvMultipleMessages
+	 *
+	 * \warning operation is asynchronous execute must be called to ensure they are executed
 	 *
 	 * \see sendRecvMultipleMessages
 	 *
@@ -756,13 +787,44 @@ public:
 	 *          in case you want to send data without knowledge from the other side
 	 *          consider to use sendRecvMultipleMessages
 	 *
-	 * \warning operation are async execute must be called to ensure they are executed
+	 * \warning operation is asynchronous execute must be called to ensure they are executed
 	 *
 	 * \see sendRecvMultipleMessages
 	 *
 	 * \param proc processor id
 	 * \param tag id
 	 * \param v buffer to send
+	 * \param sz size of the buffer
+	 *
+	 * \return true if succeed false otherwise
+	 *
+	 */
+	bool recv(size_t proc, size_t tag, void * v, size_t sz)
+	{
+		// recv over MPI
+
+		// Create one request
+		req.add();
+
+		// receive
+		MPI_IrecvWB::recv(proc,SEND_RECV_BASE + tag,v,sz,req.last());
+
+		return true;
+	}
+
+	/*! \brief Recv data from a processor
+	 *
+	 * \warning In order to avoid deadlock every recv must be coupled with a send
+	 *          in case you want to send data without knowledge from the other side
+	 *          consider to use sendRecvMultipleMessages
+	 *
+	 * \warning operation is asynchronous execute must be called to ensure they are executed
+	 *
+	 * \see sendRecvMultipleMessages
+	 *
+	 * \param proc processor id
+	 * \param tag id
+	 * \param v vector to send
 	 *
 	 * \return true if succeed false otherwise
 	 *

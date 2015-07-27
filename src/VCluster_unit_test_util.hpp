@@ -489,6 +489,9 @@ template<typename T> void test_send_recv_primitives(size_t n, Vcluster & vcl)
 {
 	openfpm::vector<T> v_send = allocate_openfpm_primitive<T>(n,vcl.getProcessUnitID());
 
+	{
+	//! [ Send and receive vectors data ]
+
 	// Send to 8 processors
 	for (size_t i = 0 ; i < 8 ; i++)
 		vcl.send( mod(vcl.getProcessUnitID() + i * P_STRIDE, vcl.getProcessingUnits()) ,i,v_send);
@@ -516,6 +519,45 @@ template<typename T> void test_send_recv_primitives(size_t n, Vcluster & vcl)
 
 			BOOST_REQUIRE_EQUAL(pt,p_recv);
 		}
+	}
+
+	//! [ Send and receive vectors data ]
+
+	}
+
+	{
+	//! [ Send and receive plain buffer data ]
+
+	// Send to 8 processors
+	for (size_t i = 0 ; i < 8 ; i++)
+		vcl.send( mod(vcl.getProcessUnitID() + i * P_STRIDE, vcl.getProcessingUnits()) ,i,v_send.getPointer(),v_send.size()*sizeof(T));
+
+	openfpm::vector<openfpm::vector<T> > pt_buf;
+	pt_buf.resize(8);
+
+	// Recv from 8 processors
+	for (size_t i = 0 ; i < 8 ; i++)
+	{
+		pt_buf.get(i).resize(n);
+		vcl.recv( mod( (vcl.getProcessUnitID() - i * P_STRIDE), vcl.getProcessingUnits()) ,i,pt_buf.get(i).getPointer(),pt_buf.get(i).size()*sizeof(T));
+	}
+
+	vcl.execute();
+
+	// Check the received buffers (careful at negative modulo)
+	for (size_t i = 0 ; i < 8 ; i++)
+	{
+		for (size_t j = 0 ; j < n ; j++)
+		{
+			T pt = pt_buf.get(i).get(j);
+
+			T p_recv = mod( (vcl.getProcessUnitID() - i * P_STRIDE), vcl.getProcessingUnits());
+
+			BOOST_REQUIRE_EQUAL(pt,p_recv);
+		}
+	}
+
+	//! [ Send and receive plain buffer data ]
 	}
 }
 
