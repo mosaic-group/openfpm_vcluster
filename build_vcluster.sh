@@ -11,8 +11,8 @@ mv /tmp/openfpm_vcluster OpenFPM_vcluster
 
 mkdir OpenFPM_vcluster/src/config
 
-git clone ssh://git@ppmcoremirror:2222/incardon/openfpm_devices.git OpenFPM_devices
-git clone ssh://git@ppmcoremirror:2222/incardon/openfpm_data.git OpenFPM_data
+git clone ssh://git@ppmcoremirror.dynu.com:2222/incardon/openfpm_devices.git OpenFPM_devices
+git clone ssh://git@ppmcoremirror.dynu.com:2222/incardon/openfpm_data.git OpenFPM_data
 cd OpenFPM_data
 git checkout develop
 cd ..
