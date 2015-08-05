@@ -153,7 +153,7 @@ BOOST_AUTO_TEST_CASE ( packer_unpacker_test )
 
 	//! [Unpack a message into primitives objects vectors and grids]
 
-	Pack_stat ps;
+	Unpack_stat ps;
 
 	unsigned char uc2;
 	Unpacker<unsigned char,HeapMemory>::unpack(mem,uc2,ps);
@@ -175,7 +175,6 @@ BOOST_AUTO_TEST_CASE ( packer_unpacker_test )
 	Unpacker<float,HeapMemory>::unpack(mem,f2,ps);
 	double d2;
 	Unpacker<double,HeapMemory>::unpack(mem,d2,ps);
-
 
 	// Unpack the point and check
 	Point_test<float> p_test;
