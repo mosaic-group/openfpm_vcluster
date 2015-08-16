@@ -290,7 +290,7 @@ class Packer<T,Mem,PACKER_GRID>
 	template <typename it, typename dtype, int ... prp> static void pack_with_iterator(it & sub_it, T & obj, dtype & dest)
 	{
 		// Sending property object
-		typedef object<typename object_creator<typename T::type::type,prp...>::type> prp_object;
+		typedef object<typename object_creator<typename T::value_type::type,prp...>::type> prp_object;
 
 		size_t id = 0;
 
@@ -298,7 +298,7 @@ class Packer<T,Mem,PACKER_GRID>
 		while (sub_it.isNext())
 		{
 			// copy all the object in the send buffer
-			typedef encapc<T::dims,typename T::type,typename T::memory_conf > encap_src;
+			typedef encapc<T::dims,typename T::value_type,typename T::memory_conf > encap_src;
 			// destination object type
 			typedef encapc<1,prp_object,typename dtype::memory_conf > encap_dst;
 
@@ -367,7 +367,7 @@ public:
 #endif
 
 		// Sending property object
-		typedef object<typename object_creator<typename T::type::type,prp...>::type> prp_object;
+		typedef object<typename object_creator<typename T::value_type::type,prp...>::type> prp_object;
 		typedef openfpm::vector<prp_object,openfpm::device_cpu<prp_object>,ExtPreAlloc<Mem>,openfpm::grow_policy_identity> dtype;
 
 		// Create an object over the preallocated memory (No allocation is produced)
@@ -410,7 +410,7 @@ public:
 	template<int ... prp> static void packRequest(T & obj, grid_key_dx_iterator_sub<T::dims> & sub, std::vector<size_t> & v)
 	{
 		// Sending property object
-		typedef object<typename object_creator<typename T::type::type,prp...>::type> prp_object;
+		typedef object<typename object_creator<typename T::value_type::type,prp...>::type> prp_object;
 		typedef openfpm::vector<prp_object,openfpm::device_cpu<prp_object>,ExtPreAlloc<Mem>,openfpm::grow_policy_identity> dtype;
 
 		// Calculate the required memory for packing

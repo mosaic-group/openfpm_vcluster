@@ -204,13 +204,13 @@ class Unpacker<T,Mem,PACKER_GRID>
 		size_t id = 0;
 
 		// Sending property object
-		typedef object<typename object_creator<typename T::type::type,prp...>::type> prp_object;
+		typedef object<typename object_creator<typename T::value_type::type,prp...>::type> prp_object;
 
 		// unpacking the information
 		while (sub_it.isNext())
 		{
 			// copy all the object in the send buffer
-			typedef encapc<T::dims,typename T::type,typename T::memory_conf > encap_dst;
+			typedef encapc<T::dims,typename T::value_type,typename T::memory_conf > encap_dst;
 			// destination object type
 			typedef encapc<1,prp_object,typename grid_cpu<T::dims,prp_object>::memory_conf > encap_src;
 
@@ -268,7 +268,7 @@ public:
 	template<unsigned int ... prp> static void unpack(ExtPreAlloc<Mem> & mem, grid_key_dx_iterator_sub<T::dims> & sub_it, T & obj, Unpack_stat & ps)
 	{
 		// object that store the information in mem
-		typedef object<typename object_creator<typename T::type::type,prp...>::type> prp_object;
+		typedef object<typename object_creator<typename T::value_type::type,prp...>::type> prp_object;
 		typedef openfpm::vector<prp_object,openfpm::device_cpu<prp_object>,PtrMemory,openfpm::grow_policy_identity> stype;
 
 		size_t size = stype::calculateMem(sub_it.getVolume(),0);
