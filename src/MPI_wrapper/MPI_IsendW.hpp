@@ -28,10 +28,10 @@ public:
  *
  */
 
-template<typename T, typename ly, typename Mem, typename gr> class MPI_IsendW
+template<typename T, typename Mem, typename gr> class MPI_IsendW
 {
 public:
-	static inline void send(size_t proc , size_t tag ,openfpm::vector<T,ly,Mem,gr> & v, MPI_Request & req)
+	static inline void send(size_t proc , size_t tag ,openfpm::vector<T,Mem,gr> & v, MPI_Request & req)
 	{
 		MPI_Isend(v.getPointer(), v.size() * sizeof(T),MPI_BYTE, proc, tag , MPI_COMM_WORLD,&req);
 	}
@@ -41,10 +41,10 @@ public:
 /*! \brief specialization for vector of integer
  *
  */
-template<typename ly, typename Mem, typename gr> class MPI_IsendW<int,ly,Mem,gr>
+template<typename Mem, typename gr> class MPI_IsendW<int,Mem,gr>
 {
 public:
-	static inline void send(size_t proc , size_t tag ,openfpm::vector<int,ly,Mem,gr> & v, MPI_Request & req)
+	static inline void send(size_t proc , size_t tag ,openfpm::vector<int,Mem,gr> & v, MPI_Request & req)
 	{
 		MPI_Isend(v.getPointer(), v.size(),MPI_INT, proc, tag , MPI_COMM_WORLD,&req);
 	}
@@ -53,10 +53,10 @@ public:
 /*! \brief specialization for unsigned integer
  *
  */
-template<typename ly, typename Mem, typename gr> class MPI_IsendW<unsigned int,ly,Mem,gr>
+template<typename Mem, typename gr> class MPI_IsendW<unsigned int,Mem,gr>
 {
 public:
-	static inline void send(size_t proc , size_t tag ,openfpm::vector<unsigned int,ly,Mem,gr> & v, MPI_Request & req)
+	static inline void send(size_t proc , size_t tag ,openfpm::vector<unsigned int,Mem,gr> & v, MPI_Request & req)
 	{
 		MPI_Isend(v.getPointer(), v.size(),MPI_UNSIGNED, proc, tag , MPI_COMM_WORLD,&req);
 	}
@@ -65,10 +65,10 @@ public:
 /*! \brief specialization for short
  *
  */
-template<typename ly, typename Mem, typename gr> class MPI_IsendW<short,ly,Mem,gr>
+template<typename Mem, typename gr> class MPI_IsendW<short,Mem,gr>
 {
 public:
-	static inline void send(size_t proc , size_t tag ,openfpm::vector<short,ly,Mem,gr> & v, MPI_Request & req)
+	static inline void send(size_t proc , size_t tag ,openfpm::vector<short,Mem,gr> & v, MPI_Request & req)
 	{
 		MPI_Isend(v.getPointer(), v.size(),MPI_SHORT, proc, tag , MPI_COMM_WORLD,&req);
 	}
@@ -77,10 +77,10 @@ public:
 /*! \brief specialization for short
  *
  */
-template<typename ly, typename Mem, typename gr> class MPI_IsendW<unsigned short,ly,Mem,gr>
+template<typename Mem, typename gr> class MPI_IsendW<unsigned short,Mem,gr>
 {
 public:
-	static inline void send(size_t proc , size_t tag ,openfpm::vector<unsigned short,ly,Mem,gr> & v, MPI_Request & req)
+	static inline void send(size_t proc , size_t tag ,openfpm::vector<unsigned short,Mem,gr> & v, MPI_Request & req)
 	{
 		MPI_Isend(v.getPointer(), v.size(),MPI_UNSIGNED_SHORT, proc, tag , MPI_COMM_WORLD,&req);
 	}
@@ -89,10 +89,10 @@ public:
 /*! \brief specialization for char
  *
  */
-template<typename ly, typename Mem, typename gr> class MPI_IsendW<char,ly,Mem,gr>
+template<typename Mem, typename gr> class MPI_IsendW<char,Mem,gr>
 {
 public:
-	static inline void send(size_t proc , size_t tag ,openfpm::vector<char,ly,Mem,gr> & v, MPI_Request & req)
+	static inline void send(size_t proc , size_t tag ,openfpm::vector<char,Mem,gr> & v, MPI_Request & req)
 	{
 		MPI_Isend(v.getPointer(), v.size(),MPI_CHAR, proc, tag , MPI_COMM_WORLD,&req);
 	}
@@ -101,10 +101,10 @@ public:
 /*! \brief specialization for char
  *
  */
-template<typename ly, typename Mem, typename gr> class MPI_IsendW<unsigned char,ly,Mem,gr>
+template<typename Mem, typename gr> class MPI_IsendW<unsigned char,Mem,gr>
 {
 public:
-	static inline void send(size_t proc , size_t tag ,openfpm::vector<unsigned char,ly,Mem,gr> & v, MPI_Request & req)
+	static inline void send(size_t proc , size_t tag ,openfpm::vector<unsigned char,Mem,gr> & v, MPI_Request & req)
 	{
 		MPI_Isend(v.getPointer(), v.size(),MPI_UNSIGNED_CHAR, proc, tag , MPI_COMM_WORLD,&req);
 	}
@@ -113,10 +113,10 @@ public:
 /*! \brief specialization for size_t
  *
  */
-template<typename ly, typename Mem, typename gr> class MPI_IsendW<size_t,ly,Mem,gr>
+template<typename Mem, typename gr> class MPI_IsendW<size_t,Mem,gr>
 {
 public:
-	static inline void send(size_t proc , size_t tag ,openfpm::vector<size_t,ly,Mem,gr> & v, MPI_Request & req)
+	static inline void send(size_t proc , size_t tag ,openfpm::vector<size_t,Mem,gr> & v, MPI_Request & req)
 	{
 		MPI_Isend(v.getPointer(), v.size(),MPI_UNSIGNED_LONG, proc, tag , MPI_COMM_WORLD,&req);
 	}
@@ -125,10 +125,10 @@ public:
 /*! \brief specialization for size_t
  *
  */
-template<typename ly, typename Mem, typename gr> class MPI_IsendW<long int,ly,Mem,gr>
+template<typename Mem, typename gr> class MPI_IsendW<long int,Mem,gr>
 {
 public:
-	static inline void send(size_t proc , size_t tag ,openfpm::vector<long int,ly,Mem,gr> & v, MPI_Request & req)
+	static inline void send(size_t proc , size_t tag ,openfpm::vector<long int,Mem,gr> & v, MPI_Request & req)
 	{
 		MPI_Isend(v.getPointer(), v.size(),MPI_LONG, proc, tag , MPI_COMM_WORLD,&req);
 	}
@@ -137,10 +137,10 @@ public:
 /*! \brief specialization for float
  *
  */
-template<typename ly, typename Mem, typename gr> class MPI_IsendW<float,ly,Mem,gr>
+template<typename Mem, typename gr> class MPI_IsendW<float,Mem,gr>
 {
 public:
-	static inline void send(size_t proc , size_t tag ,openfpm::vector<float,ly,Mem,gr> & v, MPI_Request & req)
+	static inline void send(size_t proc , size_t tag ,openfpm::vector<float,Mem,gr> & v, MPI_Request & req)
 	{
 		MPI_Isend(v.getPointer(), v.size(),MPI_FLOAT, proc, tag , MPI_COMM_WORLD,&req);
 	}
@@ -149,10 +149,10 @@ public:
 /*! \brief specialization for double
  *
  */
-template<typename ly, typename Mem, typename gr> class MPI_IsendW<double,ly,Mem,gr>
+template<typename Mem, typename gr> class MPI_IsendW<double,Mem,gr>
 {
 public:
-	static inline void send(size_t proc , size_t tag ,openfpm::vector<double,ly,Mem,gr> & v, MPI_Request & req)
+	static inline void send(size_t proc , size_t tag ,openfpm::vector<double,Mem,gr> & v, MPI_Request & req)
 	{
 		MPI_Isend(v.getPointer(), v.size(),MPI_DOUBLE, proc, tag , MPI_COMM_WORLD,&req);
 	}

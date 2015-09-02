@@ -223,7 +223,7 @@ public:
 		// Sending property object
 		typedef object<typename object_creator<typename T::value_type::type,prp...>::type> prp_object;
 
-		typedef openfpm::vector<prp_object,openfpm::device_cpu<prp_object>,ExtPreAlloc<Mem>,openfpm::grow_policy_identity> dtype;
+		typedef openfpm::vector<prp_object,ExtPreAlloc<Mem>,openfpm::grow_policy_identity> dtype;
 
 		// Create an object over the preallocated memory (No allocation is produced)
 		dtype dest;
@@ -331,7 +331,7 @@ public:
 
 		// Sending property object and vector
 		typedef object<typename object_creator<typename T::type,prp...>::type> prp_object;
-		typedef openfpm::vector<prp_object,openfpm::device_cpu<prp_object>,ExtPreAlloc<Mem>> dtype;
+		typedef openfpm::vector<prp_object,ExtPreAlloc<Mem>> dtype;
 
 		// Calculate the required memory for packing
 		size_t alloc_ele = dtype::calculateMem(obj.size(),0);
@@ -368,7 +368,7 @@ public:
 
 		// Sending property object
 		typedef object<typename object_creator<typename T::value_type::type,prp...>::type> prp_object;
-		typedef openfpm::vector<prp_object,openfpm::device_cpu<prp_object>,ExtPreAlloc<Mem>,openfpm::grow_policy_identity> dtype;
+		typedef openfpm::vector<prp_object,ExtPreAlloc<Mem>,openfpm::grow_policy_identity> dtype;
 
 		// Create an object over the preallocated memory (No allocation is produced)
 		dtype dest;
@@ -390,7 +390,7 @@ public:
 	{
 		// Sending property object
 		typedef object<typename object_creator<typename T::type::type,prp...>::type> prp_object;
-		typedef openfpm::vector<prp_object,openfpm::device_cpu<prp_object>,ExtPreAlloc<Mem>,openfpm::grow_policy_identity> dtype;
+		typedef openfpm::vector<prp_object,ExtPreAlloc<Mem>,openfpm::grow_policy_identity> dtype;
 
 		// Calculate the required memory for packing
 		size_t alloc_ele = dtype::calculateMem(obj.size(),0);
@@ -411,7 +411,7 @@ public:
 	{
 		// Sending property object
 		typedef object<typename object_creator<typename T::value_type::type,prp...>::type> prp_object;
-		typedef openfpm::vector<prp_object,openfpm::device_cpu<prp_object>,ExtPreAlloc<Mem>,openfpm::grow_policy_identity> dtype;
+		typedef openfpm::vector<prp_object,ExtPreAlloc<Mem>,openfpm::grow_policy_identity> dtype;
 
 		// Calculate the required memory for packing
 		size_t alloc_ele = dtype::calculateMem(sub.getVolume(),0);

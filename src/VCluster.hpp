@@ -164,7 +164,7 @@ public:
 		MPI_Comm_size(MPI_COMM_WORLD, &size);
 		MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
-#ifdef MEMLEAK_CHECK
+#ifdef SE_CLASS2
 			process_v_cl = rank;
 #endif
 
@@ -764,7 +764,7 @@ public:
 	 * \return true if succeed false otherwise
 	 *
 	 */
-	template<typename T, typename ly, typename Mem, typename gr> bool send(size_t proc, size_t tag, openfpm::vector<T,ly,Mem,gr> & v)
+	template<typename T, typename Mem, typename gr> bool send(size_t proc, size_t tag, openfpm::vector<T,Mem,gr> & v)
 	{
 #ifdef DEBUG
 		checkType<T>();
@@ -776,7 +776,7 @@ public:
 		req.add();
 
 		// send
-		MPI_IsendW<T,ly,Mem,gr>::send(proc,SEND_RECV_BASE + tag,v,req.last());
+		MPI_IsendW<T,Mem,gr>::send(proc,SEND_RECV_BASE + tag,v,req.last());
 
 		return true;
 	}
@@ -829,7 +829,7 @@ public:
 	 * \return true if succeed false otherwise
 	 *
 	 */
-	template<typename T, typename ly, typename Mem, typename gr> bool recv(size_t proc, size_t tag, openfpm::vector<T,ly,Mem,gr> & v)
+	template<typename T, typename Mem, typename gr> bool recv(size_t proc, size_t tag, openfpm::vector<T,Mem,gr> & v)
 	{
 #ifdef DEBUG
 		checkType<T>();

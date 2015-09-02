@@ -153,7 +153,7 @@ public:
 
 		// Sending property object
 		typedef object<typename object_creator<typename T::value_type::type,prp...>::type> prp_object;
-		typedef openfpm::vector<prp_object,openfpm::device_cpu<prp_object>,PtrMemory,openfpm::grow_policy_identity> stype;
+		typedef openfpm::vector<prp_object,PtrMemory,openfpm::grow_policy_identity> stype;
 
 		// Calculate the size to pack the object
 		size_t size = stype::calculateMem(obj.size(),0);
@@ -236,7 +236,7 @@ public:
 	{
 		// object that store the information in mem
 		typedef object<typename object_creator<typename T::type,prp...>::type> prp_object;
-		typedef openfpm::vector<prp_object,openfpm::device_cpu<prp_object>,PtrMemory,openfpm::grow_policy_identity> stype;
+		typedef openfpm::vector<prp_object,PtrMemory,openfpm::grow_policy_identity> stype;
 
 		// Calculate the size to pack the object
 		size_t size = stype::calculateMem(obj.size(),0);
@@ -269,7 +269,7 @@ public:
 	{
 		// object that store the information in mem
 		typedef object<typename object_creator<typename T::value_type::type,prp...>::type> prp_object;
-		typedef openfpm::vector<prp_object,openfpm::device_cpu<prp_object>,PtrMemory,openfpm::grow_policy_identity> stype;
+		typedef openfpm::vector<prp_object,PtrMemory,openfpm::grow_policy_identity> stype;
 
 		size_t size = stype::calculateMem(sub_it.getVolume(),0);
 
