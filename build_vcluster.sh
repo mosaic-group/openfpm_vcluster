@@ -1,23 +1,23 @@
 #! /bin/bash
 
-# Make a directory in /tmp/OpenFPM_data
+# Make a directory in /tmp/openfpm_data
 
 echo "Directory: $1"
 echo "Machine: $2"
 
 mkdir /tmp/openfpm_vcluster
 mv * .[^.]* /tmp/openfpm_vcluster
-mv /tmp/openfpm_vcluster OpenFPM_vcluster
+mv /tmp/openfpm_vcluster openfpm_vcluster
 
-mkdir OpenFPM_vcluster/src/config
+mkdir openfpm_vcluster/src/config
 
-git clone ssh://git@ppmcoremirror.dynu.com:2222/incardon/openfpm_devices.git OpenFPM_devices
-git clone ssh://git@ppmcoremirror.dynu.com:2222/incardon/openfpm_data.git OpenFPM_data
-cd OpenFPM_data
+git clone ssh://git@ppmcoremirror.dynu.com:2222/incardon/openfpm_devices.git openfpm_devices
+git clone ssh://git@ppmcoremirror.dynu.com:2222/incardon/openfpm_data.git openfpm_data
+cd openfpm_data
 git checkout develop
 cd ..
 
-cd "$1/OpenFPM_vcluster"
+cd "$1/openfpm_vcluster"
 
 if [ "$2" == "gin" ]
 then

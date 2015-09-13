@@ -165,12 +165,12 @@ am__define_uniq_tagged_files = \
 ETAGS = etags
 CTAGS = ctags
 DISTFILES = $(DIST_COMMON) $(DIST_SOURCES) $(TEXINFOS) $(EXTRA_DIST)
-ACLOCAL = ${SHELL} /home/i-bird/Desktop/MOSAIC/OpenFPM_project/OpenFPM_vcluster/missing aclocal-1.14
+ACLOCAL = ${SHELL} /home/i-bird/Desktop/MOSAIC/OpenFPM_project/openfpm_vcluster/missing aclocal-1.14
 AMTAR = $${TAR-tar}
 AM_DEFAULT_VERBOSITY = 1
-AUTOCONF = ${SHELL} /home/i-bird/Desktop/MOSAIC/OpenFPM_project/OpenFPM_vcluster/missing autoconf
-AUTOHEADER = ${SHELL} /home/i-bird/Desktop/MOSAIC/OpenFPM_project/OpenFPM_vcluster/missing autoheader
-AUTOMAKE = ${SHELL} /home/i-bird/Desktop/MOSAIC/OpenFPM_project/OpenFPM_vcluster/missing automake-1.14
+AUTOCONF = ${SHELL} /home/i-bird/Desktop/MOSAIC/OpenFPM_project/openfpm_vcluster/missing autoconf
+AUTOHEADER = ${SHELL} /home/i-bird/Desktop/MOSAIC/OpenFPM_project/openfpm_vcluster/missing autoheader
+AUTOMAKE = ${SHELL} /home/i-bird/Desktop/MOSAIC/OpenFPM_project/openfpm_vcluster/missing automake-1.14
 AWK = gawk
 BOOST_CPPFLAGS = -pthread -I/usr/include
 BOOST_DATE_TIME_LIB = -lboost_date_time
@@ -192,7 +192,7 @@ CUDA_CFLAGS =  -I -I -I/usr/local/cuda/include
 CUDA_LIBS =  -L -L -L/usr/local/cuda/lib64 -lcuda -lcudart
 CXX = mpic++
 CXXDEPMODE = depmode=gcc3
-CXXFLAGS =  --std=c++11 -march=native -mtune=native -Wno-unused-local-typedefs -Wextra -Wno-unused-parameter  -g3  -Wall -O0 
+CXXFLAGS =  --std=c++11 -march=native -mtune=native -Wno-unused-local-typedefs -Wextra -Wno-unused-parameter  -Wall -O3 -g3 -funroll-loops 
 CYGPATH_W = echo
 DEFAULT_LIB =  -lrt 
 DEFS = -DHAVE_CONFIG_H
@@ -201,7 +201,7 @@ ECHO_C =
 ECHO_N = -n
 ECHO_T = 
 EXEEXT = 
-INCLUDES_PATH =   -I/usr/local/include -I. -Iconfig -I../../OpenFPM_devices/src -I../../OpenFPM_data/src
+INCLUDES_PATH =   -I/usr/local/include -I. -Iconfig -I../../openfpm_devices/src -I../../openfpm_data/src
 INSTALL = /usr/bin/install -c
 INSTALL_DATA = ${INSTALL} -m 644
 INSTALL_PROGRAM = ${INSTALL}
@@ -211,10 +211,10 @@ LDFLAGS =
 LIBOBJS = 
 LIBS = 
 LTLIBOBJS = 
-MAKEINFO = ${SHELL} /home/i-bird/Desktop/MOSAIC/OpenFPM_project/OpenFPM_vcluster/missing makeinfo
+MAKEINFO = ${SHELL} /home/i-bird/Desktop/MOSAIC/OpenFPM_project/openfpm_vcluster/missing makeinfo
 MKDIR_P = /usr/bin/mkdir -p
 NVCC = /usr/local/cuda/bin/nvcc
-NVCCFLAGS =    -g -O0 
+NVCCFLAGS =    -O3 
 NVCC_EXIST = yes
 OBJEXT = o
 PACKAGE = full-package-name
@@ -229,10 +229,10 @@ SET_MAKE =
 SHELL = /bin/sh
 STRIP = 
 VERSION = VERSION
-abs_builddir = /home/i-bird/Desktop/MOSAIC/OpenFPM_project/OpenFPM_vcluster/src
-abs_srcdir = /home/i-bird/Desktop/MOSAIC/OpenFPM_project/OpenFPM_vcluster/src
-abs_top_builddir = /home/i-bird/Desktop/MOSAIC/OpenFPM_project/OpenFPM_vcluster
-abs_top_srcdir = /home/i-bird/Desktop/MOSAIC/OpenFPM_project/OpenFPM_vcluster
+abs_builddir = /home/i-bird/Desktop/MOSAIC/OpenFPM_project/openfpm_vcluster/src
+abs_srcdir = /home/i-bird/Desktop/MOSAIC/OpenFPM_project/openfpm_vcluster/src
+abs_top_builddir = /home/i-bird/Desktop/MOSAIC/OpenFPM_project/openfpm_vcluster
+abs_top_srcdir = /home/i-bird/Desktop/MOSAIC/OpenFPM_project/openfpm_vcluster
 ac_ct_CC = gcc
 ac_ct_CXX = 
 am__include = include
@@ -260,7 +260,7 @@ host_vendor = unknown
 htmldir = ${docdir}
 includedir = ${prefix}/include
 infodir = ${datarootdir}/info
-install_sh = ${SHELL} /home/i-bird/Desktop/MOSAIC/OpenFPM_project/OpenFPM_vcluster/install-sh
+install_sh = ${SHELL} /home/i-bird/Desktop/MOSAIC/OpenFPM_project/openfpm_vcluster/install-sh
 libdir = ${exec_prefix}/lib
 libexecdir = ${exec_prefix}/libexec
 localedir = ${datarootdir}/locale
@@ -285,7 +285,7 @@ top_build_prefix = ../
 top_builddir = ..
 top_srcdir = ..
 LINKLIBS = $(DEFAULT_LIB) $(PTHREAD_LIBS) $(OPT_LIBS) $(BOOST_LDFLAGS)
-vcluster_SOURCES = main.cpp VCluster.cpp ../../OpenFPM_devices/src/memory/HeapMemory.cpp ../../OpenFPM_devices/src/memory/PtrMemory.cpp
+vcluster_SOURCES = main.cpp VCluster.cpp ../../openfpm_devices/src/memory/HeapMemory.cpp ../../openfpm_devices/src/memory/PtrMemory.cpp
 vcluster_CXXFLAGS = $(INCLUDES_PATH) $(BOOST_CPPFLAGS)
 vcluster_CFLAGS = $(CUDA_CFLAGS)
 vcluster_LDADD = $(LINKLIBS)
@@ -423,33 +423,33 @@ vcluster-VCluster.obj: VCluster.cpp
 #	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) \
 #	$(AM_V_CXX_no)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(vcluster_CXXFLAGS) $(CXXFLAGS) -c -o vcluster-VCluster.obj `if test -f 'VCluster.cpp'; then $(CYGPATH_W) 'VCluster.cpp'; else $(CYGPATH_W) '$(srcdir)/VCluster.cpp'; fi`
 
-vcluster-HeapMemory.o: ../../OpenFPM_devices/src/memory/HeapMemory.cpp
-	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(vcluster_CXXFLAGS) $(CXXFLAGS) -MT vcluster-HeapMemory.o -MD -MP -MF $(DEPDIR)/vcluster-HeapMemory.Tpo -c -o vcluster-HeapMemory.o `test -f '../../OpenFPM_devices/src/memory/HeapMemory.cpp' || echo '$(srcdir)/'`../../OpenFPM_devices/src/memory/HeapMemory.cpp
+vcluster-HeapMemory.o: ../../openfpm_devices/src/memory/HeapMemory.cpp
+	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(vcluster_CXXFLAGS) $(CXXFLAGS) -MT vcluster-HeapMemory.o -MD -MP -MF $(DEPDIR)/vcluster-HeapMemory.Tpo -c -o vcluster-HeapMemory.o `test -f '../../openfpm_devices/src/memory/HeapMemory.cpp' || echo '$(srcdir)/'`../../openfpm_devices/src/memory/HeapMemory.cpp
 	$(AM_V_at)$(am__mv) $(DEPDIR)/vcluster-HeapMemory.Tpo $(DEPDIR)/vcluster-HeapMemory.Po
-#	$(AM_V_CXX)source='../../OpenFPM_devices/src/memory/HeapMemory.cpp' object='vcluster-HeapMemory.o' libtool=no \
+#	$(AM_V_CXX)source='../../openfpm_devices/src/memory/HeapMemory.cpp' object='vcluster-HeapMemory.o' libtool=no \
 #	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) \
-#	$(AM_V_CXX_no)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(vcluster_CXXFLAGS) $(CXXFLAGS) -c -o vcluster-HeapMemory.o `test -f '../../OpenFPM_devices/src/memory/HeapMemory.cpp' || echo '$(srcdir)/'`../../OpenFPM_devices/src/memory/HeapMemory.cpp
+#	$(AM_V_CXX_no)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(vcluster_CXXFLAGS) $(CXXFLAGS) -c -o vcluster-HeapMemory.o `test -f '../../openfpm_devices/src/memory/HeapMemory.cpp' || echo '$(srcdir)/'`../../openfpm_devices/src/memory/HeapMemory.cpp
 
-vcluster-HeapMemory.obj: ../../OpenFPM_devices/src/memory/HeapMemory.cpp
-	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(vcluster_CXXFLAGS) $(CXXFLAGS) -MT vcluster-HeapMemory.obj -MD -MP -MF $(DEPDIR)/vcluster-HeapMemory.Tpo -c -o vcluster-HeapMemory.obj `if test -f '../../OpenFPM_devices/src/memory/HeapMemory.cpp'; then $(CYGPATH_W) '../../OpenFPM_devices/src/memory/HeapMemory.cpp'; else $(CYGPATH_W) '$(srcdir)/../../OpenFPM_devices/src/memory/HeapMemory.cpp'; fi`
+vcluster-HeapMemory.obj: ../../openfpm_devices/src/memory/HeapMemory.cpp
+	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(vcluster_CXXFLAGS) $(CXXFLAGS) -MT vcluster-HeapMemory.obj -MD -MP -MF $(DEPDIR)/vcluster-HeapMemory.Tpo -c -o vcluster-HeapMemory.obj `if test -f '../../openfpm_devices/src/memory/HeapMemory.cpp'; then $(CYGPATH_W) '../../openfpm_devices/src/memory/HeapMemory.cpp'; else $(CYGPATH_W) '$(srcdir)/../../openfpm_devices/src/memory/HeapMemory.cpp'; fi`
 	$(AM_V_at)$(am__mv) $(DEPDIR)/vcluster-HeapMemory.Tpo $(DEPDIR)/vcluster-HeapMemory.Po
-#	$(AM_V_CXX)source='../../OpenFPM_devices/src/memory/HeapMemory.cpp' object='vcluster-HeapMemory.obj' libtool=no \
+#	$(AM_V_CXX)source='../../openfpm_devices/src/memory/HeapMemory.cpp' object='vcluster-HeapMemory.obj' libtool=no \
 #	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) \
-#	$(AM_V_CXX_no)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(vcluster_CXXFLAGS) $(CXXFLAGS) -c -o vcluster-HeapMemory.obj `if test -f '../../OpenFPM_devices/src/memory/HeapMemory.cpp'; then $(CYGPATH_W) '../../OpenFPM_devices/src/memory/HeapMemory.cpp'; else $(CYGPATH_W) '$(srcdir)/../../OpenFPM_devices/src/memory/HeapMemory.cpp'; fi`
+#	$(AM_V_CXX_no)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(vcluster_CXXFLAGS) $(CXXFLAGS) -c -o vcluster-HeapMemory.obj `if test -f '../../openfpm_devices/src/memory/HeapMemory.cpp'; then $(CYGPATH_W) '../../openfpm_devices/src/memory/HeapMemory.cpp'; else $(CYGPATH_W) '$(srcdir)/../../openfpm_devices/src/memory/HeapMemory.cpp'; fi`
 
-vcluster-PtrMemory.o: ../../OpenFPM_devices/src/memory/PtrMemory.cpp
-	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(vcluster_CXXFLAGS) $(CXXFLAGS) -MT vcluster-PtrMemory.o -MD -MP -MF $(DEPDIR)/vcluster-PtrMemory.Tpo -c -o vcluster-PtrMemory.o `test -f '../../OpenFPM_devices/src/memory/PtrMemory.cpp' || echo '$(srcdir)/'`../../OpenFPM_devices/src/memory/PtrMemory.cpp
+vcluster-PtrMemory.o: ../../openfpm_devices/src/memory/PtrMemory.cpp
+	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(vcluster_CXXFLAGS) $(CXXFLAGS) -MT vcluster-PtrMemory.o -MD -MP -MF $(DEPDIR)/vcluster-PtrMemory.Tpo -c -o vcluster-PtrMemory.o `test -f '../../openfpm_devices/src/memory/PtrMemory.cpp' || echo '$(srcdir)/'`../../openfpm_devices/src/memory/PtrMemory.cpp
 	$(AM_V_at)$(am__mv) $(DEPDIR)/vcluster-PtrMemory.Tpo $(DEPDIR)/vcluster-PtrMemory.Po
-#	$(AM_V_CXX)source='../../OpenFPM_devices/src/memory/PtrMemory.cpp' object='vcluster-PtrMemory.o' libtool=no \
+#	$(AM_V_CXX)source='../../openfpm_devices/src/memory/PtrMemory.cpp' object='vcluster-PtrMemory.o' libtool=no \
 #	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) \
-#	$(AM_V_CXX_no)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(vcluster_CXXFLAGS) $(CXXFLAGS) -c -o vcluster-PtrMemory.o `test -f '../../OpenFPM_devices/src/memory/PtrMemory.cpp' || echo '$(srcdir)/'`../../OpenFPM_devices/src/memory/PtrMemory.cpp
+#	$(AM_V_CXX_no)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(vcluster_CXXFLAGS) $(CXXFLAGS) -c -o vcluster-PtrMemory.o `test -f '../../openfpm_devices/src/memory/PtrMemory.cpp' || echo '$(srcdir)/'`../../openfpm_devices/src/memory/PtrMemory.cpp
 
-vcluster-PtrMemory.obj: ../../OpenFPM_devices/src/memory/PtrMemory.cpp
-	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(vcluster_CXXFLAGS) $(CXXFLAGS) -MT vcluster-PtrMemory.obj -MD -MP -MF $(DEPDIR)/vcluster-PtrMemory.Tpo -c -o vcluster-PtrMemory.obj `if test -f '../../OpenFPM_devices/src/memory/PtrMemory.cpp'; then $(CYGPATH_W) '../../OpenFPM_devices/src/memory/PtrMemory.cpp'; else $(CYGPATH_W) '$(srcdir)/../../OpenFPM_devices/src/memory/PtrMemory.cpp'; fi`
+vcluster-PtrMemory.obj: ../../openfpm_devices/src/memory/PtrMemory.cpp
+	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(vcluster_CXXFLAGS) $(CXXFLAGS) -MT vcluster-PtrMemory.obj -MD -MP -MF $(DEPDIR)/vcluster-PtrMemory.Tpo -c -o vcluster-PtrMemory.obj `if test -f '../../openfpm_devices/src/memory/PtrMemory.cpp'; then $(CYGPATH_W) '../../openfpm_devices/src/memory/PtrMemory.cpp'; else $(CYGPATH_W) '$(srcdir)/../../openfpm_devices/src/memory/PtrMemory.cpp'; fi`
 	$(AM_V_at)$(am__mv) $(DEPDIR)/vcluster-PtrMemory.Tpo $(DEPDIR)/vcluster-PtrMemory.Po
-#	$(AM_V_CXX)source='../../OpenFPM_devices/src/memory/PtrMemory.cpp' object='vcluster-PtrMemory.obj' libtool=no \
+#	$(AM_V_CXX)source='../../openfpm_devices/src/memory/PtrMemory.cpp' object='vcluster-PtrMemory.obj' libtool=no \
 #	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) \
-#	$(AM_V_CXX_no)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(vcluster_CXXFLAGS) $(CXXFLAGS) -c -o vcluster-PtrMemory.obj `if test -f '../../OpenFPM_devices/src/memory/PtrMemory.cpp'; then $(CYGPATH_W) '../../OpenFPM_devices/src/memory/PtrMemory.cpp'; else $(CYGPATH_W) '$(srcdir)/../../OpenFPM_devices/src/memory/PtrMemory.cpp'; fi`
+#	$(AM_V_CXX_no)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(vcluster_CXXFLAGS) $(CXXFLAGS) -c -o vcluster-PtrMemory.obj `if test -f '../../openfpm_devices/src/memory/PtrMemory.cpp'; then $(CYGPATH_W) '../../openfpm_devices/src/memory/PtrMemory.cpp'; else $(CYGPATH_W) '$(srcdir)/../../openfpm_devices/src/memory/PtrMemory.cpp'; fi`
 
 ID: $(am__tagged_files)
 	$(am__define_uniq_tagged_files); mkid -fID $$unique
