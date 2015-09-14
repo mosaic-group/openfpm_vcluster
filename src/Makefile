@@ -132,7 +132,7 @@ am__v_AR_0 = @echo "  AR      " $@;
 am__v_AR_1 = 
 libvcluster_a_AR = $(AR) $(ARFLAGS)
 libvcluster_a_LIBADD =
-am_libvcluster_a_OBJECTS =
+am_libvcluster_a_OBJECTS = libvcluster_a-VCluster.$(OBJEXT)
 libvcluster_a_OBJECTS = $(am_libvcluster_a_OBJECTS)
 PROGRAMS = $(noinst_PROGRAMS)
 am_vcluster_OBJECTS = vcluster-main.$(OBJEXT) \
@@ -177,18 +177,6 @@ AM_V_CXXLD = $(am__v_CXXLD_$(V))
 am__v_CXXLD_ = $(am__v_CXXLD_$(AM_DEFAULT_VERBOSITY))
 am__v_CXXLD_0 = @echo "  CXXLD   " $@;
 am__v_CXXLD_1 = 
-COMPILE = $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) \
-	$(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS)
-AM_V_CC = $(am__v_CC_$(V))
-am__v_CC_ = $(am__v_CC_$(AM_DEFAULT_VERBOSITY))
-am__v_CC_0 = @echo "  CC      " $@;
-am__v_CC_1 = 
-CCLD = $(CC)
-LINK = $(CCLD) $(AM_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) $(LDFLAGS) -o $@
-AM_V_CCLD = $(am__v_CCLD_$(V))
-am__v_CCLD_ = $(am__v_CCLD_$(AM_DEFAULT_VERBOSITY))
-am__v_CCLD_0 = @echo "  CCLD    " $@;
-am__v_CCLD_1 = 
 SOURCES = $(libvcluster_a_SOURCES) $(vcluster_SOURCES)
 DIST_SOURCES = $(libvcluster_a_SOURCES) $(vcluster_SOURCES)
 am__can_run_installinfo = \
@@ -345,11 +333,11 @@ vcluster_CXXFLAGS = $(INCLUDES_PATH) $(BOOST_CPPFLAGS)
 vcluster_CFLAGS = $(CUDA_CFLAGS)
 vcluster_LDADD = $(LINKLIBS)
 lib_LIBRARIES = libvcluster.a
-libvcluster_a_SOURCES = 
+libvcluster_a_SOURCES = VCluster.cpp 
 libvcluster_a_CXXFLAGS = $(INCLUDES_PATH) -I/usr/local/include
 libvcluster_a_CFLAGS = 
 nobase_include_HEADERS = MPI_wrapper/MPI_IallreduceW.hpp MPI_wrapper/MPI_IrecvW.hpp MPI_wrapper/MPI_IsendW.hpp MPI_wrapper/MPI_util.hpp \
-Pack_selector.hpp Pack_stat.hpp Packer.hpp Unpacker.hpp VCluster.hpp VCluster_object.hpp VCluster_object_array.hpp VirtualCluster.hpp VObject.hpp
+Pack_selector.hpp Pack_stat.hpp Packer.hpp Unpacker.hpp VCluster.hpp VCluster_object.hpp VCluster_object_array.hpp VObject.hpp
 
 all: all-am
 
@@ -435,6 +423,7 @@ mostlyclean-compile:
 distclean-compile:
 	-rm -f *.tab.c
 
+include ./$(DEPDIR)/libvcluster_a-VCluster.Po
 include ./$(DEPDIR)/vcluster-HeapMemory.Po
 include ./$(DEPDIR)/vcluster-PtrMemory.Po
 include ./$(DEPDIR)/vcluster-VCluster.Po
@@ -453,6 +442,20 @@ include ./$(DEPDIR)/vcluster-main.Po
 #	$(AM_V_CXX)source='$<' object='$@' libtool=no \
 #	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) \
 #	$(AM_V_CXX_no)$(CXXCOMPILE) -c -o $@ `$(CYGPATH_W) '$<'`
+
+libvcluster_a-VCluster.o: VCluster.cpp
+	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libvcluster_a_CXXFLAGS) $(CXXFLAGS) -MT libvcluster_a-VCluster.o -MD -MP -MF $(DEPDIR)/libvcluster_a-VCluster.Tpo -c -o libvcluster_a-VCluster.o `test -f 'VCluster.cpp' || echo '$(srcdir)/'`VCluster.cpp
+	$(AM_V_at)$(am__mv) $(DEPDIR)/libvcluster_a-VCluster.Tpo $(DEPDIR)/libvcluster_a-VCluster.Po
+#	$(AM_V_CXX)source='VCluster.cpp' object='libvcluster_a-VCluster.o' libtool=no \
+#	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) \
+#	$(AM_V_CXX_no)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libvcluster_a_CXXFLAGS) $(CXXFLAGS) -c -o libvcluster_a-VCluster.o `test -f 'VCluster.cpp' || echo '$(srcdir)/'`VCluster.cpp
+
+libvcluster_a-VCluster.obj: VCluster.cpp
+	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libvcluster_a_CXXFLAGS) $(CXXFLAGS) -MT libvcluster_a-VCluster.obj -MD -MP -MF $(DEPDIR)/libvcluster_a-VCluster.Tpo -c -o libvcluster_a-VCluster.obj `if test -f 'VCluster.cpp'; then $(CYGPATH_W) 'VCluster.cpp'; else $(CYGPATH_W) '$(srcdir)/VCluster.cpp'; fi`
+	$(AM_V_at)$(am__mv) $(DEPDIR)/libvcluster_a-VCluster.Tpo $(DEPDIR)/libvcluster_a-VCluster.Po
+#	$(AM_V_CXX)source='VCluster.cpp' object='libvcluster_a-VCluster.obj' libtool=no \
+#	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) \
+#	$(AM_V_CXX_no)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libvcluster_a_CXXFLAGS) $(CXXFLAGS) -c -o libvcluster_a-VCluster.obj `if test -f 'VCluster.cpp'; then $(CYGPATH_W) 'VCluster.cpp'; else $(CYGPATH_W) '$(srcdir)/VCluster.cpp'; fi`
 
 vcluster-main.o: main.cpp
 	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(vcluster_CXXFLAGS) $(CXXFLAGS) -MT vcluster-main.o -MD -MP -MF $(DEPDIR)/vcluster-main.Tpo -c -o vcluster-main.o `test -f 'main.cpp' || echo '$(srcdir)/'`main.cpp

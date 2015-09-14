@@ -8,12 +8,12 @@ vcluster_CFLAGS = $(CUDA_CFLAGS)
 vcluster_LDADD = $(LINKLIBS)
 
 lib_LIBRARIES = libvcluster.a
-libvcluster_a_SOURCES = 
+libvcluster_a_SOURCES = VCluster.cpp 
 libvcluster_a_CXXFLAGS = $(INCLUDES_PATH) -I/usr/local/include
 libvcluster_a_CFLAGS =
 
 nobase_include_HEADERS = MPI_wrapper/MPI_IallreduceW.hpp MPI_wrapper/MPI_IrecvW.hpp MPI_wrapper/MPI_IsendW.hpp MPI_wrapper/MPI_util.hpp \
-Pack_selector.hpp Pack_stat.hpp Packer.hpp Unpacker.hpp VCluster.hpp VCluster_object.hpp VCluster_object_array.hpp VirtualCluster.hpp VObject.hpp
+Pack_selector.hpp Pack_stat.hpp Packer.hpp Unpacker.hpp VCluster.hpp VCluster_object.hpp VCluster_object_array.hpp VObject.hpp
 
 
 .cu.o :
