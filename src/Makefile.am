@@ -9,7 +9,7 @@ vcluster_LDADD = $(LINKLIBS)
 
 lib_LIBRARIES = libvcluster.a
 libvcluster_a_SOURCES = 
-libvcluster_a_CXXFLAGS = $(INCLUDES_PATH) -I/usr/local/include
+libvcluster_a_CXXFLAGS = $(INCLUDES_PATH) $(BOOST_CPPFLAGS)
 libvcluster_a_CFLAGS =
 
 nobase_include_HEADERS = MPI_wrapper/MPI_IallreduceW.hpp MPI_wrapper/MPI_IrecvW.hpp MPI_wrapper/MPI_IsendW.hpp MPI_wrapper/MPI_util.hpp \
