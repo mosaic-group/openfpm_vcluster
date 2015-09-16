@@ -13,8 +13,8 @@ libvcluster_a_CXXFLAGS = $(INCLUDES_PATH) $(BOOST_CPPFLAGS)
 libvcluster_a_CFLAGS =
 
 nobase_include_HEADERS = MPI_wrapper/MPI_IallreduceW.hpp MPI_wrapper/MPI_IrecvW.hpp MPI_wrapper/MPI_IsendW.hpp MPI_wrapper/MPI_util.hpp \
-Pack_selector.hpp Pack_stat.hpp Packer.hpp Unpacker.hpp VCluster.hpp VCluster_object.hpp VCluster_object_array.hpp VObject.hpp
-
+Pack_selector.hpp Pack_stat.hpp Packer.hpp Unpacker.hpp VCluster.hpp VCluster_object.hpp VCluster_object_array.hpp VObject.hpp \
+util/Vcluster_log.hpp
 
 .cu.o :
 	$(NVCC) $(NVCCFLAGS) -o $@ -c $<
