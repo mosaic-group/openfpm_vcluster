@@ -239,7 +239,7 @@ public:
 			typedef encapc<1,prp_object,typename dtype::memory_conf > encap_dst;
 
 			// Copy only the selected properties
-			object_si_d<encap_src,encap_dst,ENCAP,prp...>(obj.get(obj_it.get()),dest.get(obj_it.get()));
+			object_si_d<encap_src,encap_dst,OBJ_ENCAP,prp...>(obj.get(obj_it.get()),dest.get(obj_it.get()));
 
 			++obj_it;
 		}
@@ -303,7 +303,7 @@ class Packer<T,Mem,PACKER_GRID>
 			typedef encapc<1,prp_object,typename dtype::memory_conf > encap_dst;
 
 			// Copy only the selected properties
-			object_si_d<encap_src,encap_dst,ENCAP,prp...>(obj.get_o(sub_it.get()),dest.get(id));
+			object_si_d<encap_src,encap_dst,OBJ_ENCAP,prp...>(obj.get_o(sub_it.get()),dest.get(id));
 
 			++id;
 			++sub_it;

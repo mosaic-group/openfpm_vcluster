@@ -174,7 +174,7 @@ public:
 			typedef encapc<1,prp_object,typename stype::memory_conf > encap_src;
 
 			// Copy only the selected properties
-			object_s_di<encap_src,encap_dst,ENCAP,prp...>(src.get(id),obj.get(obj_it.get()));
+			object_s_di<encap_src,encap_dst,OBJ_ENCAP,prp...>(src.get(id),obj.get(obj_it.get()));
 
 			++id;
 			++obj_it;
@@ -215,7 +215,7 @@ class Unpacker<T,Mem,PACKER_GRID>
 			typedef encapc<1,prp_object,typename grid_cpu<T::dims,prp_object>::memory_conf > encap_src;
 
 			// Copy only the selected properties
-			object_s_di<encap_src,encap_dst,ENCAP,prp...>(src.get(id),obj.get_o(sub_it.get()));
+			object_s_di<encap_src,encap_dst,OBJ_ENCAP,prp...>(src.get(id),obj.get_o(sub_it.get()));
 
 			++id;
 			++sub_it;
