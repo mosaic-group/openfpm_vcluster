@@ -271,7 +271,7 @@ public:
 	 *
 	 */
 
-	template<typename T> void reduce(T & num)
+	template<typename T> void sum(T & num)
 	{
 #ifdef DEBUG
 		checkType<T>();

@@ -95,12 +95,136 @@ template<unsigned int ip, typename T> void commFunc(Vcluster & vcl,openfpm::vect
 		vcl.sendrecvMultipleMessagesNBX(prc,data,msg_alloc,ptr_arg);
 }
 
+template<unsigned int ip, typename T> void commFunc_null_odd(Vcluster & vcl,openfpm::vector< size_t > & prc, openfpm::vector< T > & data, void * (* msg_alloc)(size_t,size_t,size_t,size_t,size_t,void *), void * ptr_arg)
+{
+	if (ip == PCX)
+	{
+		if (vcl.getProcessUnitID() % 2 == 0)
+			vcl.sendrecvMultipleMessagesPCX(prc,data,msg_alloc,ptr_arg);
+		else
+		{
+			openfpm::vector<size_t> map;
+
+			// resize map with the number of processors
+			map.resize(vcl.getProcessingUnits());
+
+			// reset the sending buffer
+			map.fill(0);
+
+			// No send check if passing null to sendrecv sendrecvMultipleMessagePCX work
+			vcl.sendrecvMultipleMessagesPCX(prc.size(),(size_t *)map.getPointer(),(size_t *)NULL,(size_t *)NULL,(void **)NULL,msg_alloc,ptr_arg,NONE);
+		}
+	}
+	else if (ip == NBX)
+	{
+		if (vcl.getProcessUnitID() % 2 == 0)
+			vcl.sendrecvMultipleMessagesNBX(prc,data,msg_alloc,ptr_arg);
+		else
+		{
+			// No send check if passing null to sendrecv sendrecvMultipleMessagePCX work
+			vcl.sendrecvMultipleMessagesNBX(prc.size(),(size_t *)NULL,(size_t *)NULL,(void **)NULL,msg_alloc,ptr_arg,NONE);
+		}
+	}
+}
+
 template <unsigned int ip> std::string method()
 {
 	if (ip == PCX)
 		return std::string("PCX");
 	else if (ip == NBX)
 		return std::string("NBX");
+}
+
+template<unsigned int ip> void test_no_send_some_peer()
+{
+	Vcluster & vcl = *global_v_cluster;
+
+	size_t n_proc = vcl.getProcessingUnits();
+
+	// Check long communication with some peer not comunication
+
+	size_t j = 4567;
+
+	global_step = j;
+	// Processor step
+	long int ps = n_proc / (8 + 1);
+
+	// send message
+	openfpm::vector<openfpm::vector<unsigned char>> message;
+	// recv message
+	openfpm::vector<openfpm::vector<unsigned char>> recv_message(n_proc);
+
+	openfpm::vector<size_t> prc;
+
+	// only even communicate
+
+	if (vcl.getProcessUnitID() % 2 == 0)
+	{
+		for (size_t i = 0 ; i < 8  && i < n_proc ; i++)
+		{
+			size_t p_id = ((i+1) * ps + vcl.getProcessUnitID()) % n_proc;
+			if (p_id != vcl.getProcessUnitID())
+			{
+				prc.add(p_id);
+				message.add();
+				std::ostringstream msg;
+				msg << "Hello from " << vcl.getProcessUnitID() << " to " << p_id;
+				std::string str(msg.str());
+				message.last().resize(j);
+				memset(message.last().getPointer(),0,j);
+				std::copy(str.c_str(),&(str.c_str())[msg.str().size()],&(message.last().get(0)));
+			}
+		}
+	}
+
+	recv_message.resize(n_proc);
+
+#ifdef VERBOSE_TEST
+	timer t;
+	t.start();
+#endif
+
+	commFunc_null_odd<ip>(vcl,prc,message,msg_alloc,&recv_message);
+
+#ifdef VERBOSE_TEST
+	t.stop();
+	double clk = t.getwct();
+	double clk_max = clk;
+
+	size_t size_send_recv = 2 * j * (prc.size());
+	vcl.sum(size_send_recv);
+	vcl.max(clk_max);
+	vcl.execute();
+
+	if (vcl.getProcessUnitID() == 0)
+		std::cout << "(Long pattern: " << method<ip>() << ")Buffer size: " << j << "    Bandwidth (Average): " << size_send_recv / vcl.getProcessingUnits() / clk / 1e6 << " MB/s  " << "    Bandwidth (Total): " << size_send_recv / clk / 1e6 << " MB/s    Clock: " << clk << "   Clock MAX: " << clk_max <<"\n";
+#endif
+
+	// Check the message
+	for (long int i = 0 ; i < 8  && i < (long int)n_proc ; i++)
+	{
+		long int p_id = (- (i+1) * ps + (long int)vcl.getProcessUnitID());
+		if (p_id < 0)
+			p_id += n_proc;
+		else
+			p_id = p_id % n_proc;
+
+		if (p_id != (long int)vcl.getProcessUnitID())
+		{
+			// only even processor communicate
+			if (p_id % 2 == 1)
+				continue;
+
+			std::ostringstream msg;
+			msg << "Hello from " << p_id << " to " << vcl.getProcessUnitID();
+			std::string str(msg.str());
+			BOOST_REQUIRE_EQUAL(std::equal(str.c_str(),str.c_str() + str.size() ,&(recv_message.get(p_id).get(0))),true);
+		}
+		else
+		{
+			BOOST_REQUIRE_EQUAL(0,recv_message.get(p_id).size());
+		}
+	}
 }
 
 template<unsigned int ip> void test()
@@ -170,7 +294,7 @@ template<unsigned int ip> void test()
 			double clk_max = clk;
 
 			size_t size_send_recv = 2 * j * (prc.size());
-			vcl.reduce(size_send_recv);
+			vcl.sum(size_send_recv);
 			vcl.max(clk_max);
 			vcl.execute();
 
@@ -254,8 +378,8 @@ template<unsigned int ip> void test()
 			double clk_max = clk;
 
 			size_t size_send_recv = (prc.size() + recv_message.size()) * j;
-			vcl.reduce(size_send_recv);
-			vcl.reduce(clk);
+			vcl.sum(size_send_recv);
+			vcl.sum(clk);
 			vcl.max(clk_max);
 			vcl.execute();
 			clk /= vcl.getProcessingUnits();
@@ -381,7 +505,7 @@ template<unsigned int ip> void test()
 			double clk_max = clk;
 
 			size_t size_send_recv = 2 * j * (prc.size());
-			vcl.reduce(size_send_recv);
+			vcl.sum(size_send_recv);
 			vcl.max(clk_max);
 			vcl.execute();
 

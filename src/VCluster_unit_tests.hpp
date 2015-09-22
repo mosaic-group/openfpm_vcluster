@@ -53,21 +53,21 @@ BOOST_AUTO_TEST_CASE( VCluster_use_reductions)
 
 	// Sum reductions
 	if ( vcl.getProcessingUnits() < 128 )
-		vcl.reduce(c);
+		vcl.sum(c);
 	if ( vcl.getProcessingUnits() < 256 )
-		vcl.reduce(uc);
+		vcl.sum(uc);
 	if ( vcl.getProcessingUnits() < 32768 )
-		vcl.reduce(s);
+		vcl.sum(s);
 	if ( vcl.getProcessingUnits() < 65536 )
-		vcl.reduce(us);
+		vcl.sum(us);
 	if ( vcl.getProcessingUnits() < 2147483648 )
-		vcl.reduce(i);
+		vcl.sum(i);
 	if ( vcl.getProcessingUnits() < 4294967296 )
-		vcl.reduce(ui);
-	vcl.reduce(li);
-	vcl.reduce(uli);
-	vcl.reduce(f);
-	vcl.reduce(d);
+		vcl.sum(ui);
+	vcl.sum(li);
+	vcl.sum(uli);
+	vcl.sum(f);
+	vcl.sum(d);
 
 	// Max reduction
 	if ( vcl.getProcessingUnits() < 128 )
@@ -136,6 +136,11 @@ BOOST_AUTO_TEST_CASE( VCluster_use_sendrecv)
 	test<NBX>();
 	totp_check = true;
 	test<PCX>();
+
+	totp_check = false;
+	test_no_send_some_peer<NBX>();
+	totp_check = false;
+	test_no_send_some_peer<PCX>();
 
 	std::cout << "VCluster unit test stop" << "\n";
 }
