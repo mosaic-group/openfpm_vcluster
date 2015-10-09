@@ -12,6 +12,7 @@
 #include "Packer.hpp"
 #include "Unpacker.hpp"
 #include "Grid/grid_util_test.hpp"
+#include <iostream>
 
 BOOST_AUTO_TEST_SUITE( packer_unpacker )
 

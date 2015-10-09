@@ -134,54 +134,10 @@ class Unpacker<T,Mem,PACKER_VECTOR>
 {
 public:
 
-	/*! \brief unpack a vector
-	 *
-	 * \warning the properties should match the packed properties, and the obj must have the same size of the packed vector, consider to pack
-	 *          this information if you cannot infer-it
-	 *
-	 * \param ext preallocated memory from where to unpack the vector
-	 * \param obj object where to unpack
-	 *
-	 */
 	template<unsigned int ... prp> void static unpack(ExtPreAlloc<Mem> & mem, T & obj, Unpack_stat & ps)
 	{
-		// if no properties should be unpacked return
-		if (sizeof...(prp) == 0)
-			return;
-
-		size_t id = 0;
-
-		// Sending property object
-		typedef object<typename object_creator<typename T::value_type::type,prp...>::type> prp_object;
-		typedef openfpm::vector<prp_object,PtrMemory,openfpm::grow_policy_identity> stype;
-
-		// Calculate the size to pack the object
-		size_t size = stype::calculateMem(obj.size(),0);
-
-		// Create a Pointer object over the preallocated memory (No allocation is produced)
-		PtrMemory & ptr = *(new PtrMemory(mem.getPointerOffset(ps.getOffset()),size));
-
-		stype src;
-		src.setMemory(ptr);
-		src.resize(obj.size());
-		auto obj_it = obj.getIterator();
-
-		while (obj_it.isNext())
-		{
-			// copy all the object in the send buffer
-			typedef encapc<1,typename T::value_type,typename T::memory_conf > encap_dst;
-			// destination object type
-			typedef encapc<1,prp_object,typename stype::memory_conf > encap_src;
-
-			// Copy only the selected properties
-			object_s_di<encap_src,encap_dst,ENCAP,prp...>(src.get(id),obj.get(obj_it.get()));
-
-			++id;
-			++obj_it;
-		}
-
-		ps.addOffset(size);
-	}
+		obj.unpack<prp...>(mem, obj, ps);
+	};
 };
 
 /*! \brief Unpacker for grids
@@ -193,98 +149,17 @@ public:
 template<typename T, typename Mem>
 class Unpacker<T,Mem,PACKER_GRID>
 {
-	/*! \brief unpack the grid given an iterator
-	 *
-	 * \tparam it type of iterator
-	 * \tparam prp of the grid object to unpack
-	 *
-	 */
-	template <typename it, typename stype, unsigned int ... prp> static void unpack_with_iterator(ExtPreAlloc<Mem> & mem, it & sub_it, T & obj, stype & src, Unpack_stat & ps)
-	{
-		size_t id = 0;
-
-		// Sending property object
-		typedef object<typename object_creator<typename T::value_type::type,prp...>::type> prp_object;
-
-		// unpacking the information
-		while (sub_it.isNext())
-		{
-			// copy all the object in the send buffer
-			typedef encapc<T::dims,typename T::value_type,typename T::memory_conf > encap_dst;
-			// destination object type
-			typedef encapc<1,prp_object,typename grid_cpu<T::dims,prp_object>::memory_conf > encap_src;
-
-			// Copy only the selected properties
-			object_s_di<encap_src,encap_dst,ENCAP,prp...>(src.get(id),obj.get_o(sub_it.get()));
-
-			++id;
-			++sub_it;
-		}
-	}
-
 public:
 
-	/*! \brief unpack the grid object
-	 *
-	 * \tparam prp properties to unpack
-	 *
-	 * \param ext preallocated memory from where to unpack the grid
-	 * \param obj object where to unpack
-	 *
-	 */
 	template<unsigned int ... prp> static void unpack(ExtPreAlloc<Mem> & mem, T & obj, Unpack_stat & ps)
 	{
-		// object that store the information in mem
-		typedef object<typename object_creator<typename T::type,prp...>::type> prp_object;
-		typedef openfpm::vector<prp_object,PtrMemory,openfpm::grow_policy_identity> stype;
+		obj.unpack<prp...>(mem, ps);
+	};
 
-		// Calculate the size to pack the object
-		size_t size = stype::calculateMem(obj.size(),0);
-
-		// Create an Pointer object over the preallocated memory (No allocation is produced)
-		PtrMemory & ptr = *(new PtrMemory(mem.getPointerOffset(ps.getOffset()),size));
-
-		// Create an object over a pointer (No allocation is produced)
-		stype src;
-		src.setMemory(mem);
-		src.resize(obj.size());
-
-		auto it = obj.getIterator();
-
-		unpack_with_iterator<decltype(it),stype,prp...>(mem,it,obj,src,ps);
-
-		ps.addOffset(size);
-	}
-
-	/*! \brief unpack the sub-grid object
-	 *
-	 * \tparam prp properties to unpack
-	 *
-	 * \param mem preallocated memory from where to unpack the object
-	 * \param sub sub-grid iterator
-	 * \param obj object where to unpack
-	 *
-	 */
 	template<unsigned int ... prp> static void unpack(ExtPreAlloc<Mem> & mem, grid_key_dx_iterator_sub<T::dims> & sub_it, T & obj, Unpack_stat & ps)
 	{
-		// object that store the information in mem
-		typedef object<typename object_creator<typename T::value_type::type,prp...>::type> prp_object;
-		typedef openfpm::vector<prp_object,PtrMemory,openfpm::grow_policy_identity> stype;
-
-		size_t size = stype::calculateMem(sub_it.getVolume(),0);
-
-		// Create an object over the preallocated memory (No allocation is produced)
-		PtrMemory & ptr = *(new PtrMemory(mem.getPointerOffset(ps.getOffset()),size));
-
-		// Create an object of the packed information over a pointer (No allocation is produced)
-		stype src;
-		src.setMemory(ptr);
-		src.resize(sub_it.getVolume());
-
-		unpack_with_iterator<grid_key_dx_iterator_sub<T::dims>,stype,prp...>(mem,sub_it,obj,src,ps);
-
-		ps.addOffset(size);
-	}
+		obj.unpack<prp...>(mem, sub_it, ps);
+	};
 };
 
 /*! \brief Unpacker for encapsulated objects

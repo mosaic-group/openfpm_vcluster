@@ -15,6 +15,7 @@
 #include "util/util_debug.hpp"
 #include "Pack_stat.hpp"
 #include "Pack_selector.hpp"
+#include "Vector/map_vector.hpp"
 
 /*! \brief Packing class
  *
@@ -202,68 +203,16 @@ class Packer<T,Mem,PACKER_VECTOR>
 {
 public:
 
-	/*! \brief pack a vector selecting the properties to pack
-	 *
-	 * \param mem preallocated memory where to pack the vector
-	 * \param obj object to pack
-	 * \param sts pack-stat info
-	 *
-	 */
-	template<int ... prp> static void pack(ExtPreAlloc<Mem> & mem, T & obj, Pack_stat & sts)
-	{
-#ifdef DEBUG
-		if (mem.ref() == 0)
-			std::cerr << "Error : " << __FILE__ << ":" << __LINE__ << " the reference counter of mem should never be zero when packing \n";
-#endif
-
-		// if no properties should be packed return
-		if (sizeof...(prp) == 0)
-			return;
-
-		// Sending property object
-		typedef object<typename object_creator<typename T::value_type::type,prp...>::type> prp_object;
-
-		typedef openfpm::vector<prp_object,ExtPreAlloc<Mem>,openfpm::grow_policy_identity> dtype;
-
-		// Create an object over the preallocated memory (No allocation is produced)
-		dtype dest;
-		dest.setMemory(mem);
-		dest.resize(obj.size());
-		auto obj_it = obj.getIterator();
-
-		while (obj_it.isNext())
-		{
-			// copy all the object in the send buffer
-			typedef encapc<1,typename T::value_type,typename T::memory_conf > encap_src;
-			// destination object type
-			typedef encapc<1,prp_object,typename dtype::memory_conf > encap_dst;
-
-			// Copy only the selected properties
-			object_si_d<encap_src,encap_dst,ENCAP,prp...>(obj.get(obj_it.get()),dest.get(obj_it.get()));
-
-			++obj_it;
-		}
-
-		// Update statistic
-		sts.incReq();
-
-	}
-
-	/*! \brief Insert an allocation request into the vector
-	 *
-	 * \param obj vector object to pack
-	 * \param requests vector
-	 *
-	 */
 	template<int ... prp> static void packRequest(T & obj, std::vector<size_t> & v)
 	{
-		typedef object<typename object_creator<typename T::value_type::type,prp...>::type> prp_object;
+		obj.packRequest<prp...>(obj, v);
+	};
 
-		// Calculate the required memory for packing
-		size_t alloc_ele = openfpm::vector<prp_object>::calculateMem(obj.size(),0);
+	template<int ... prp> static void pack(ExtPreAlloc<Mem> & mem, T & obj, Pack_stat & sts)
+	{
+		obj.pack<prp...>(mem, obj, sts);
+	};
 
-		v.push_back(alloc_ele);
-	}
 };
 
 /*! \brief Packer for grids and sub-grids
@@ -275,157 +224,30 @@ public:
 template<typename T, typename Mem>
 class Packer<T,Mem,PACKER_GRID>
 {
-	/*! \brief Pack an N-dimensional grid into a vector like structure B given an iterator of the grid
-	 *
-	 * \tparam it type of iterator of the grid-structure
-	 * \tparam dtype type of the structure B
-	 * \tparam dim Dimensionality of the grid
-	 * \tparam properties to pack
-	 *
-	 * \param it Grid iterator
-	 * \param obj object to pack
-	 * \param dest where to pack
-	 *
-	 */
-	template <typename it, typename dtype, int ... prp> static void pack_with_iterator(it & sub_it, T & obj, dtype & dest)
-	{
-		// Sending property object
-		typedef object<typename object_creator<typename T::value_type::type,prp...>::type> prp_object;
-
-		size_t id = 0;
-
-		// Packing the information
-		while (sub_it.isNext())
-		{
-			// copy all the object in the send buffer
-			typedef encapc<T::dims,typename T::value_type,typename T::memory_conf > encap_src;
-			// destination object type
-			typedef encapc<1,prp_object,typename dtype::memory_conf > encap_dst;
-
-			// Copy only the selected properties
-			object_si_d<encap_src,encap_dst,ENCAP,prp...>(obj.get_o(sub_it.get()),dest.get(id));
-
-			++id;
-			++sub_it;
-		}
-	}
-
 public:
 
-	/*! \brief Pack the object into the memory given an iterator
-	 *
-	 * \tparam dim Dimensionality of the grid
-	 * \tparam prp properties to pack
-	 *
-	 * \param mem preallocated memory where to pack the objects
-	 * \param obj object to pack
-	 * \param sts pack statistic
-	 *
-	 */
-	template<int ... prp> static void pack(ExtPreAlloc<Mem> & mem, T & obj, Pack_stat & sts)
-	{
-#ifdef DEBUG
-		if (mem.ref() == 0)
-			std::cerr << "Error : " << __FILE__ << ":" << __LINE__ << " the reference counter of mem should never be zero when packing \n";
-#endif
-
-		// Sending property object and vector
-		typedef object<typename object_creator<typename T::type,prp...>::type> prp_object;
-		typedef openfpm::vector<prp_object,ExtPreAlloc<Mem>> dtype;
-
-		// Calculate the required memory for packing
-		size_t alloc_ele = dtype::calculateMem(obj.size(),0);
-
-		// Create an object over the preallocated memory (No allocation is produced)
-		dtype dest;
-		dest.setMemory(mem);
-		dest.resize(obj.size());
-
-		auto it = obj.getIterator();
-
-		pack_with_iterator<decltype(it),dtype,prp...>(mem,it,obj,dest);
-
-		// Update statistic
-		sts.incReq();
-	}
-
-	/*! \brief Pack the object into the memory given an iterator
-	 *
-	 * \tparam prp properties to pack
-	 *
-	 * \param mem preallocated memory where to pack the objects
-	 * \param sub_it sub grid iterator ( or the elements in the grid to pack )
-	 * \param obj object to pack
-	 * \param sts pack statistic
-	 *
-	 */
-	template<int ... prp> static void pack(ExtPreAlloc<Mem> & mem, T & obj, grid_key_dx_iterator_sub<T::dims> & sub_it, Pack_stat & sts)
-	{
-#ifdef DEBUG
-		if (mem.ref() == 0)
-			std::cerr << "Error : " << __FILE__ << ":" << __LINE__ << " the reference counter of mem should never be zero when packing \n";
-#endif
-
-		// Sending property object
-		typedef object<typename object_creator<typename T::value_type::type,prp...>::type> prp_object;
-		typedef openfpm::vector<prp_object,ExtPreAlloc<Mem>,openfpm::grow_policy_identity> dtype;
-
-		// Create an object over the preallocated memory (No allocation is produced)
-		dtype dest;
-		dest.setMemory(mem);
-		dest.resize(sub_it.getVolume());
-
-		pack_with_iterator<grid_key_dx_iterator_sub<T::dims>,dtype,prp...>(sub_it,obj,dest);
-
-		// Update statistic
-		sts.incReq();
-	}
-
-	/*! \brief Insert an allocation request
-	 *
-	 * \param vector of requests
-	 *
-	 */
 	template<int ... prp> static void packRequest(T & obj, std::vector<size_t> & v)
 	{
-		// Sending property object
-		typedef object<typename object_creator<typename T::type::type,prp...>::type> prp_object;
-		typedef openfpm::vector<prp_object,ExtPreAlloc<Mem>,openfpm::grow_policy_identity> dtype;
+		obj.packRequest<prp...>(v);
+	};
 
-		// Calculate the required memory for packing
-		size_t alloc_ele = dtype::calculateMem(obj.size(),0);
-
-		v.push_back(alloc_ele);
-	}
-
-	/*! \brief Insert an allocation request
-	 *
-	 * \tparam prp set of properties to pack
-	 *
-	 * \param obj grid to pack
-	 * \param sub sub-grid iterator
-	 * \param vector of requests
-	 *
-	 */
 	template<int ... prp> static void packRequest(T & obj, grid_key_dx_iterator_sub<T::dims> & sub, std::vector<size_t> & v)
 	{
-		// Sending property object
-		typedef object<typename object_creator<typename T::value_type::type,prp...>::type> prp_object;
-		typedef openfpm::vector<prp_object,ExtPreAlloc<Mem>,openfpm::grow_policy_identity> dtype;
+		obj.packRequest<prp...>(sub, v);
+	};
 
-		// Calculate the required memory for packing
-		size_t alloc_ele = dtype::calculateMem(sub.getVolume(),0);
-
-		v.push_back(alloc_ele);
+	template<int ... prp> static void pack(ExtPreAlloc<Mem> & mem, T & obj, Pack_stat & sts)
+	{
+		obj.pack<prp...>(mem, sts);
 	}
+
+	template<int ... prp> static void pack(ExtPreAlloc<Mem> & mem, T & obj, grid_key_dx_iterator_sub<T::dims> & sub_it, Pack_stat & sts)
+	{
+		obj.pack<prp...>(mem, sub_it, sts);
+	}
+
 };
 
-/*! \brief Packer class for encapsulated objects
- *
- * \tparam T object type to pack
- * \tparam Mem Memory origin HeapMemory CudaMemory ...
- *
- */
 template<typename T, typename Mem>
 class Packer<T,Mem,PACKER_ENCAP_OBJECTS>
 {
