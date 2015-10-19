@@ -125,7 +125,8 @@ BOOST_AUTO_TEST_CASE ( packer_unpacker_test )
 	BOOST_REQUIRE_EQUAL(pap_prp[pap_prp.size()-1],(sizeof(float) + sizeof(float[3])) * sub.getVolume());
 
 	// Calculate how much preallocated memory we need to pack all the objects
-	size_t req = ExtPreAlloc<HeapMemory>::calculateMem(pap_prp);
+	ExtPreAlloc<HeapMemory> preall;
+	size_t req = preall.calculateMem(pap_prp);
 
 	// allocate the memory
 	HeapMemory pmem;

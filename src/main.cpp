@@ -6,3 +6,4 @@
 #include "unit_test_init_cleanup.hpp"
 #include "VCluster_unit_tests.hpp"
 #include "Packer_unit_tests.hpp"
+#include "Packer_nested_tests.hpp"
