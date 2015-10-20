@@ -882,6 +882,7 @@ public:
 };
 
 void init_global_v_cluster(int *argc, char ***argv);
+void delete_global_v_cluster();
 
 extern Vcluster * global_v_cluster;
 
