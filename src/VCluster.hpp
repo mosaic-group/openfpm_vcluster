@@ -10,6 +10,7 @@
 #include "MPI_wrapper/MPI_IallreduceW.hpp"
 #include "MPI_wrapper/MPI_IrecvW.hpp"
 #include "MPI_wrapper/MPI_IsendW.hpp"
+#include "MPI_wrapper/MPI_IAllGather.hpp"
 #include <exception>
 #include "Vector/map_vector.hpp"
 #ifdef DEBUG
@@ -26,6 +27,7 @@
 
 #define SERIVCE_MESSAGE_TAG 16384
 #define SEND_RECV_BASE 8192
+#define GATHER_BASE 24576
 
 extern size_t n_vcluster;
 extern bool global_mpi_init;
@@ -747,6 +749,7 @@ public:
 		return true;
 	}
 
+
 	/*! \brief Send data to a processor
 	 *
 	 * \warning In order to avoid deadlock every send must be coupled with a recv
@@ -812,36 +815,65 @@ public:
 		return true;
 	}
 
-	/*! \brief Recv data from a processor
-	 *
-	 * \warning In order to avoid deadlock every recv must be coupled with a send
-	 *          in case you want to send data without knowledge from the other side
-	 *          consider to use sendRecvMultipleMessages
+    /*! \brief Recv data from a processor
+     *
+     * \warning In order to avoid deadlock every recv must be coupled with a send
+     *          in case you want to send data without knowledge from the other side
+     *          consider to use sendRecvMultipleMessages
+     *
+     * \warning operation is asynchronous execute must be called to ensure they are executed
+     *
+     * \see sendRecvMultipleMessages
+     *
+     * \param proc processor id
+     * \param tag id
+     * \param v vector to send
+     *
+     * \return true if succeed false otherwise
+     *
+     */
+    template<typename T, typename Mem, typename gr> bool recv(size_t proc, size_t tag, openfpm::vector<T,Mem,gr> & v)
+    {
+#ifdef DEBUG
+            checkType<T>();
+#endif
+
+            // recv over MPI
+
+            // Create one request
+            req.add();
+
+            // receive
+            MPI_IrecvW<T>::recv(proc,SEND_RECV_BASE + tag,v,req.last());
+
+            return true;
+    }
+
+	/*! \brief Gather the data from all processors
 	 *
 	 * \warning operation is asynchronous execute must be called to ensure they are executed
 	 *
-	 * \see sendRecvMultipleMessages
-	 *
-	 * \param proc processor id
 	 * \param tag id
-	 * \param v vector to send
+	 * \param v vector to receive
+	 * \param send data to send
 	 *
 	 * \return true if succeed false otherwise
 	 *
 	 */
-	template<typename T, typename Mem, typename gr> bool recv(size_t proc, size_t tag, openfpm::vector<T,Mem,gr> & v)
+	template<typename T, typename Mem, typename gr> bool allGather(T & send, openfpm::vector<T,Mem,gr> & v)
 	{
 #ifdef DEBUG
 		checkType<T>();
 #endif
 
-		// recv over MPI
-
 		// Create one request
 		req.add();
 
+		// Number of processors
+		v.resize(getProcessingUnits());
+
 		// receive
-		MPI_IrecvW<T>::recv(proc,SEND_RECV_BASE + tag,v,req.last());
+		MPI_IAllGatherW<T>::gather(&send,1,v.getPointer(),1,req.last());
 
 		return true;
 	}

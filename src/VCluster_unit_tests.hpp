@@ -128,6 +128,22 @@ BOOST_AUTO_TEST_CASE(VCluster_send_recv)
 	test_send_recv_primitives<double>(N_V_ELEMENTS,vcl);
 }
 
+BOOST_AUTO_TEST_CASE(VCluster_allgather)
+{
+	Vcluster & vcl = *global_v_cluster;
+
+	test_single_all_gather_primitives<unsigned char>(vcl);
+	test_single_all_gather_primitives<char>(vcl);
+	test_single_all_gather_primitives<short>(vcl);
+	test_single_all_gather_primitives<unsigned short>(vcl);
+	test_single_all_gather_primitives<int>(vcl);
+	test_single_all_gather_primitives<unsigned int>(vcl);
+	test_single_all_gather_primitives<long int>(vcl);
+	test_single_all_gather_primitives<unsigned long int>(vcl);
+	test_single_all_gather_primitives<float>(vcl);
+	test_single_all_gather_primitives<double>(vcl);
+}
+
 BOOST_AUTO_TEST_CASE( VCluster_use_sendrecv)
 {
 	std::cout << "VCluster unit test start" << "\n";

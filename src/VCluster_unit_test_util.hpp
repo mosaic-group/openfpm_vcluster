@@ -679,4 +679,21 @@ template<typename T> void test_send_recv_primitives(size_t n, Vcluster & vcl)
 	}
 }
 
+template<typename T>  void test_single_all_gather_primitives(Vcluster & vcl)
+{
+	//! [allGather numbers]
+
+	openfpm::vector<T> clt;
+	T data = vcl.getProcessUnitID();
+
+	vcl.allGather(data,clt);
+	vcl.execute();
+
+	for (size_t i = 0 ; i < vcl.getProcessingUnits() ; i++)
+		BOOST_REQUIRE_EQUAL(i,clt.get(i));
+
+	//! [allGather numbers]
+
+}
+
 #endif /* VCLUSTER_UNIT_TEST_UTIL_HPP_ */
