@@ -53,6 +53,16 @@ public:
 		return objects[i];
 	}
 
+	/*! \brief Return the element i
+	 *
+	 * \return a reference to the object i
+	 *
+	 */
+	const T & get(unsigned int i) const
+	{
+		return objects[i];
+	}
+
 	/*! \brief Check if this Object is an array
 	 *
 	 * \return true, it is an array
