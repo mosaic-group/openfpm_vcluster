@@ -132,8 +132,12 @@ BOOST_AUTO_TEST_CASE(VCluster_allgather)
 {
 	Vcluster & vcl = *global_v_cluster;
 
-	test_single_all_gather_primitives<unsigned char>(vcl);
-	test_single_all_gather_primitives<char>(vcl);
+	if (vcl.getProcessingUnits() < 256)
+		test_single_all_gather_primitives<unsigned char>(vcl);
+
+	if (vcl.getProcessingUnits() < 128)
+		test_single_all_gather_primitives<char>(vcl);
+
 	test_single_all_gather_primitives<short>(vcl);
 	test_single_all_gather_primitives<unsigned short>(vcl);
 	test_single_all_gather_primitives<int>(vcl);
