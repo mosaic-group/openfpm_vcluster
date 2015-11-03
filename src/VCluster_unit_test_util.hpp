@@ -78,6 +78,7 @@ void * msg_alloc3(size_t msg_i ,size_t total_msg, size_t total_p, size_t i, size
 	openfpm::vector<openfpm::vector<unsigned char>> * v = static_cast<openfpm::vector<openfpm::vector<unsigned char>> *>(ptr);
 
 	v->add();
+
 	prc_recv.add();
 
 	BOOST_REQUIRE_EQUAL(msg_i, global_step);
@@ -247,6 +248,7 @@ template<unsigned int ip> void test()
 			openfpm::vector<openfpm::vector<unsigned char>> message;
 			// recv message
 			openfpm::vector<openfpm::vector<unsigned char>> recv_message(n_proc);
+			recv_message.reserve(n_proc);
 
 			openfpm::vector<size_t> prc;
 
@@ -340,6 +342,7 @@ template<unsigned int ip> void test()
 			openfpm::vector<openfpm::vector<unsigned char>> message;
 			// recv message
 			openfpm::vector<openfpm::vector<unsigned char>> recv_message;
+//			recv_message.reserve(n_proc);
 
 			openfpm::vector<size_t> prc;
 
