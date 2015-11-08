@@ -92,22 +92,23 @@ fi
 
 INCLUDES_PATH+=" -I/usr/local/include -I. -Iconfig -I../../openfpm_devices/src -I../../openfpm_data/src"
 
-###### Check for memleak check compilation
+########
 
-AC_MSG_CHECKING(whether to build with memory check)
-mem_check=no
-AC_ARG_ENABLE(memcheck,
-	AC_HELP_STRING(
-	    [--enable-memcheck],
-	    [enable memory checking (def=no)]
-	),
-  	mem_check="$enableval"
+## Enable scan coverty
+
+AC_MSG_CHECKING(whether to build for scan coverty compilation)
+AC_ARG_ENABLE(scan-coverty,
+        AC_HELP_STRING(
+            [--enable-scan-coverty],
+            [enable scan-coverty compilation (def=no)]
+        ),
+        scancoverty="$enableval"
 )
 
+AC_MSG_RESULT($scancoverty)
 
-AC_MSG_RESULT($mem_check)
-if test x"$mem_check" = x"yes"; then
-	AC_DEFINE([MEMLEAK_CHECK],[],[Memory check])
+if test x"$scancoverty" = x"yes"; then
+        AC_DEFINE([COVERTY_SCAN],[],[Compile for coverty scan])
 fi
 
 ####################################
