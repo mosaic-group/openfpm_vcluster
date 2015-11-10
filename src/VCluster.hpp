@@ -317,8 +317,13 @@ public:
 	// sending map
 	openfpm::vector<size_t> map;
 
+	// barrier request
+	MPI_Request bar_req;
+	// barrier status
+	MPI_Status bar_stat;
+
 	// Distributed processor graph
-	MPI_Comm proc_comm_graph;
+//	MPI_Comm proc_comm_graph;
 
 	/*! \brief
 	 *
@@ -328,7 +333,7 @@ public:
 
 	openfpm::vector<size_t> NN_proc;
 
-	void setLocality(openfpm::vector<size_t> NN_proc)
+/*	void setLocality(openfpm::vector<size_t> NN_proc)
 	{
 		// Number of sources in the graph, and sources processors
 		size_t sources = NN_proc.size();
@@ -348,7 +353,7 @@ public:
 		}
 
 		MPI_Dist_graph_create_adjacent(MPI_COMM_WORLD,sources,&src_proc.get(0),(const int *)MPI_UNWEIGHTED,dest,&dest_proc.get(0),(const int *)MPI_UNWEIGHTED,MPI_INFO_NULL,true,&proc_comm_graph);
-	}
+	}*/
 
 	/*! \brief Send and receive multiple messages within local processors
 	 *
@@ -454,11 +459,6 @@ public:
 
 		sendrecvMultipleMessagesPCX(prc.size(),(size_t *)map.getPointer(),(size_t *)sz_send.getPointer(),(size_t *)prc.getPointer(),(void **)ptr_send.getPointer(),msg_alloc,ptr_arg,opt);
 	}
-
-	// barrier request
-	MPI_Request bar_req;
-	// barrier status
-	MPI_Status bar_stat;
 
 	/*! \brief Send and receive multiple messages local
 	 *
