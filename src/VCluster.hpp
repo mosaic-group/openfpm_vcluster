@@ -29,7 +29,9 @@
 #define SEND_RECV_BASE 8192
 #define GATHER_BASE 24576
 
+// number of vcluster instances
 extern size_t n_vcluster;
+// Global MPI initialization
 extern bool global_mpi_init;
 
 ///////////////////// Post functions /////////////
@@ -139,6 +141,9 @@ public:
 	// Finalize the MPI program
 	~Vcluster()
 	{
+#ifdef SE_CLASS2
+		check_delete(this);
+#endif
 		n_vcluster--;
 
 		// if there are no other vcluster instances finalize
@@ -150,6 +155,10 @@ public:
 	Vcluster(int *argc, char ***argv)
 	:NBX_cnt(0)
 	{
+#ifdef SE_CLASS2
+		check_new(this,8,VCLUSTER_EVENT,PRJ_VCLUSTER);
+#endif
+
 		n_vcluster++;
 
 		// Check if MPI is already initialized
@@ -913,10 +922,27 @@ public:
 
 };
 
-void init_global_v_cluster(int *argc, char ***argv);
-void delete_global_v_cluster();
+// Function to initialize the global VCluster //
 
 extern Vcluster * global_v_cluster;
+
+
+/*! \brief Initialize a global instance of Runtime Virtual Cluster Machine
+ *
+ * Initialize a global instance of Runtime Virtual Cluster Machine
+ *
+ */
+
+static void init_global_v_cluster(int *argc, char ***argv)
+{
+	if (global_v_cluster == NULL)
+		global_v_cluster = new Vcluster(argc,argv);
+}
+
+static void delete_global_v_cluster()
+{
+	delete global_v_cluster;
+}
 
 #endif
 
