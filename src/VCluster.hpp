@@ -151,9 +151,15 @@ public:
 		{
 			std::cout << "Finalize\n";
 
-			if (MPI_Finalize() != 0)
+			int already_finalised;
+
+			MPI_Finalized(&already_finalised);
+			if (!already_finalised)
 			{
-				std::cerr << "DAMN!!!!!!!! \n";
+				if (MPI_Finalize() != 0)
+				{
+					std::cerr << __FILE__ << ":" << __LINE__  << " MPI_Finalize FAILED \n";
+				}
 			}
 		}
 	}
@@ -168,12 +174,14 @@ public:
 
 		n_vcluster++;
 
+		int already_initialised;
+		MPI_Initialized(&already_initialised);
+
 		// Check if MPI is already initialized
-		if (global_mpi_init == false)
+		if (!already_initialised)
 		{
 
 			MPI_Init(argc,argv);
-			global_mpi_init = true;
 		}
 
 		//! Get the total number of process
