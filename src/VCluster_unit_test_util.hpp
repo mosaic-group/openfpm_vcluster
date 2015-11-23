@@ -8,8 +8,6 @@
 #ifndef VCLUSTER_UNIT_TEST_UTIL_HPP_
 #define VCLUSTER_UNIT_TEST_UTIL_HPP_
 
-#define VERBOSE_TEST
-
 #include "VCluster.hpp"
 #include "Point_test.hpp"
 #include "Vector/vector_test_util.hpp"
