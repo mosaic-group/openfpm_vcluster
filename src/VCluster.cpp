@@ -6,4 +6,4 @@ Vcluster * global_v_cluster = NULL;
 bool global_mpi_init = false;
 
 // number of vcluster instances
-size_t n_vcluster = 0;
+//size_t n_vcluster = 0;
