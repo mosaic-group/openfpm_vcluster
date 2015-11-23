@@ -144,11 +144,14 @@ public:
 #ifdef SE_CLASS2
 		check_delete(this);
 #endif
-//		n_vcluster--;
+		n_vcluster--;
 
 		// if there are no other vcluster instances finalize
-//		if (n_vcluster == 0)
+		if (n_vcluster == 0)
+		{
+			std::cout << "Finalize\n";
 			MPI_Finalize();
+		}
 	}
 
 	//! \brief Virtual cluster constructor
@@ -159,7 +162,7 @@ public:
 		check_new(this,8,VCLUSTER_EVENT,PRJ_VCLUSTER);
 #endif
 
-//		n_vcluster++;
+		n_vcluster++;
 
 		// Check if MPI is already initialized
 		if (global_mpi_init == false)
