@@ -150,7 +150,11 @@ public:
 		if (n_vcluster == 0)
 		{
 			std::cout << "Finalize\n";
-			MPI_Finalize();
+
+			if (MPI_Finalize() != 0)
+			{
+				std::cerr << "DAMN!!!!!!!! \n";
+			}
 		}
 	}
 
