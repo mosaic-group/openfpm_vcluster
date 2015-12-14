@@ -37,7 +37,7 @@ public:
 	 * \return the size of the array
 	 *
 	 */
-	size_t size()
+	size_t size() const
 	{
 		return objects.size();
 	}
@@ -168,6 +168,16 @@ public:
 	 *
 	 */
 	T & operator[](size_t j)
+	{
+		return objects[j];
+	}
+
+	/*! \brief Return the object j in the array
+	 *
+	 * \param j element j
+	 *
+	 */
+	const T & operator[](size_t j) const
 	{
 		return objects[j];
 	}
