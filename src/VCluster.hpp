@@ -947,13 +947,13 @@ extern Vcluster * global_v_cluster;
  *
  */
 
-static void init_global_v_cluster(int *argc, char ***argv)
+static inline void init_global_v_cluster(int *argc, char ***argv)
 {
 	if (global_v_cluster == NULL)
 		global_v_cluster = new Vcluster(argc,argv);
 }
 
-static void delete_global_v_cluster()
+static inline void delete_global_v_cluster()
 {
 	delete global_v_cluster;
 }
