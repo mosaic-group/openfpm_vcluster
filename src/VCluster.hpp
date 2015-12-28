@@ -529,6 +529,11 @@ public:
 			if (sz[i] != 0)
 			{
 				req.add();
+
+#ifdef SE_CLASS2
+				check_valid(ptr[i],sz[i]);
+#endif
+
 				MPI_SAFE_CALL(MPI_Issend(ptr[i], sz[i], MPI_BYTE, prc[i], SEND_SPARSE + NBX_cnt, MPI_COMM_WORLD,&req.last()));
 				log.logSend(prc[i]);
 			}
@@ -567,7 +572,15 @@ public:
 
 				rid++;
 
+				// Check the pointer
+#ifdef SE_CLASS2
+				check_valid(ptr,msize);
+#endif
 				MPI_SAFE_CALL(MPI_Recv(ptr,msize,MPI_BYTE,stat_t.MPI_SOURCE,SEND_SPARSE+NBX_cnt,MPI_COMM_WORLD,&stat_t));
+
+#ifdef SE_CLASS2
+				check_valid(ptr,msize);
+#endif
 			}
 
 			// Check the status of all the MPI_issend and call the barrier if finished
@@ -719,6 +732,11 @@ public:
 			void * ptr = msg_alloc(proc_com.get(i),total_msg,n_proc_com,proc_com.get(n_proc_com+i),i,ptr_arg);
 
 			req.add();
+
+#ifdef SE_CLASS2
+				check_valid(ptr,proc_com.get(i));
+#endif
+
 			MPI_SAFE_CALL(MPI_Irecv(ptr,proc_com.get(i),MPI_BYTE,proc_com.get(i+n_proc_com),MSG_SEND_RECV,MPI_COMM_WORLD,&req.last()));
 		}
 
@@ -727,6 +745,11 @@ public:
 		for (size_t i = 0 ; i < n_send ; i++)
 		{
 			req.add();
+
+#ifdef SE_CLASS2
+			check_valid(ptr[i],sz[i]);
+#endif
+
 			MPI_SAFE_CALL(MPI_Isend(ptr[i],sz[i],MPI_BYTE,prc[i],MSG_SEND_RECV,MPI_COMM_WORLD,&req.last()));
 		}
 
@@ -734,7 +757,6 @@ public:
 		if (req.size() != 0) {MPI_SAFE_CALL(MPI_Waitall(req.size(),&req.get(0),&stat.get(0)));}
 
 		// Remove the executed request
-
 		req.clear();
 		stat.clear();
 	}
