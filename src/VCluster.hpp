@@ -237,6 +237,10 @@ public:
 
 		// open the log file
 		log.openLog(rank);
+
+		// Initialize bar_req
+		bar_req = MPI_Request();
+		bar_stat = MPI_Status();
 	}
 
 #ifdef DEBUG
@@ -940,15 +944,7 @@ public:
 
 		// MPI error get the message and abort MPI
 		if (err != MPI_SUCCESS)
-		{
-			char * error_msg = NULL;
-			int len;
-			MPI_Error_string(err,error_msg,&len);
-
-			std::cerr << "Error MPI rank " << rank << ": " << error_msg << "\n";
-
 			MPI_Abort(MPI_COMM_WORLD,1);
-		}
 
 		// Remove executed request and status
 		req.clear();
