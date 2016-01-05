@@ -71,7 +71,7 @@ fi
 
 ####### include OpenFPM_devices include path
 
-INCLUDES_PATH+=" -I/usr/local/include -I. -Iconfig -I../../OpenFPM_devices/src -I../../OpenFPM_data/src"
+INCLUDES_PATH+=" -I/usr/local/include -I. -Iconfig -I../../openfpm_devices/src -I../../OpenFPM_data/src"
 
 ###### Check for memleak check compilation
 

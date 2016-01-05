@@ -15,6 +15,7 @@
 #include <random>
 #include "VCluster_unit_test_util.hpp"
 #include "Point_test.hpp"
+#include "Vector/vector_test_util.hpp"
 
 BOOST_AUTO_TEST_SUITE( VCluster_test )
 
@@ -108,8 +109,6 @@ BOOST_AUTO_TEST_CASE( VCluster_use_reductions)
 }
 
 #define N_V_ELEMENTS 16
-
-#include "Vector/vector_test_util.hpp"
 
 BOOST_AUTO_TEST_CASE(VCluster_send_recv)
 {

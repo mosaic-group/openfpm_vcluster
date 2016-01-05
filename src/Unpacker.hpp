@@ -9,12 +9,12 @@
 #define SRC_UNPACKER_HPP_
 
 #include "util/object_util.hpp"
-#include "Grid/util.hpp"
-#include "Vector/util.hpp"
+//#include "Grid/util.hpp"
+//#include "Vector/util.hpp"
 #include "memory/ExtPreAlloc.hpp"
 #include "util/util_debug.hpp"
 #include "Pack_selector.hpp"
-#include "Pack_stat.hpp"
+#include "util/Pack_stat.hpp"
 #include "memory/PtrMemory.hpp"
 
 /*! \brief Unpacker class
@@ -62,6 +62,34 @@ public:
 		obj = *ptr;
 
 		ps.addOffset(sizeof(T));
+	}
+};
+
+template<typename T, typename Mem>
+class Unpacker<T,Mem,PACKER_ARRAY_PRIMITIVE>
+{
+public:
+
+
+	/*! \brief It unpack C++ primitives
+	 *
+	 * \param ext preallocated memory from where to unpack the object
+	 * \param obj object where to unpack
+	 *
+	 */
+	static void unpack(ExtPreAlloc<Mem> & ext, T & obj, Unpack_stat & ps)
+	{
+
+		//Unpacking a size of a source vector
+		size_t u2 = 0;
+		Unpacker<size_t, Mem>::unpack(ext,u2,ps);
+
+		//Resize a destination vector
+		obj.resize(u2);
+
+		memcpy(obj.getPointer(),ext.getPointerOffset(ps.getOffset()),sizeof(typename T::value_type)*obj.size());
+
+		ps.addOffset(sizeof(typename T::value_type)*obj.size());
 	}
 };
 
@@ -136,7 +164,7 @@ public:
 
 	template<unsigned int ... prp> void static unpack(ExtPreAlloc<Mem> & mem, T & obj, Unpack_stat & ps)
 	{
-		obj.unpack<prp...>(mem, obj, ps);
+		obj.unpack<prp...>(mem, ps);
 	};
 };
 

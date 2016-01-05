@@ -5,10 +5,20 @@
  *      Author: Pietro Incardona
  */
 
+
+#ifndef SRC_PACK_AAA_SELECTOR_HPP_
+#define SRC_PACK_AAA_SELECTOR_HPP_
+
 #include <type_traits>
+#include "util/common.hpp"
+#include "Grid/Encap.hpp"
+#include "Grid/util.hpp"
+#include "Vector/util.hpp"
 
 //! Primitive packing
 #define PACKER_PRIMITIVE 1
+//! Array of primitives packing
+#define PACKER_ARRAY_PRIMITIVE 2
 //! Encapsulated Object packing
 #define PACKER_ENCAP_OBJECTS 3
 //! Vector of objects packing
@@ -19,10 +29,6 @@
 #define PACKER_OBJECTS_WITH_WARNING_POINTERS 6
 //! Packer error structure has pointers
 #define PACKER_OBJECTS_WITH_POINTER_CHECK 7
-
-
-#ifndef SRC_PACK_SELECTOR_HPP_
-#define SRC_PACK_SELECTOR_HPP_
 
 #define IS_ENCAP 4
 #define IS_GRID 2

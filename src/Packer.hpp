@@ -9,13 +9,19 @@
 #define SRC_PACKER_HPP_
 
 #include "util/object_util.hpp"
-#include "Grid/util.hpp"
+//#include "Grid/util.hpp"
 #include "Vector/util.hpp"
 #include "memory/ExtPreAlloc.hpp"
 #include "util/util_debug.hpp"
-#include "Pack_stat.hpp"
+
+#ifdef SRC_PACK_SELECTOR_HPP_
+#error blabla
+#endif
+
+#include "Grid/grid_sm.hpp"
+#include "util/Pack_stat.hpp"
 #include "Pack_selector.hpp"
-#include "Vector/map_vector.hpp"
+//#include "Vector/map_vector.hpp"
 
 /*! \brief Packing class
  *
@@ -83,7 +89,6 @@ public:
 		if (ext.ref() == 0)
 			std::cerr << "Error : " << __FILE__ << ":" << __LINE__ << " the reference counter of mem should never be zero when packing \n";
 #endif
-
 		ext.allocate(sizeof(T));
 		*(T *)ext.getPointer() = obj;
 
@@ -97,6 +102,52 @@ public:
 	 *
 	 */
 	static void packRequest(std::vector<size_t> & req)
+	{
+		req.push_back(sizeof(T));
+	}
+};
+
+/*! \brief Packer for primitives
+ *
+ * \tparam T object type to pack
+ * \tparam Mem Memory origin HeapMemory CudaMemory ...
+ *
+ */
+template<typename T, typename Mem>
+class Packer<T,Mem,PACKER_ARRAY_PRIMITIVE>
+{
+public:
+
+	/*! \brief It packs arrays of C++ primitives
+	 *
+	 * \param ext preallocated memory where to pack the object
+	 * \param obj object to pack
+	 * \param sts pack-stat info
+	 *
+	 */
+	inline static void pack(ExtPreAlloc<Mem> & ext, const T & obj, Pack_stat & sts, size_t n)
+	{
+#ifdef DEBUG
+		if (ext.ref() == 0)
+			std::cerr << "Error : " << __FILE__ << ":" << __LINE__ << " the reference counter of mem should never be zero when packing \n";
+#endif
+		//Pack the size of a vector
+		Packer<size_t, Mem>::pack(ext,obj.size(),sts);
+
+		//Pack a vector
+		ext.allocate(sizeof(typename T::value_type)*n);
+		memcpy(ext.getPointer(),obj.getPointer(),sizeof(typename T::value_type)*n);
+
+		// update statistic
+		sts.incReq();
+	}
+
+	/*! \brief It add a request to pack a C++ primitive
+	 *
+	 * \param req requests vector
+	 *
+	 */
+	static void packRequestDummy(std::vector<size_t> & req)
 	{
 		req.push_back(sizeof(T));
 	}
@@ -205,12 +256,15 @@ public:
 
 	template<int ... prp> static void packRequest(T & obj, std::vector<size_t> & v)
 	{
-		obj.packRequest<prp...>(obj, v);
+		obj.packRequest<prp...>(v);
 	};
 
 	template<int ... prp> static void pack(ExtPreAlloc<Mem> & mem, T & obj, Pack_stat & sts)
 	{
-		obj.pack<prp...>(mem, obj, sts);
+#ifdef DEBUG
+		std::cout << "Inside vector pack() function! (packer.hpp)" << std::endl;
+#endif
+		obj.pack<prp...>(mem, sts);
 	};
 
 };
