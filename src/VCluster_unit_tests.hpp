@@ -54,21 +54,21 @@ BOOST_AUTO_TEST_CASE( VCluster_use_reductions)
 
 	// Sum reductions
 	if ( vcl.getProcessingUnits() < 128 )
-		vcl.reduce(c);
+		vcl.sum(c);
 	if ( vcl.getProcessingUnits() < 256 )
-		vcl.reduce(uc);
+		vcl.sum(uc);
 	if ( vcl.getProcessingUnits() < 32768 )
-		vcl.reduce(s);
+		vcl.sum(s);
 	if ( vcl.getProcessingUnits() < 65536 )
-		vcl.reduce(us);
+		vcl.sum(us);
 	if ( vcl.getProcessingUnits() < 2147483648 )
-		vcl.reduce(i);
+		vcl.sum(i);
 	if ( vcl.getProcessingUnits() < 4294967296 )
-		vcl.reduce(ui);
-	vcl.reduce(li);
-	vcl.reduce(uli);
-	vcl.reduce(f);
-	vcl.reduce(d);
+		vcl.sum(ui);
+	vcl.sum(li);
+	vcl.sum(uli);
+	vcl.sum(f);
+	vcl.sum(d);
 
 	// Max reduction
 	if ( vcl.getProcessingUnits() < 128 )
@@ -90,22 +90,22 @@ BOOST_AUTO_TEST_CASE( VCluster_use_reductions)
 	vcl.execute();
 
 	if ( vcl.getProcessingUnits() < 128 )
-	{BOOST_REQUIRE_EQUAL(c_max,vcl.getProcessingUnits()-1);}
+	{BOOST_REQUIRE_EQUAL(c_max,(char)vcl.getProcessingUnits()-1);}
 	if ( vcl.getProcessingUnits() < 256 )
-	{BOOST_REQUIRE_EQUAL(uc_max,vcl.getProcessingUnits()-1);}
+	{BOOST_REQUIRE_EQUAL(uc_max,(unsigned char)vcl.getProcessingUnits()-1);}
 	if ( vcl.getProcessingUnits() < 32768 )
-	{BOOST_REQUIRE_EQUAL(s_max,vcl.getProcessingUnits()-1);}
+	{BOOST_REQUIRE_EQUAL(s_max,(short int) vcl.getProcessingUnits()-1);}
 	if ( vcl.getProcessingUnits() < 65536 )
-	{BOOST_REQUIRE_EQUAL(us_max,vcl.getProcessingUnits()-1);}
+	{BOOST_REQUIRE_EQUAL(us_max,(unsigned short)vcl.getProcessingUnits()-1);}
 	if ( vcl.getProcessingUnits() < 2147483648 )
-	{BOOST_REQUIRE_EQUAL(i_max,vcl.getProcessingUnits()-1);}
+	{BOOST_REQUIRE_EQUAL(i_max,(int)vcl.getProcessingUnits()-1);}
 	if ( vcl.getProcessingUnits() < 4294967296 )
-	{BOOST_REQUIRE_EQUAL(ui_max,vcl.getProcessingUnits()-1);}
+	{BOOST_REQUIRE_EQUAL(ui_max,(unsigned int)vcl.getProcessingUnits()-1);}
 
-	BOOST_REQUIRE_EQUAL(li_max,vcl.getProcessingUnits()-1);
-	BOOST_REQUIRE_EQUAL(uli_max,vcl.getProcessingUnits()-1);
-	BOOST_REQUIRE_EQUAL(f_max,vcl.getProcessingUnits()-1);
-	BOOST_REQUIRE_EQUAL(d_max,vcl.getProcessingUnits()-1);
+	BOOST_REQUIRE_EQUAL(li_max,(long int)vcl.getProcessingUnits()-1);
+	BOOST_REQUIRE_EQUAL(uli_max,(unsigned long int)vcl.getProcessingUnits()-1);
+	BOOST_REQUIRE_EQUAL(f_max,(float)vcl.getProcessingUnits()-1);
+	BOOST_REQUIRE_EQUAL(d_max,(double)vcl.getProcessingUnits()-1);
 }
 
 #define N_V_ELEMENTS 16
@@ -127,6 +127,26 @@ BOOST_AUTO_TEST_CASE(VCluster_send_recv)
 	test_send_recv_primitives<double>(N_V_ELEMENTS,vcl);
 }
 
+BOOST_AUTO_TEST_CASE(VCluster_allgather)
+{
+	Vcluster & vcl = *global_v_cluster;
+
+	if (vcl.getProcessingUnits() < 256)
+		test_single_all_gather_primitives<unsigned char>(vcl);
+
+	if (vcl.getProcessingUnits() < 128)
+		test_single_all_gather_primitives<char>(vcl);
+
+	test_single_all_gather_primitives<short>(vcl);
+	test_single_all_gather_primitives<unsigned short>(vcl);
+	test_single_all_gather_primitives<int>(vcl);
+	test_single_all_gather_primitives<unsigned int>(vcl);
+	test_single_all_gather_primitives<long int>(vcl);
+	test_single_all_gather_primitives<unsigned long int>(vcl);
+	test_single_all_gather_primitives<float>(vcl);
+	test_single_all_gather_primitives<double>(vcl);
+}
+
 BOOST_AUTO_TEST_CASE( VCluster_use_sendrecv)
 {
 	std::cout << "VCluster unit test start" << "\n";
@@ -135,6 +155,11 @@ BOOST_AUTO_TEST_CASE( VCluster_use_sendrecv)
 	test<NBX>();
 	totp_check = true;
 	test<PCX>();
+
+	totp_check = false;
+	test_no_send_some_peer<NBX>();
+	totp_check = false;
+	test_no_send_some_peer<PCX>();
 
 	std::cout << "VCluster unit test stop" << "\n";
 }

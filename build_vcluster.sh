@@ -1,23 +1,23 @@
 #! /bin/bash
 
-# Make a directory in /tmp/OpenFPM_data
+# Make a directory in /tmp/openfpm_data
 
 echo "Directory: $1"
 echo "Machine: $2"
 
 mkdir /tmp/openfpm_vcluster
 mv * .[^.]* /tmp/openfpm_vcluster
-mv /tmp/openfpm_vcluster OpenFPM_vcluster
+mv /tmp/openfpm_vcluster openfpm_vcluster
 
-mkdir OpenFPM_vcluster/src/config
+mkdir openfpm_vcluster/src/config
 
-git clone ssh://git@ppmcoremirror.dynu.com:2222/incardon/openfpm_devices.git OpenFPM_devices
-git clone ssh://git@ppmcoremirror.dynu.com:2222/incardon/openfpm_data.git OpenFPM_data
-cd OpenFPM_data
+git clone ssh://git@ppmcoremirror.dynu.com:2222/incardon/openfpm_devices.git openfpm_devices
+git clone ssh://git@ppmcoremirror.dynu.com:2222/incardon/openfpm_data.git openfpm_data
+cd openfpm_data
 git checkout develop
 cd ..
 
-cd "$1/OpenFPM_vcluster"
+cd "$1/openfpm_vcluster"
 
 if [ "$2" == "gin" ]
 then
@@ -73,19 +73,23 @@ then
  module unload bullxmpi
 
  sh ./autogen.sh
- sh ./configure --enable-verbose CXX=mpic++
+ sh ./configure --enable-verbose --with-boost=/sw/taurus/libraries/boost/1.55.0-gnu4.8  CXX=mpic++
  make
  if [ $? -ne 0 ]; then exit 1 ; fi
 
- salloc --nodes=1 --ntasks-per-node=16 --time=00:05:00 --mem-per-cpu=1900 --partition=haswell bash -c "ulimit -s unlimited && mpirun -np 16 src/vcluster"
+ salloc --nodes=1 --ntasks-per-node=24 --exclude=taurusi[6300-6400]  --time=00:05:00 --mem-per-cpu=1900 --partition=haswell bash -c "ulimit -s unlimited && mpirun -np 24 src/vcluster --report_level=no"
  if [ $? -ne 0 ]; then exit 1 ; fi
- salloc --nodes=2 --ntasks-per-node=16 --time=00:05:00 --mem-per-cpu=1900 --partition=haswell bash -c "ulimit -s unlimited && mpirun -np 32 src/vcluster"
+ sleep 5
+ salloc --nodes=2 --ntasks-per-node=24 --exclude=taurusi[6300-6400] --time=00:05:00 --mem-per-cpu=1900 --partition=haswell bash -c "ulimit -s unlimited && mpirun -np 48 src/vcluster --report_level=no"
  if [ $? -ne 0 ]; then exit 1 ; fi
- salloc --nodes=4 --ntasks-per-node=16 --time=00:05:00 --mem-per-cpu=1900 --partition=haswell bash -c "ulimit -s unlimited && mpirun -np 64 src/vcluster"
+ sleep 5
+ salloc --nodes=4 --ntasks-per-node=24 --exclude=taurusi[6300-6400] --time=00:05:00 --mem-per-cpu=1900 --partition=haswell bash -c "ulimit -s unlimited && mpirun -np 96 src/vcluster --report_level=no"
  if [ $? -ne 0 ]; then exit 1 ; fi
- salloc --nodes=8 --ntasks-per-node=16 --time=00:05:00 --mem-per-cpu=1900 --partition=haswell bash -c "ulimit -s unlimited && mpirun -np 128 src/vcluster"
+ sleep 5
+ salloc --nodes=8 --ntasks-per-node=24 --exclude=taurusi[6300-6400] --time=00:05:00 --mem-per-cpu=1900 --partition=haswell bash -c "ulimit -s unlimited && mpirun -np 192 src/vcluster --report_level=no"
  if [ $? -ne 0 ]; then exit 1 ; fi
- salloc --nodes=16 --ntasks-per-node=16 --time=00:5:00 --mem-per-cpu=1900 --partition=haswell bash -c "ulimit -s unlimited && mpirun -np 256 src/vcluster"
+ sleep 5
+ salloc --nodes=10 --ntasks-per-node=24 --exclude=taurusi[6300-6400] --time=00:5:00 --mem-per-cpu=1900 --partition=haswell bash -c "ulimit -s unlimited && mpirun -np 240 src/vcluster --report_level=no"
  if [ $? -ne 0 ]; then exit 1 ; fi
 
 else
@@ -95,7 +99,9 @@ else
  make
 
  mpirun -np 2 ./src/vcluster
+ if [ $? -ne 0 ]; then exit 1 ; fi
  mpirun -np 4 ./src/vcluster
+ if [ $? -ne 0 ]; then exit 1 ; fi
 fi
 
-
+curl -X POST --data "payload={\"icon_emoji\": \":jenkins:\", \"username\": \"jenkins\"  , \"attachments\":[{ \"title\":\"Info:\", \"color\": \"#00FF00\", \"text\":\"$2 completed succeffuly the openfpm_vcluster test \" }] }" https://hooks.slack.com/services/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

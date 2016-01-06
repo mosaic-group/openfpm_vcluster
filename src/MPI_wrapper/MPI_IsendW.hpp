@@ -16,7 +16,7 @@
 class MPI_IsendWB
 {
 public:
-	static inline void send(size_t proc , size_t tag ,void * buf, size_t sz, MPI_Request & req)
+	static inline void send(size_t proc , size_t tag ,const void * buf, size_t sz, MPI_Request & req)
 	{
 		MPI_Isend(buf, sz,MPI_BYTE, proc, tag , MPI_COMM_WORLD,&req);
 	}
