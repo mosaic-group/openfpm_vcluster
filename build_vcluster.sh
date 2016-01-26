@@ -69,7 +69,7 @@ then
  echo "$PATH"
  module load gcc/4.8.2
  module load boost/1.55.0-gnu4.8
- module load openmpi/1.8.7
+ module load openmpi/1.8.8-gnu
  module unload bullxmpi
 
  sh ./autogen.sh
