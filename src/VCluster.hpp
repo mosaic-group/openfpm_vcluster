@@ -308,6 +308,26 @@ public:
 		MPI_IallreduceW<T>::reduce(num,MPI_MAX,req.last());
 	}
 
+	/*! \brief Get the minimum number across all processors (or reduction with insinity norm)
+	 *
+	 * \param num to reduce
+	 *
+	 */
+
+	template<typename T> void min(T & num)
+	{
+#ifdef DEBUG
+		checkType<T>();
+#endif
+		// reduce over MPI
+
+		// Create one request
+		req.add();
+
+		// reduce
+		MPI_IallreduceW<T>::reduce(num,MPI_MIN,req.last());
+	}
+
 	// vector of pointers of send buffers
 	openfpm::vector<void *> ptr_send;
 

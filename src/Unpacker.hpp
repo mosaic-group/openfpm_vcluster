@@ -24,7 +24,7 @@
  * \tparam Implementation of the unpacker (the Pack_selector choose the correct one)
  *
  */
-template<typename T, typename Mem, int pack_type=Pack_selector<T>::value >
+template<typename T, typename Mem, int pack_type = Pack_selector<T>::value>
 class Unpacker
 {
 public:
@@ -32,7 +32,7 @@ public:
 	/*! \brief Error, no implementation
 	 *
 	 */
-	static void unpack(ExtPreAlloc<Mem> , T & obj)
+	static void unpack(ExtPreAlloc<Mem>, T & obj)
 	{
 		std::cerr << "Error: " << __FILE__ << ":" << __LINE__ << " packing for the type " << demangle(typeid(T).name()) << " is not implemented\n";
 	}
@@ -45,10 +45,9 @@ public:
  *
  */
 template<typename T, typename Mem>
-class Unpacker<T,Mem,PACKER_PRIMITIVE>
+class Unpacker<T, Mem, PACKER_PRIMITIVE>
 {
 public:
-
 
 	/*! \brief It unpack C++ primitives
 	 *
@@ -56,7 +55,7 @@ public:
 	 * \param obj object where to unpack
 	 *
 	 */
-	static void unpack(ExtPreAlloc<Mem> & ext, T & obj,Unpack_stat & ps)
+	static void unpack(ExtPreAlloc<Mem> & ext, T & obj, Unpack_stat & ps)
 	{
 		T * ptr = static_cast<T *>(ext.getPointerOffset(ps.getOffset()));
 		obj = *ptr;
@@ -65,7 +64,6 @@ public:
 	}
 };
 
-
 /*! \brief Unpacker for objects with no possibility to check for internal pointers
  *
  * \tparam T object type to unpack
@@ -73,7 +71,7 @@ public:
  *
  */
 template<typename T, typename Mem>
-class Unpacker<T,Mem,PACKER_OBJECTS_WITH_WARNING_POINTERS>
+class Unpacker<T, Mem, PACKER_OBJECTS_WITH_WARNING_POINTERS>
 {
 public:
 
@@ -86,9 +84,9 @@ public:
 	static void unpack(ExtPreAlloc<Mem> & ext, T & obj, Unpack_stat & ps)
 	{
 #ifdef DEBUG
-		std::cerr << "Warning: " << __FILE__ << ":" << __LINE__ << " impossible to check the type " << demangle(typeid(T).name()) << " please consider to add a static method \"void noPointers()\" \n" ;
+		std::cerr << "Warning: " << __FILE__ << ":" << __LINE__ << " impossible to check the type " << demangle(typeid(T).name()) << " please consider to add a static method \"void noPointers()\" \n";
 #endif
-		memcpy(&obj,(T *)ext.getPointerOffset(ps.getOffset()),sizeof(T));
+		memcpy(&obj, (T *) ext.getPointerOffset(ps.getOffset()), sizeof(T));
 
 		ps.addOffset(sizeof(T));
 	}
@@ -101,7 +99,7 @@ public:
  *
  */
 template<typename T, typename Mem>
-class Unpacker<T,Mem,PACKER_OBJECTS_WITH_POINTER_CHECK>
+class Unpacker<T, Mem, PACKER_OBJECTS_WITH_POINTER_CHECK>
 {
 public:
 
@@ -115,9 +113,9 @@ public:
 	{
 #ifdef DEBUG
 		if (obj.noPointers() == false)
-			std::cerr << "Error: " << __FILE__ << ":" << __LINE__ << " the type " << demangle(typeid(T).name()) << " has pointers inside, sending pointers values has no sense\n";
+		std::cerr << "Error: " << __FILE__ << ":" << __LINE__ << " the type " << demangle(typeid(T).name()) << " has pointers inside, sending pointers values has no sense\n";
 #endif
-		memcpy(&obj,(T *)ext.getPointerOffset(ps.getOffset()),sizeof(T));
+		memcpy(&obj, (T *) ext.getPointerOffset(ps.getOffset()), sizeof(T));
 
 		ps.addOffset(sizeof(T));
 	}
@@ -130,7 +128,7 @@ public:
  *
  */
 template<typename T, typename Mem>
-class Unpacker<T,Mem,PACKER_VECTOR>
+class Unpacker<T, Mem, PACKER_VECTOR>
 {
 public:
 
@@ -152,14 +150,14 @@ public:
 		size_t id = 0;
 
 		// Sending property object
-		typedef object<typename object_creator<typename T::value_type::type,prp...>::type> prp_object;
-		typedef openfpm::vector<prp_object,PtrMemory,openfpm::grow_policy_identity> stype;
+		typedef object<typename object_creator<typename T::value_type::type, prp...>::type> prp_object;
+		typedef openfpm::vector<prp_object, PtrMemory, openfpm::grow_policy_identity> stype;
 
 		// Calculate the size to pack the object
-		size_t size = stype::calculateMem(obj.size(),0);
+		size_t size = stype::calculateMem(obj.size(), 0);
 
 		// Create a Pointer object over the preallocated memory (No allocation is produced)
-		PtrMemory & ptr = *(new PtrMemory(mem.getPointerOffset(ps.getOffset()),size));
+		PtrMemory & ptr = *(new PtrMemory(mem.getPointerOffset(ps.getOffset()), size));
 
 		stype src;
 		src.setMemory(ptr);
@@ -169,12 +167,12 @@ public:
 		while (obj_it.isNext())
 		{
 			// copy all the object in the send buffer
-			typedef encapc<1,typename T::value_type,typename T::memory_conf > encap_dst;
+			typedef encapc<1, typename T::value_type, typename T::memory_conf> encap_dst;
 			// destination object type
-			typedef encapc<1,prp_object,typename stype::memory_conf > encap_src;
+			typedef encapc<1, prp_object, typename stype::memory_conf> encap_src;
 
 			// Copy only the selected properties
-			object_s_di<encap_src,encap_dst,OBJ_ENCAP,prp...>(src.get(id),obj.get(obj_it.get()));
+			object_s_di<encap_src, encap_dst, OBJ_ENCAP, prp...>(src.get(id), obj.get(obj_it.get()));
 
 			++id;
 			++obj_it;
@@ -191,7 +189,7 @@ public:
  *
  */
 template<typename T, typename Mem>
-class Unpacker<T,Mem,PACKER_GRID>
+class Unpacker<T, Mem, PACKER_GRID>
 {
 	/*! \brief unpack the grid given an iterator
 	 *
@@ -199,23 +197,23 @@ class Unpacker<T,Mem,PACKER_GRID>
 	 * \tparam prp of the grid object to unpack
 	 *
 	 */
-	template <typename it, typename stype, unsigned int ... prp> static void unpack_with_iterator(ExtPreAlloc<Mem> & mem, it & sub_it, T & obj, stype & src, Unpack_stat & ps)
+	template<typename it, typename stype, unsigned int ... prp> static void unpack_with_iterator(ExtPreAlloc<Mem> & mem, it & sub_it, T & obj, stype & src, Unpack_stat & ps)
 	{
 		size_t id = 0;
 
 		// Sending property object
-		typedef object<typename object_creator<typename T::value_type::type,prp...>::type> prp_object;
+		typedef object<typename object_creator<typename T::value_type::type, prp...>::type> prp_object;
 
 		// unpacking the information
 		while (sub_it.isNext())
 		{
 			// copy all the object in the send buffer
-			typedef encapc<T::dims,typename T::value_type,typename T::memory_conf > encap_dst;
+			typedef encapc<T::dims, typename T::value_type, typename T::memory_conf> encap_dst;
 			// destination object type
-			typedef encapc<1,prp_object,typename grid_cpu<T::dims,prp_object>::memory_conf > encap_src;
+			typedef encapc<1, prp_object, typename grid_cpu<T::dims, prp_object>::memory_conf> encap_src;
 
 			// Copy only the selected properties
-			object_s_di<encap_src,encap_dst,OBJ_ENCAP,prp...>(src.get(id),obj.get_o(sub_it.get()));
+			object_s_di<encap_src, encap_dst, OBJ_ENCAP, prp...>(src.get(id), obj.get_o(sub_it.get()));
 
 			++id;
 			++sub_it;
@@ -235,14 +233,14 @@ public:
 	template<unsigned int ... prp> static void unpack(ExtPreAlloc<Mem> & mem, T & obj, Unpack_stat & ps)
 	{
 		// object that store the information in mem
-		typedef object<typename object_creator<typename T::type,prp...>::type> prp_object;
-		typedef openfpm::vector<prp_object,PtrMemory,openfpm::grow_policy_identity> stype;
+		typedef object<typename object_creator<typename T::type, prp...>::type> prp_object;
+		typedef openfpm::vector<prp_object, PtrMemory, openfpm::grow_policy_identity> stype;
 
 		// Calculate the size to pack the object
-		size_t size = stype::calculateMem(obj.size(),0);
+		size_t size = stype::calculateMem(obj.size(), 0);
 
 		// Create an Pointer object over the preallocated memory (No allocation is produced)
-		PtrMemory & ptr = *(new PtrMemory(mem.getPointerOffset(ps.getOffset()),size));
+		PtrMemory & ptr = *(new PtrMemory(mem.getPointerOffset(ps.getOffset()), size));
 
 		// Create an object over a pointer (No allocation is produced)
 		stype src;
@@ -251,7 +249,7 @@ public:
 
 		auto it = obj.getIterator();
 
-		unpack_with_iterator<decltype(it),stype,prp...>(mem,it,obj,src,ps);
+		unpack_with_iterator<decltype(it), stype, prp...>(mem, it, obj, src, ps);
 
 		ps.addOffset(size);
 	}
@@ -268,20 +266,20 @@ public:
 	template<unsigned int ... prp> static void unpack(ExtPreAlloc<Mem> & mem, grid_key_dx_iterator_sub<T::dims> & sub_it, T & obj, Unpack_stat & ps)
 	{
 		// object that store the information in mem
-		typedef object<typename object_creator<typename T::value_type::type,prp...>::type> prp_object;
-		typedef openfpm::vector<prp_object,PtrMemory,openfpm::grow_policy_identity> stype;
+		typedef object<typename object_creator<typename T::value_type::type, prp...>::type> prp_object;
+		typedef openfpm::vector<prp_object, PtrMemory, openfpm::grow_policy_identity> stype;
 
-		size_t size = stype::calculateMem(sub_it.getVolume(),0);
+		size_t size = stype::calculateMem(sub_it.getVolume(), 0);
 
 		// Create an object over the preallocated memory (No allocation is produced)
-		PtrMemory & ptr = *(new PtrMemory(mem.getPointerOffset(ps.getOffset()),size));
+		PtrMemory & ptr = *(new PtrMemory(mem.getPointerOffset(ps.getOffset()), size));
 
 		// Create an object of the packed information over a pointer (No allocation is produced)
 		stype src;
 		src.setMemory(ptr);
 		src.resize(sub_it.getVolume());
 
-		unpack_with_iterator<grid_key_dx_iterator_sub<T::dims>,stype,prp...>(mem,sub_it,obj,src,ps);
+		unpack_with_iterator<grid_key_dx_iterator_sub<T::dims>, stype, prp...>(mem, sub_it, obj, src, ps);
 
 		ps.addOffset(size);
 	}
@@ -294,7 +292,7 @@ public:
  *
  */
 template<typename T, typename Mem>
-class Unpacker<T,Mem,PACKER_ENCAP_OBJECTS>
+class Unpacker<T, Mem, PACKER_ENCAP_OBJECTS>
 {
 public:
 
@@ -304,23 +302,22 @@ public:
 	 *
 	 *
 	 */
-/*	void pack(ExtPreAlloc<Mem> & mem, T & eobj)
-	{
-		// Create an object out of the encapsulated object and copy
-		typename T::type obj = eobj;
+	/*	void pack(ExtPreAlloc<Mem> & mem, T & eobj)
+	 {
+	 // Create an object out of the encapsulated object and copy
+	 typename T::type obj = eobj;
 
-		memcpy(mem.getPointer(),&obj,sizeof(T::type));
-	}*/
+	 memcpy(mem.getPointer(),&obj,sizeof(T::type));
+	 }*/
 
 	/*! \brief
 	 *
 	 *
 	 */
-/*	void packRequest(std::vector<size_t> & v)
-	{
-		v.push_back(sizeof(T::type));
-	}*/
+	/*	void packRequest(std::vector<size_t> & v)
+	 {
+	 v.push_back(sizeof(T::type));
+	 }*/
 };
-
 
 #endif /* SRC_UNPACKER_HPP_ */
