@@ -5,7 +5,6 @@
 #include <mpi.h>
 #include "MPI_wrapper/MPI_util.hpp"
 #include "VCluster_object.hpp"
-#include "VCluster_object_array.hpp"
 #include "Vector/map_vector.hpp"
 #include "MPI_wrapper/MPI_IallreduceW.hpp"
 #include "MPI_wrapper/MPI_IrecvW.hpp"
@@ -306,26 +305,6 @@ public:
 	size_t getProcessUnitID()
 	{
 		return rank;
-	}
-
-	/*! \brief Allocate a set of objects
-	 *
-	 * \tparam obj
-	 * \param n number of object
-	 *
-	 * \return an object representing an array of objects
-	 *
-	 */
-	template <typename obj> Vcluster_object_array<obj> allocate(size_t n)
-	{
-		// Vcluster object array
-		Vcluster_object_array<obj> vo;
-
-		// resize the array
-		vo.resize(n);
-
-		// Create the object on memory and return a Vcluster_object_array
-		return vo;
 	}
 
 	/*! \brief Sum the numbers across all processors and get the result
