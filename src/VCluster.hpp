@@ -160,6 +160,9 @@ class Vcluster
 	// sending map
 	openfpm::vector<size_t> map;
 
+	// Receive buffers
+	openfpm::vector<HeapMemory> recv_buf;
+
 	// barrier request
 	MPI_Request bar_req;
 	// barrier status
@@ -347,56 +350,6 @@ public:
 		MPI_IallreduceW<T>::reduce(num,MPI_MAX,req.last());
 	}
 
-	/*! \brief Send and receive multiple messages
-	 *
-	 * It send multiple messages to a set of processors the and receive
-	 * multiple messages from another set of processors, all the processor must call this
-	 * function, NBX is more performant than PCX with more processors (1000+)
-	 *
-	 * suppose the following situation the calling processor want to communicate
-	 * * 2 vector of 100 integers to processor 1
-	 * * 1 vector of 50 integers to processor 6
-	 * * 1 vector of 48 integers to processor 7
-	 * * 1 vector of 70 integers to processor 8
-	 *
-	 * \param prc list of processors you should communicate with [1,1,6,7,8]
-	 *
-	 * \param v vector containing the data to send [v=vector<vector<int>>, v.size()=4, T=vector<int>], T at the moment
-	 *          is only tested for vectors of 0 or more generic elements (without pointers)
-	 *
-	 * \param msg_alloc This is a call-back with the purpose to allocate space
-	 *        for the incoming messages and give back a valid pointer, supposing that this call-back has been triggered by
-	 *        the processor of id 5 that want to communicate with me a message of size 100 byte the call-back will have
-	 *        the following 6 parameters
-	 *        in the call-back in order:
-	 *        * message size required to receive the message (100)
-	 *        * total message size to receive from all the processors (NBX does not provide this information)
-	 *        * the total number of processor want to communicate with you (NBX does not provide this information)
-	 *        * processor id (5)
-	 *        * ri request id (it is an id that goes from 0 to total_p, and is incremented
-	 *           every time message_alloc is called)
-	 *        * void pointer, parameter for additional data to pass to the call-back
-	 *
-	 * \param opt options, only NONE supported
-	 *
-	 */
-	template<typename T> void sendrecvMultipleMessagesNBX(openfpm::vector< size_t > & prc, openfpm::vector< T * > & data, void * (* msg_alloc)(size_t,size_t,size_t,size_t,size_t,void *), void * ptr_arg, long int opt=NONE)
-	{
-#ifdef DEBUG
-		checkType<typename T::value_type>();
-#endif
-		// resize the pointer list
-		ptr_send.resize(prc.size());
-		sz_send.resize(prc.size());
-
-		for (size_t i = 0 ; i < prc.size() ; i++)
-		{
-			ptr_send.get(i) = data.get(i)->getPointer();
-			sz_send.get(i) = data.get(i)->size() * sizeof(typename T::value_type);
-		}
-
-		sendrecvMultipleMessagesNBX(prc.size(),(size_t *)sz_send.getPointer(),(size_t *)prc.getPointer(),(void **)ptr_send.getPointer(),msg_alloc,ptr_arg,opt);
-	}
 
 	/*! \brief Send and receive multiple messages
 	 *
@@ -548,7 +501,7 @@ public:
 	 * \param opt options, NONE (ignored in this moment)
 	 *
 	 */
-	void sendrecvMultipleMessagesNBX(size_t n_send , size_t sz[], size_t prc[] , void * ptr[], void * (* msg_alloc)(size_t,size_t,size_t,size_t,size_t,void *), void * ptr_arg, long int opt)
+	void sendrecvMultipleMessagesNBX(size_t n_send , size_t sz[], size_t prc[] , void * ptr[], void * (* msg_alloc)(size_t,size_t,size_t,size_t,size_t,void *), void * ptr_arg, long int opt = NONE)
 	{
 		if (stat.size() != 0 || req.size() != 0)
 			std::cerr << "Error: " << __FILE__ << ":" << __LINE__ << " this function must be called when no other requests are in progress \n";
@@ -981,6 +934,8 @@ public:
 	}
 
 
+	/////////////////////// Semantic communication ///////////////////////
+	#include "VCluster_semantic.ipp"
 };
 
 // Function to initialize the global VCluster //
