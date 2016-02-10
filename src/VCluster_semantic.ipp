@@ -7,6 +7,16 @@
  *      Author: Pietro Incardona
  */
 
+/*! \brief Reset the receive buffer
+ * 
+ * 
+ */
+void reset_recv_buf()
+{
+	for (size_t i = 0 ; i < recv_buf.size() ; i++)
+		recv_buf.get(i).resize(0);
+}
+
 /*! \brief Call-back to allocate buffer to receive data
  *
  * \param msg_i size required to receive the message from i
@@ -27,10 +37,9 @@ static void * msg_alloc(size_t msg_i ,size_t total_msg, size_t total_p, size_t i
 	if (recv_buf == NULL)
 		std::cerr << __FILE__ << ":" << __LINE__ << " Internal error this processor is not suppose to receive\n";
 
-	// We need one more slot
-	recv_buf->add();
+	recv_buf->resize(ri+1);
 
-	recv_buf->last().resize(msg_i);
+	recv_buf->get(ri).resize(msg_i);
 
 	// return the pointer
 	return recv_buf->last().getPointer();
@@ -62,6 +71,9 @@ static void * msg_alloc(size_t msg_i ,size_t total_msg, size_t total_p, size_t i
  */
 template<typename T, typename S> bool SGather(T & send, S & recv,size_t root)
 {
+	// Reset the receive buffer
+	reset_recv_buf();
+	
 	// If we are on master collect the information
 	if (getProcessUnitID() == root)
 	{
@@ -92,13 +104,15 @@ template<typename T, typename S> bool SGather(T & send, S & recv,size_t root)
 			// Merge the information
 			recv.add(v2);
 		}
+		
+		recv.add(send);
 	}
 	else
 	{
 		// send buffer (master does not send anything) so send req and send_buf
 		// remain buffer with size 0
 		openfpm::vector<size_t> send_prc;
-		send_prc.add(0);
+		send_prc.add(root);
 		openfpm::vector<void *> send_buf;
 		send_buf.add(send.getPointer());
 		openfpm::vector<size_t> sz;
