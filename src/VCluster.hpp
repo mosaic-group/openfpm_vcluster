@@ -298,6 +298,16 @@ public:
 
 #endif
 
+	/*! \brief Get the MPI_Communicator (or processor group) this VCluster is using
+	 *
+	 * \return MPI comunicator
+	 *
+	 */
+	MPI_Comm getMPIComm()
+	{
+		return MPI_COMM_WORLD;
+	}
+
 	//! Get the total number of processing units
 	size_t getProcessingUnits()
 	{
