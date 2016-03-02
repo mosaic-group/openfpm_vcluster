@@ -11,11 +11,8 @@ mv /tmp/openfpm_vcluster openfpm_vcluster
 
 mkdir openfpm_vcluster/src/config
 
-git clone ssh://git@ppmcoremirror.dynu.com:2222/incardon/openfpm_devices.git openfpm_devices
-git clone ssh://git@ppmcoremirror.dynu.com:2222/incardon/openfpm_data.git openfpm_data
-cd openfpm_data
-git checkout develop
-cd ..
+git clone git@ppmcore.mpi-cbg.de:/incardon/openfpm_devices.git openfpm_devices
+git clone git@ppmcore.mpi-cbg.de:/incardon/openfpm_data.git openfpm_data
 
 cd "$1/openfpm_vcluster"
 
@@ -69,7 +66,7 @@ then
  echo "$PATH"
  module load gcc/4.8.2
  module load boost/1.55.0-gnu4.8
- module load openmpi/1.8.7
+ module load openmpi/1.8.8-gnu
  module unload bullxmpi
 
  sh ./autogen.sh
@@ -77,15 +74,19 @@ then
  make
  if [ $? -ne 0 ]; then exit 1 ; fi
 
- salloc --nodes=1 --ntasks-per-node=16 --time=00:05:00 --mem-per-cpu=1900 --partition=haswell bash -c "ulimit -s unlimited && mpirun -np 16 src/vcluster"
+ salloc --nodes=1 --ntasks-per-node=24 --exclude=taurusi[6300-6400],taurusi[5400-5500]  --time=00:05:00 --mem-per-cpu=1900 --partition=haswell bash -c "ulimit -s unlimited && mpirun -np 24 src/vcluster --report_level=no"
  if [ $? -ne 0 ]; then exit 1 ; fi
- salloc --nodes=2 --ntasks-per-node=16 --time=00:05:00 --mem-per-cpu=1900 --partition=haswell bash -c "ulimit -s unlimited && mpirun -np 32 src/vcluster"
+ sleep 5
+ salloc --nodes=2 --ntasks-per-node=24 --exclude=taurusi[6300-6400],taurusi[5400-5500] --time=00:05:00 --mem-per-cpu=1900 --partition=haswell bash -c "ulimit -s unlimited && mpirun -np 48 src/vcluster --report_level=no"
  if [ $? -ne 0 ]; then exit 1 ; fi
- salloc --nodes=4 --ntasks-per-node=16 --time=00:05:00 --mem-per-cpu=1900 --partition=haswell bash -c "ulimit -s unlimited && mpirun -np 64 src/vcluster"
+ sleep 5
+ salloc --nodes=4 --ntasks-per-node=24 --exclude=taurusi[6300-6400],taurusi[5400-5500] --time=00:05:00 --mem-per-cpu=1900 --partition=haswell bash -c "ulimit -s unlimited && mpirun -np 96 src/vcluster --report_level=no"
  if [ $? -ne 0 ]; then exit 1 ; fi
- salloc --nodes=8 --ntasks-per-node=16 --time=00:05:00 --mem-per-cpu=1900 --partition=haswell bash -c "ulimit -s unlimited && mpirun -np 128 src/vcluster"
+ sleep 5
+ salloc --nodes=8 --ntasks-per-node=24 --exclude=taurusi[6300-6400],taurusi[5400-5500] --time=00:05:00 --mem-per-cpu=1900 --partition=haswell bash -c "ulimit -s unlimited && mpirun -np 192 src/vcluster --report_level=no"
  if [ $? -ne 0 ]; then exit 1 ; fi
- salloc --nodes=16 --ntasks-per-node=16 --time=00:5:00 --mem-per-cpu=1900 --partition=haswell bash -c "ulimit -s unlimited && mpirun -np 256 src/vcluster"
+ sleep 5
+ salloc --nodes=10 --ntasks-per-node=24 --exclude=taurusi[6300-6400],taurusi[5400-5500] --time=00:5:00 --mem-per-cpu=1900 --partition=haswell bash -c "ulimit -s unlimited && mpirun -np 240 src/vcluster --report_level=no"
  if [ $? -ne 0 ]; then exit 1 ; fi
 
 else

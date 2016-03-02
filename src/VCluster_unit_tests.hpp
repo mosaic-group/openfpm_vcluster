@@ -15,6 +15,7 @@
 #include <random>
 #include "VCluster_unit_test_util.hpp"
 #include "Point_test.hpp"
+#include "Vector/vector_test_util.hpp"
 
 BOOST_AUTO_TEST_SUITE( VCluster_test )
 
@@ -89,27 +90,25 @@ BOOST_AUTO_TEST_CASE( VCluster_use_reductions)
 	vcl.execute();
 
 	if ( vcl.getProcessingUnits() < 128 )
-	{BOOST_REQUIRE_EQUAL(c_max,vcl.getProcessingUnits()-1);}
+	{BOOST_REQUIRE_EQUAL(c_max,(char)vcl.getProcessingUnits()-1);}
 	if ( vcl.getProcessingUnits() < 256 )
-	{BOOST_REQUIRE_EQUAL(uc_max,vcl.getProcessingUnits()-1);}
+	{BOOST_REQUIRE_EQUAL(uc_max,(unsigned char)vcl.getProcessingUnits()-1);}
 	if ( vcl.getProcessingUnits() < 32768 )
-	{BOOST_REQUIRE_EQUAL(s_max,vcl.getProcessingUnits()-1);}
+	{BOOST_REQUIRE_EQUAL(s_max,(short int) vcl.getProcessingUnits()-1);}
 	if ( vcl.getProcessingUnits() < 65536 )
-	{BOOST_REQUIRE_EQUAL(us_max,vcl.getProcessingUnits()-1);}
+	{BOOST_REQUIRE_EQUAL(us_max,(unsigned short)vcl.getProcessingUnits()-1);}
 	if ( vcl.getProcessingUnits() < 2147483648 )
-	{BOOST_REQUIRE_EQUAL(i_max,vcl.getProcessingUnits()-1);}
+	{BOOST_REQUIRE_EQUAL(i_max,(int)vcl.getProcessingUnits()-1);}
 	if ( vcl.getProcessingUnits() < 4294967296 )
-	{BOOST_REQUIRE_EQUAL(ui_max,vcl.getProcessingUnits()-1);}
+	{BOOST_REQUIRE_EQUAL(ui_max,(unsigned int)vcl.getProcessingUnits()-1);}
 
-	BOOST_REQUIRE_EQUAL(li_max,vcl.getProcessingUnits()-1);
-	BOOST_REQUIRE_EQUAL(uli_max,vcl.getProcessingUnits()-1);
-	BOOST_REQUIRE_EQUAL(f_max,vcl.getProcessingUnits()-1);
-	BOOST_REQUIRE_EQUAL(d_max,vcl.getProcessingUnits()-1);
+	BOOST_REQUIRE_EQUAL(li_max,(long int)vcl.getProcessingUnits()-1);
+	BOOST_REQUIRE_EQUAL(uli_max,(unsigned long int)vcl.getProcessingUnits()-1);
+	BOOST_REQUIRE_EQUAL(f_max,(float)vcl.getProcessingUnits()-1);
+	BOOST_REQUIRE_EQUAL(d_max,(double)vcl.getProcessingUnits()-1);
 }
 
 #define N_V_ELEMENTS 16
-
-#include "Vector/vector_test_util.hpp"
 
 BOOST_AUTO_TEST_CASE(VCluster_send_recv)
 {

@@ -8,8 +8,6 @@
 #ifndef VCLUSTER_UNIT_TEST_UTIL_HPP_
 #define VCLUSTER_UNIT_TEST_UTIL_HPP_
 
-#define VERBOSE_TEST
-
 #include "VCluster.hpp"
 #include "Point_test.hpp"
 #include "Vector/vector_test_util.hpp"
@@ -45,7 +43,7 @@ void * msg_alloc(size_t msg_i ,size_t total_msg, size_t total_p, size_t i,size_t
 	if (global_v_cluster->getProcessingUnits() <= 8)
 	{if (totp_check) BOOST_REQUIRE_EQUAL(total_p,global_v_cluster->getProcessingUnits()-1);}
 	else
-	{if (totp_check) BOOST_REQUIRE_EQUAL(total_p,8);}
+	{if (totp_check) BOOST_REQUIRE_EQUAL(total_p,(size_t)8);}
 
 	BOOST_REQUIRE_EQUAL(msg_i, global_step);
 	v->get(i).resize(msg_i);
@@ -223,7 +221,7 @@ template<unsigned int ip> void test_no_send_some_peer()
 		}
 		else
 		{
-			BOOST_REQUIRE_EQUAL(0,recv_message.get(p_id).size());
+			BOOST_REQUIRE_EQUAL((size_t)0,recv_message.get(p_id).size());
 		}
 	}
 }
@@ -322,7 +320,7 @@ template<unsigned int ip> void test()
 				}
 				else
 				{
-					BOOST_REQUIRE_EQUAL(0,recv_message.get(p_id).size());
+					BOOST_REQUIRE_EQUAL((size_t)0,recv_message.get(p_id).size());
 				}
 			}
 		}
@@ -534,7 +532,7 @@ template<unsigned int ip> void test()
 				}
 				else
 				{
-					BOOST_REQUIRE_EQUAL(0,recv_message.get(p_id).size());
+					BOOST_REQUIRE_EQUAL((size_t)0,recv_message.get(p_id).size());
 				}
 			}
 		}
@@ -549,6 +547,8 @@ template<unsigned int ip> void test()
  */
 void test_send_recv_complex(const size_t n, Vcluster & vcl)
 {
+	//! [Send and receive vectors of complex]
+
 	// Point test typedef
 	typedef Point_test<float> p;
 
@@ -569,6 +569,8 @@ void test_send_recv_complex(const size_t n, Vcluster & vcl)
 	}
 
 	vcl.execute();
+
+	//! [Send and receive vectors of complex]
 
 	// Check the received buffers (careful at negative modulo)
 	for (size_t i = 0 ; i < 8 ; i++)
@@ -611,7 +613,7 @@ template<typename T> void test_send_recv_primitives(size_t n, Vcluster & vcl)
 	openfpm::vector<T> v_send = allocate_openfpm_primitive<T>(n,vcl.getProcessUnitID());
 
 	{
-	//! [ Send and receive vectors data ]
+	//! [Sending and receiving primitives]
 
 	// Send to 8 processors
 	for (size_t i = 0 ; i < 8 ; i++)
@@ -629,6 +631,8 @@ template<typename T> void test_send_recv_primitives(size_t n, Vcluster & vcl)
 
 	vcl.execute();
 
+	//! [Sending and receiving primitives]
+
 	// Check the received buffers (careful at negative modulo)
 	for (size_t i = 0 ; i < 8 ; i++)
 	{
@@ -642,12 +646,10 @@ template<typename T> void test_send_recv_primitives(size_t n, Vcluster & vcl)
 		}
 	}
 
-	//! [ Send and receive vectors data ]
-
 	}
 
 	{
-	//! [ Send and receive plain buffer data ]
+	//! [Send and receive plain buffer data]
 
 	// Send to 8 processors
 	for (size_t i = 0 ; i < 8 ; i++)
@@ -665,6 +667,8 @@ template<typename T> void test_send_recv_primitives(size_t n, Vcluster & vcl)
 
 	vcl.execute();
 
+	//! [Send and receive plain buffer data]
+
 	// Check the received buffers (careful at negative modulo)
 	for (size_t i = 0 ; i < 8 ; i++)
 	{
@@ -678,7 +682,6 @@ template<typename T> void test_send_recv_primitives(size_t n, Vcluster & vcl)
 		}
 	}
 
-	//! [ Send and receive plain buffer data ]
 	}
 }
 
@@ -693,7 +696,7 @@ template<typename T>  void test_single_all_gather_primitives(Vcluster & vcl)
 	vcl.execute();
 
 	for (size_t i = 0 ; i < vcl.getProcessingUnits() ; i++)
-		BOOST_REQUIRE_EQUAL(i,clt.get(i));
+		BOOST_REQUIRE_EQUAL(i,(size_t)clt.get(i));
 
 	//! [allGather numbers]
 
