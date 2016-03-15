@@ -8,6 +8,8 @@
 #ifndef MPI_UTIL_HPP_
 #define MPI_UTIL_HPP_
 
+#include <iostream>
+
 /*! \brief From an MPI error it print an human readable message
  *
  * \param error_code
