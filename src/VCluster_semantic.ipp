@@ -32,7 +32,7 @@ void reset_recv_buf()
  */
 static void * msg_alloc(size_t msg_i ,size_t total_msg, size_t total_p, size_t i, size_t ri, void * ptr)
 {
-	openfpm::vector<HeapMemory> * recv_buf = (openfpm::vector<HeapMemory> *)ptr;
+	openfpm::vector<BHeapMemory> * recv_buf = (openfpm::vector<BHeapMemory> *)ptr;
 
 	if (recv_buf == NULL)
 		std::cerr << __FILE__ << ":" << __LINE__ << " Internal error this processor is not suppose to receive\n";
@@ -69,7 +69,7 @@ static void * msg_alloc(size_t msg_i ,size_t total_msg, size_t total_p, size_t i
  * \return true if the function completed succefully
  *
  */
-template<typename T, typename S> bool SGather(T & send, S & recv,size_t root)
+template<typename T, typename S> bool SGather(T & send, S & recv,size_t root, int debug = 0)
 {
 	// Reset the receive buffer
 	reset_recv_buf();
@@ -89,7 +89,7 @@ template<typename T, typename S> bool SGather(T & send, S & recv,size_t root)
 			// for each received buffer create a memory reppresentation
 			// calculate the number of received elements
 			size_t n_ele = recv_buf.get(i).size() / sizeof(typename T::value_type);
-	
+
 			// add the received particles to the vector
 			PtrMemory * ptr1 = new PtrMemory(recv_buf.get(i).getPointer(),recv_buf.get(i).size());
 			

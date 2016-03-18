@@ -17,6 +17,7 @@
 #include "util/util_debug.hpp"
 #endif
 #include "util/Vcluster_log.hpp"
+#include "memory/BHeapMemory.hpp"
 
 #define MSG_LENGTH 1024
 #define MSG_SEND_RECV 1025
@@ -161,7 +162,7 @@ class Vcluster
 	openfpm::vector<size_t> map;
 
 	// Receive buffers
-	openfpm::vector<HeapMemory> recv_buf;
+	openfpm::vector<BHeapMemory> recv_buf;
 
 	// barrier request
 	MPI_Request bar_req;
