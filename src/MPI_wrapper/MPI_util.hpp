@@ -35,6 +35,7 @@ static void error_handler(int error_code)
 	if (MPI_SUCCESS != err) {\
 		std::cerr << "MPI error: "<< __FILE__ << " " << __LINE__ << "\n";\
 		error_handler(err);\
+		MPI_Abort(MPI_COMM_WORLD,-1);\
 	}\
 }
 

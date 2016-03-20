@@ -169,6 +169,10 @@ class Vcluster
 	// barrier status
 	MPI_Status bar_stat;
 
+	Vcluster & operator=(const Vcluster &)	{return *this;};
+
+	Vcluster(const Vcluster &) {};
+
 public:
 
 	// Finalize the MPI program
