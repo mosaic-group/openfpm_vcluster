@@ -66,11 +66,11 @@ then
  echo "$PATH"
  module load gcc/4.8.2
  module load boost/1.55.0-gnu4.8
- module load openmpi/1.8.8-gnu
+ module load openmpi/1.10.2-gnu
  module unload bullxmpi
 
  sh ./autogen.sh
- sh ./configure --enable-verbose --with-boost=/sw/taurus/libraries/boost/1.55.0-gnu4.8  CXX=mpic++
+ sh ./configure --with-boost=/sw/taurus/libraries/boost/1.55.0-gnu4.8  CXX=mpic++
  make
  if [ $? -ne 0 ]; then exit 1 ; fi
 
