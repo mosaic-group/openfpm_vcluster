@@ -64,8 +64,8 @@ then
  echo "Compiling on taurus"
 
  echo "$PATH"
- module load gcc/4.8.2
- module load boost/1.55.0-gnu4.8
+ module load gcc/5.3.0
+ module load boost/1.60.0
  module load openmpi/1.10.2-gnu
  module unload bullxmpi
 
