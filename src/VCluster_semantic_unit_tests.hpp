@@ -93,6 +93,102 @@ BOOST_AUTO_TEST_CASE (Vcluster_semantic_struct_gather)
 	}
 }
 
+#define SSCATTER_MAX 7
+
+BOOST_AUTO_TEST_CASE (Vcluster_semantic_scatter)
+{
+	for (size_t i = 0 ; i < 100 ; i++)
+	{
+		Vcluster & vcl = *global_v_cluster;
+
+		if (vcl.getProcessingUnits() >= 32)
+			return;
+
+		size_t nc = vcl.getProcessingUnits() / SSCATTER_MAX;
+		size_t nr = vcl.getProcessingUnits() - nc * SSCATTER_MAX;
+		nr = ((nr-1) * nr) / 2;
+
+		size_t n_elements = nc * SSCATTER_MAX * (SSCATTER_MAX - 1) / 2 + nr;
+
+		openfpm::vector<size_t> v1;
+		v1.resize(n_elements);
+
+		for(size_t i = 0 ; i < n_elements ; i++)
+			v1.get(i) = 5;
+
+		openfpm::vector<size_t> v2;
+
+		openfpm::vector<size_t> prc;
+		openfpm::vector<size_t> sz;
+
+		// Scatter pattern
+		for (size_t i = 0 ; i < vcl.getProcessingUnits() ; i++)
+		{
+			sz.add(i % SSCATTER_MAX);
+			prc.add(i);
+		}
+
+		vcl.SScatter(v1,v2,prc,sz,(i%vcl.getProcessingUnits()));
+
+		BOOST_REQUIRE_EQUAL(v2.size(),vcl.getProcessUnitID() % SSCATTER_MAX);
+
+		bool is_five = true;
+		for (size_t i = 0 ; i < v2.size() ; i++)
+			is_five &= (v2.get(i) == 5);
+
+		BOOST_REQUIRE_EQUAL(is_five,true);
+	}
+}
+
+
+BOOST_AUTO_TEST_CASE (Vcluster_semantic_struct_scatter)
+{
+	for (size_t i = 0 ; i < 100 ; i++)
+	{
+		Vcluster & vcl = *global_v_cluster;
+
+		if (vcl.getProcessingUnits() >= 32)
+			return;
+
+		size_t nc = vcl.getProcessingUnits() / SSCATTER_MAX;
+		size_t nr = vcl.getProcessingUnits() - nc * SSCATTER_MAX;
+		nr = ((nr-1) * nr) / 2;
+
+		size_t n_elements = nc * SSCATTER_MAX * (SSCATTER_MAX - 1) / 2 + nr;
+
+		openfpm::vector<size_t> v1;
+		v1.resize(n_elements);
+
+		for(size_t i = 0 ; i < n_elements ; i++)
+			v1.get(i) = 5;
+
+		openfpm::vector<size_t> v2;
+
+		openfpm::vector<size_t> prc;
+		openfpm::vector<size_t> sz;
+
+		// Scatter pattern
+		for (size_t i = 0 ; i < vcl.getProcessingUnits() ; i++)
+		{
+			sz.add(i % SSCATTER_MAX);
+			prc.add(i);
+		}
+
+		vcl.SScatter(v1,v2,prc,sz,(i%vcl.getProcessingUnits()));
+
+		if (vcl.getProcessUnitID() == (i%vcl.getProcessingUnits()))
+		{
+			BOOST_REQUIRE_EQUAL(v2.size(),vcl.getProcessUnitID() % SSCATTER_MAX);
+
+			bool is_five = true;
+			for (size_t i = 0 ; i < v2.size() ; i++)
+				is_five &= (v2.get(i) == 5);
+
+			BOOST_REQUIRE_EQUAL(is_five,true);
+		}
+	}
+}
+
 
 BOOST_AUTO_TEST_SUITE_END()
 
