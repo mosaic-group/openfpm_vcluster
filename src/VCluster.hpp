@@ -975,8 +975,7 @@ public:
 
 // Function to initialize the global VCluster //
 
-extern Vcluster * global_v_cluster;
-
+extern Vcluster * global_v_cluster_private;
 
 /*! \brief Initialize a global instance of Runtime Virtual Cluster Machine
  *
@@ -984,15 +983,47 @@ extern Vcluster * global_v_cluster;
  *
  */
 
-static inline void init_global_v_cluster(int *argc, char ***argv)
+static inline void init_global_v_cluster_private(int *argc, char ***argv)
 {
-	if (global_v_cluster == NULL)
-		global_v_cluster = new Vcluster(argc,argv);
+	if (global_v_cluster_private == NULL)
+		global_v_cluster_private = new Vcluster(argc,argv);
 }
 
-static inline void delete_global_v_cluster()
+static inline void delete_global_v_cluster_private()
 {
-	delete global_v_cluster;
+	delete global_v_cluster_private;
+}
+
+static inline Vcluster & create_vcluster()
+{
+#ifdef SE_CLASS1
+
+	if (global_v_cluster_private == NULL)
+		std::cerr << __FILE__ << ":" << __LINE__ << " Error you must call openfpm_init before using any distributed data structures";
+
+#endif
+
+	return *global_v_cluster_private;
+}
+
+/*! \brief Initialize the library
+ *
+ * This function MUST be called before any other function
+ *
+ */
+static inline void openfpm_init(int *argc, char ***argv)
+{
+	init_global_v_cluster_private(argc,argv);
+}
+
+/*! \brief Finalize the library
+ *
+ * This function MUST be called at the end of the program
+ *
+ */
+static inline void openfpm_finalize()
+{
+	delete_global_v_cluster_private();
 }
 
 #endif

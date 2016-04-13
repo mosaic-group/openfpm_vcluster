@@ -22,7 +22,7 @@ BOOST_AUTO_TEST_CASE (Vcluster_semantic_gather)
 {
 	for (size_t i = 0 ; i < 100 ; i++)
 	{
-		Vcluster & vcl = *global_v_cluster;
+		Vcluster & vcl = create_vcluster();
 
 		if (vcl.getProcessingUnits() >= 32)
 			return;
@@ -56,7 +56,7 @@ BOOST_AUTO_TEST_CASE (Vcluster_semantic_struct_gather)
 {
 	for (size_t i = 0 ; i < 100 ; i++)
 	{
-		Vcluster & vcl = *global_v_cluster;
+		Vcluster & vcl = create_vcluster();
 
 		if (vcl.getProcessingUnits() >= 32)
 			return;
@@ -99,7 +99,7 @@ BOOST_AUTO_TEST_CASE (Vcluster_semantic_scatter)
 {
 	for (size_t i = 0 ; i < 100 ; i++)
 	{
-		Vcluster & vcl = *global_v_cluster;
+		Vcluster & vcl = create_vcluster();
 
 		if (vcl.getProcessingUnits() >= 32)
 			return;
@@ -145,7 +145,7 @@ BOOST_AUTO_TEST_CASE (Vcluster_semantic_struct_scatter)
 {
 	for (size_t i = 0 ; i < 100 ; i++)
 	{
-		Vcluster & vcl = *global_v_cluster;
+		Vcluster & vcl = create_vcluster();
 
 		if (vcl.getProcessingUnits() >= 32)
 			return;

@@ -21,14 +21,14 @@ BOOST_AUTO_TEST_SUITE( VCluster_test )
 
 BOOST_AUTO_TEST_CASE (Vcluster_robustness)
 {
-	Vcluster & vcl = *global_v_cluster;
+	Vcluster & vcl = create_vcluster();
 
 	vcl.execute();
 }
 
 BOOST_AUTO_TEST_CASE( VCluster_use_reductions)
 {
-	Vcluster & vcl = *global_v_cluster;
+	Vcluster & vcl = create_vcluster();
 
 	unsigned char uc = 1;
 	char c = 1;
@@ -112,7 +112,7 @@ BOOST_AUTO_TEST_CASE( VCluster_use_reductions)
 
 BOOST_AUTO_TEST_CASE(VCluster_send_recv)
 {
-	Vcluster & vcl = *global_v_cluster;
+	Vcluster & vcl = create_vcluster();
 
 	test_send_recv_complex(N_V_ELEMENTS,vcl);
 	test_send_recv_primitives<unsigned char>(N_V_ELEMENTS,vcl);
@@ -129,7 +129,7 @@ BOOST_AUTO_TEST_CASE(VCluster_send_recv)
 
 BOOST_AUTO_TEST_CASE(VCluster_allgather)
 {
-	Vcluster & vcl = *global_v_cluster;
+	Vcluster & vcl = create_vcluster();
 
 	if (vcl.getProcessingUnits() < 256)
 		test_single_all_gather_primitives<unsigned char>(vcl);

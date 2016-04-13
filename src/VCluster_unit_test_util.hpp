@@ -40,8 +40,8 @@ void * msg_alloc(size_t msg_i ,size_t total_msg, size_t total_p, size_t i,size_t
 {
 	openfpm::vector<openfpm::vector<unsigned char>> * v = static_cast<openfpm::vector<openfpm::vector<unsigned char>> *>(ptr);
 
-	if (global_v_cluster->getProcessingUnits() <= 8)
-	{if (totp_check) BOOST_REQUIRE_EQUAL(total_p,global_v_cluster->getProcessingUnits()-1);}
+	if (create_vcluster().getProcessingUnits() <= 8)
+	{if (totp_check) BOOST_REQUIRE_EQUAL(total_p,create_vcluster().getProcessingUnits()-1);}
 	else
 	{if (totp_check) BOOST_REQUIRE_EQUAL(total_p,(size_t)8);}
 
@@ -136,7 +136,7 @@ template <unsigned int ip> std::string method()
 
 template<unsigned int ip> void test_no_send_some_peer()
 {
-	Vcluster & vcl = *global_v_cluster;
+	Vcluster & vcl = create_vcluster();
 
 	size_t n_proc = vcl.getProcessingUnits();
 
@@ -228,7 +228,7 @@ template<unsigned int ip> void test_no_send_some_peer()
 
 template<unsigned int ip> void test()
 {
-	Vcluster & vcl = *global_v_cluster;
+	Vcluster & vcl = create_vcluster();
 
 	// send/recv messages
 
@@ -325,7 +325,7 @@ template<unsigned int ip> void test()
 			}
 		}
 
-		std::srand(global_v_cluster->getProcessUnitID());
+		std::srand(create_vcluster().getProcessUnitID());
 		std::default_random_engine eg;
 		std::uniform_int_distribution<int> d(0,n_proc/8);
 
