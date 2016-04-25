@@ -1,6 +1,6 @@
 #! /bin/bash
 
-source .bashrc
+source $HOME/.bashrc
 
 # Make a directory in /tmp/openfpm_data
 
