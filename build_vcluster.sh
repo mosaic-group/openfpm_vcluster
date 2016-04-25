@@ -17,13 +17,11 @@ git clone git@ppmcore.mpi-cbg.de:/incardon/openfpm_data.git openfpm_data
 
 cd "$1/openfpm_vcluster"
 
-if [ "$2" == "gin" ]
-then
+if [ "$2" == "gin" ]; then
  echo "Compiling on gin\n"
  module load gcc/4.9.2
  module load openmpi/1.8.1
-elif [ "$2" == "wetcluster" ]
-then
+elif [ "$2" == "wetcluster" ]; then
  echo "Compiling on wetcluster"
 
 ## produce the module path
@@ -60,8 +58,7 @@ exit(0)\n"
 # if [ $? -ne 0 ]; then exit 1 ; fi
 # bsub -o output_run32.%J -K -n 128 "module load openmpi/1.8.1 ; module load gcc/4.9.2;  mpirun -np 128 ./src/vcluster"
 # if [ $? -ne 0 ]; then exit 1 ; fi
-elif [ "$2" == "taurus" ]
-then
+elif [ "$2" == "taurus" ]; then
  echo "Compiling on taurus"
 
  echo "$PATH"
