@@ -95,6 +95,7 @@ then
 else
 
  source ~/.bashrc
+ echo "$PATH"
  echo "Compiling general"
  sh ./autogen.sh
  sh ./configure  CXX=mpic++
