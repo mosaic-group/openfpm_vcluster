@@ -1,7 +1,10 @@
 #! /bin/bash
 
+source .bashrc
+
 # Make a directory in /tmp/openfpm_data
 
+echo "$PATH"
 echo "Directory: $1"
 echo "Machine: $2"
 
@@ -98,6 +101,8 @@ else
  make
 
  mpirun -np 2 ./src/vcluster
+ if [ $? -ne 0 ]; then exit 1 ; fi
+ mpirun -np 3 ./src/vcluster
  if [ $? -ne 0 ]; then exit 1 ; fi
  mpirun -np 4 ./src/vcluster
  if [ $? -ne 0 ]; then exit 1 ; fi
