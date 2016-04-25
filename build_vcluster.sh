@@ -94,7 +94,7 @@ then
 
 else
 
- source ~/.bashrc
+ source $HOME/.bashrc
  echo "$PATH"
  echo "Compiling general"
  sh ./autogen.sh
