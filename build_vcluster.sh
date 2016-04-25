@@ -1,7 +1,5 @@
 #! /bin/bash
 
-source $HOME/.bashrc
-
 # Make a directory in /tmp/openfpm_data
 
 echo "$PATH"
@@ -95,6 +93,8 @@ then
  if [ $? -ne 0 ]; then exit 1 ; fi
 
 else
+
+ source ~/.bashrc
  echo "Compiling general"
  sh ./autogen.sh
  sh ./configure  CXX=mpic++
