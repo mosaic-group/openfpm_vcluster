@@ -90,7 +90,7 @@ template<typename T, typename S> void process_receive_buffer(S & recv)
 		PtrMemory * ptr1 = new PtrMemory(recv_buf.get(i).getPointer(),recv_buf.get(i).size());
 
 		// create vector representation to a piece of memory already allocated
-		openfpm::vector<typename T::value_type,PtrMemory,openfpm::grow_policy_identity> v2;
+		openfpm::vector<typename T::value_type,PtrMemory,typename memory_traits_lin<typename T::value_type>::type, memory_traits_lin,openfpm::grow_policy_identity> v2;
 
 		v2.setMemory(*ptr1);
 
