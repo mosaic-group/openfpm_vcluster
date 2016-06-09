@@ -78,8 +78,11 @@ static void * msg_alloc(size_t msg_i ,size_t total_msg, size_t total_p, size_t i
  * \param recv receive object
  *
  */
-template<typename T, typename S> void process_receive_buffer(S & recv)
+template<typename T, typename S> void process_receive_buffer(S & recv, openfpm::vector<size_t> * sz = NULL)
 {
+	if (sz != NULL)
+		sz->resize(recv_buf.size());
+
 	for (size_t i = 0 ; i < recv_buf.size() ; i++)
 	{
 		// for each received buffer create a memory reppresentation
@@ -99,6 +102,9 @@ template<typename T, typename S> void process_receive_buffer(S & recv)
 
 		// Merge the information
 		recv.add(v2);
+
+		if (sz != NULL)
+			sz->get(i) = v2.size();
 	}
 }
 
@@ -191,7 +197,7 @@ template<typename T, typename S> bool SGather(T & send, S & recv, openfpm::vecto
 			sz.get(i) /= sizeof(typename T::value_type);
 
 		// process the received information
-		process_receive_buffer<T,S>(recv);
+		process_receive_buffer<T,S>(recv,&sz);
 
 		recv.add(send);
 		prc.add(root);
@@ -275,7 +281,7 @@ template<typename T, typename S> bool SScatter(T & send, S & recv, openfpm::vect
 		sendrecvMultipleMessagesNBX(prc.size(),(size_t *)sz_byte.getPointer(),(size_t *)prc.getPointer(),(void **)send_buf.getPointer(),msg_alloc,(void *)&bi);
 
 		// process the received information
-		process_receive_buffer<T,S>(recv);
+		process_receive_buffer<T,S>(recv,NULL);
 	}
 	else
 	{
@@ -288,10 +294,71 @@ template<typename T, typename S> bool SScatter(T & send, S & recv, openfpm::vect
 		// Send and recv multiple messages
 		sendrecvMultipleMessagesNBX(send_req.size(),NULL,NULL,NULL,msg_alloc,&bi);
 
-		process_receive_buffer<T,S>(recv);
+		process_receive_buffer<T,S>(recv,NULL);
 	}
 
 	return true;
 }
 
 
+/*! \brief Semantic Send and receive, send the data to processors and receive from the other processors
+ *
+ * Semantic communication differ from the normal one. They in general
+ * follow the following model.
+ *
+ * SSendRecv(T,S,...,op=add);
+ *
+ * "SendRecv" indicate the communication pattern, or how the information flow
+ * T is the object to send, S is the object that will receive the data.
+ * In order to work S must implement the interface S.add(T).
+ *
+ * ### Example scatter a vector of structures, to other processors
+ * \snippet VCluster_semantic_unit_tests.hpp Scatter the data from master
+ *
+ * \tparam T type of sending object
+ * \tparam S type of receiving object
+ *
+ * \param Object to send
+ * \param Object to receive
+ * \param prc processor involved in the scatter
+ * \param sz size of each chunks
+ * \param root which processor should scatter the information
+ *
+ * \return true if the function completed succefully
+ *
+ */
+template<typename T, typename S> bool SSendRecv(openfpm::vector<T> & send, S & recv, openfpm::vector<size_t> & prc_send, openfpm::vector<size_t> & prc_recv, openfpm::vector<size_t> & sz_recv)
+{
+	// Reset the receive buffer
+	reset_recv_buf();
+
+#ifdef SE_CLASS1
+
+	if (send.size() != prc_send.size())
+		std::cerr << __FILE__ << ":" << __LINE__ << " Error, the number of processor involved \"prc.size()\" must match the number of sending buffers \"send.size()\" " << std::endl;
+
+#endif
+
+	// Prepare the sending buffer
+	openfpm::vector<const void *> send_buf;
+
+	openfpm::vector<size_t> sz_byte;
+	sz_byte.resize(send.size());
+
+	for (size_t i = 0; i < send.size() ; i++)
+	{
+		send_buf.add((char *)send.get(i).getPointer());
+		sz_byte.get(i) = send.get(i).size() * sizeof(typename T::value_type);
+	}
+
+	// receive information
+	base_info bi(&recv_buf,prc_recv,sz_recv);
+
+	// Send and recv multiple messages
+	sendrecvMultipleMessagesNBX(prc_send.size(),(size_t *)sz_byte.getPointer(),(size_t *)prc_send.getPointer(),(void **)send_buf.getPointer(),msg_alloc,(void *)&bi);
+
+	// process the received information
+	process_receive_buffer<T,S>(recv,&sz_recv);
+
+	return true;
+}

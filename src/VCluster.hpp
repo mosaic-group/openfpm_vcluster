@@ -19,6 +19,10 @@
 #include "util/Vcluster_log.hpp"
 #include "memory/BHeapMemory.hpp"
 
+#ifdef HAVE_PETSC
+#include <petscvec.h>
+#endif
+
 #define MSG_LENGTH 1024
 #define MSG_SEND_RECV 1025
 #define SEND_SPARSE 4096
@@ -1013,6 +1017,12 @@ static inline Vcluster & create_vcluster()
  */
 static inline void openfpm_init(int *argc, char ***argv)
 {
+#ifdef HAVE_PETSC
+
+	PetscInitialize(argc,argv,NULL,NULL);
+
+#endif
+
 	init_global_v_cluster_private(argc,argv);
 }
 
@@ -1023,6 +1033,12 @@ static inline void openfpm_init(int *argc, char ***argv)
  */
 static inline void openfpm_finalize()
 {
+#ifdef HAVE_PETSC
+
+	PetscFinalize();
+
+#endif
+
 	delete_global_v_cluster_private();
 }
 

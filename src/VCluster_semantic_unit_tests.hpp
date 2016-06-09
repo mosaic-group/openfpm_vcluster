@@ -190,6 +190,147 @@ BOOST_AUTO_TEST_CASE (Vcluster_semantic_struct_scatter)
 }
 
 
+
+BOOST_AUTO_TEST_CASE (Vcluster_semantic_sendrecv)
+{
+	for (size_t i = 0 ; i < 100 ; i++)
+	{
+		Vcluster & vcl = create_vcluster();
+
+		if (vcl.getProcessingUnits() >= 32)
+			return;
+
+		openfpm::vector<size_t> prc_recv2;
+		openfpm::vector<size_t> prc_recv3;
+		openfpm::vector<size_t> prc_send;
+		openfpm::vector<size_t> sz_recv2;
+		openfpm::vector<size_t> sz_recv3;
+		openfpm::vector<openfpm::vector<size_t>> v1;
+		openfpm::vector<size_t> v2;
+		openfpm::vector<openfpm::vector<size_t>> v3;
+
+		v1.resize(vcl.getProcessingUnits());
+
+		size_t nc = vcl.getProcessingUnits() / SSCATTER_MAX;
+		size_t nr = vcl.getProcessingUnits() - nc * SSCATTER_MAX;
+		nr = ((nr-1) * nr) / 2;
+
+		size_t n_ele = nc * SSCATTER_MAX * (SSCATTER_MAX - 1) / 2 + nr;
+
+		for(size_t i = 0 ; i < v1.size() ; i++)
+		{
+			for (size_t j = 0 ; j < i % SSCATTER_MAX ; j++)
+				v1.get(i).add(j);
+
+			prc_send.add((i + vcl.getProcessUnitID()) % vcl.getProcessingUnits());
+		}
+
+		vcl.SSendRecv(v1,v2,prc_send,prc_recv2,sz_recv2);
+		vcl.SSendRecv(v1,v3,prc_send,prc_recv3,sz_recv3);
+
+		BOOST_REQUIRE_EQUAL(v2.size(),n_ele);
+		BOOST_REQUIRE_EQUAL(v3.size(),vcl.getProcessingUnits()-1-nc);
+
+		bool match = true;
+		size_t s = 0;
+
+		for (size_t i = 0 ; i < sz_recv2.size() ; i++)
+		{
+			for (size_t j = 0 ; j < sz_recv2.get(i) % SSCATTER_MAX ; j++)
+			{
+				match &= v2.get(s+j) == j;
+			}
+			s += sz_recv2.get(i) % SSCATTER_MAX;
+		}
+
+		BOOST_REQUIRE_EQUAL(match,true);
+
+		for (size_t i = 0 ; i < sz_recv3.size() ; i++)
+		{
+			for (size_t j = 0 ; j < sz_recv3.get(i) % SSCATTER_MAX ; j++)
+			{
+				match &= v3.get(i).get(j) == j;
+			}
+		}
+
+		BOOST_REQUIRE_EQUAL(match,true);
+	}
+}
+
+
+BOOST_AUTO_TEST_CASE (Vcluster_semantic_struct_sendrecv)
+{
+	for (size_t i = 0 ; i < 100 ; i++)
+	{
+		Vcluster & vcl = create_vcluster();
+
+		if (vcl.getProcessingUnits() >= 32)
+			return;
+
+		openfpm::vector<size_t> prc_recv2;
+		openfpm::vector<size_t> prc_recv3;
+		openfpm::vector<size_t> prc_send;
+		openfpm::vector<size_t> sz_recv2;
+		openfpm::vector<size_t> sz_recv3;
+		openfpm::vector<openfpm::vector<Box<3,size_t>>> v1;
+		openfpm::vector<Box<3,size_t>> v2;
+		openfpm::vector<openfpm::vector<Box<3,size_t>>> v3;
+
+		v1.resize(vcl.getProcessingUnits());
+
+		size_t nc = vcl.getProcessingUnits() / SSCATTER_MAX;
+		size_t nr = vcl.getProcessingUnits() - nc * SSCATTER_MAX;
+		nr = ((nr-1) * nr) / 2;
+
+		size_t n_ele = nc * SSCATTER_MAX * (SSCATTER_MAX - 1) / 2 + nr;
+
+		for(size_t i = 0 ; i < v1.size() ; i++)
+		{
+			for (size_t j = 0 ; j < i % SSCATTER_MAX ; j++)
+			{
+				Box<3,size_t> b({j,j,j},{j,j,j});
+				v1.get(i).add(b);
+			}
+
+			prc_send.add((i + vcl.getProcessUnitID()) % vcl.getProcessingUnits());
+		}
+
+		vcl.SSendRecv(v1,v2,prc_send,prc_recv2,sz_recv2);
+		vcl.SSendRecv(v1,v3,prc_send,prc_recv3,sz_recv3);
+
+		BOOST_REQUIRE_EQUAL(v2.size(),n_ele);
+		BOOST_REQUIRE_EQUAL(v3.size(),vcl.getProcessingUnits()-1-nc);
+
+		bool match = true;
+		size_t s = 0;
+
+		for (size_t i = 0 ; i < sz_recv2.size() ; i++)
+		{
+			for (size_t j = 0 ; j < sz_recv2.get(i) % SSCATTER_MAX ; j++)
+			{
+				Box<3,size_t> b({j,j,j},{j,j,j});
+				Box<3,size_t> bt = v2.get(s+j);
+				match &= bt == b;
+			}
+			s += sz_recv2.get(i) % SSCATTER_MAX;
+		}
+
+		BOOST_REQUIRE_EQUAL(match,true);
+
+		for (size_t i = 0 ; i < sz_recv3.size() ; i++)
+		{
+			for (size_t j = 0 ; j < sz_recv3.get(i) % SSCATTER_MAX ; j++)
+			{
+				Box<3,size_t> b({j,j,j},{j,j,j});
+				Box<3,size_t> bt = v3.get(i).get(j);
+				match &= bt == b;
+			}
+		}
+
+		BOOST_REQUIRE_EQUAL(match,true);
+	}
+}
+
 BOOST_AUTO_TEST_SUITE_END()
 
 #endif /* OPENFPM_VCLUSTER_SRC_VCLUSTER_SEMANTIC_UNIT_TESTS_HPP_ */
