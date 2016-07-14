@@ -17,6 +17,8 @@ void reset_recv_buf()
 {
 	for (size_t i = 0 ; i < recv_buf.size() ; i++)
 		recv_buf.get(i).resize(0);
+
+	recv_buf.resize(0);
 }
 
 /*! \brief Base info

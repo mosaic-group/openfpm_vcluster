@@ -18,3 +18,7 @@ util/Vcluster_log.hpp
 
 .cu.o :
 	$(NVCC) $(NVCCFLAGS) -o $@ -c $<
+
+test: vcluster
+	source $(HOME)/openfpm_vars &&  cd .. && mpirun -np 3 ./src/vcluster && mpirun -np 4 ./src/vcluster
+
