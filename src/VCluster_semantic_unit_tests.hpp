@@ -329,6 +329,32 @@ BOOST_AUTO_TEST_CASE (Vcluster_semantic_struct_sendrecv)
 
 		BOOST_REQUIRE_EQUAL(match,true);
 	}
+
+	// Send and receive 0 and check
+
+	{
+		Vcluster & vcl = create_vcluster();
+
+		openfpm::vector<size_t> prc_recv2;
+		openfpm::vector<size_t> prc_send;
+		openfpm::vector<size_t> sz_recv2;
+		openfpm::vector<openfpm::vector<Box<3,size_t>>> v1;
+		openfpm::vector<Box<3,size_t>> v2;
+
+		v1.resize(vcl.getProcessingUnits());
+
+
+		for(size_t i = 0 ; i < v1.size() ; i++)
+		{
+			prc_send.add((i + vcl.getProcessUnitID()) % vcl.getProcessingUnits());
+		}
+
+		vcl.SSendRecv(v1,v2,prc_send,prc_recv2,sz_recv2);
+
+		BOOST_REQUIRE_EQUAL(v2.size(),0ul);
+		BOOST_REQUIRE_EQUAL(prc_recv2.size(),0ul);
+		BOOST_REQUIRE_EQUAL(sz_recv2.size(),0ul);
+	}
 }
 
 BOOST_AUTO_TEST_SUITE_END()
