@@ -37,6 +37,8 @@
 extern size_t n_vcluster;
 // Global MPI initialization
 extern bool global_mpi_init;
+// initialization flag
+extern bool ofp_initialized;
 
 ///////////////////// Post functions /////////////
 
@@ -1004,6 +1006,16 @@ static inline Vcluster & create_vcluster()
 	return *global_v_cluster_private;
 }
 
+/*! \brief Check if the library has been initialized
+ *
+ * \return true if the library has been initialized
+ *
+ */
+static inline bool is_openfpm_init()
+{
+	return ofp_initialized;
+}
+
 /*! \brief Initialize the library
  *
  * This function MUST be called before any other function
@@ -1018,6 +1030,7 @@ static inline void openfpm_init(int *argc, char ***argv)
 #endif
 
 	init_global_v_cluster_private(argc,argv);
+	ofp_initialized = true;
 }
 
 /*! \brief Finalize the library
@@ -1034,6 +1047,7 @@ static inline void openfpm_finalize()
 #endif
 
 	delete_global_v_cluster_private();
+	ofp_initialized = false;
 }
 
 #endif
