@@ -19,6 +19,10 @@
 #include "util/Vcluster_log.hpp"
 #include "memory/BHeapMemory.hpp"
 
+#ifdef HAVE_PETSC
+#include <petscvec.h>
+#endif
+
 #define MSG_LENGTH 1024
 #define MSG_SEND_RECV 1025
 #define SEND_SPARSE 4096
@@ -33,6 +37,8 @@
 extern size_t n_vcluster;
 // Global MPI initialization
 extern bool global_mpi_init;
+// initialization flag
+extern bool ofp_initialized;
 
 ///////////////////// Post functions /////////////
 
@@ -949,19 +955,13 @@ public:
 	 */
 	void execute()
 	{
-		int err = 0;
-
 		// if req == 0 return
 		if (req.size() == 0)
 			return;
 
 		// Wait for all the requests
 		stat.resize(req.size());
-		err = MPI_Waitall(req.size(),&req.get(0),&stat.get(0));
-
-		// MPI error get the message and abort MPI
-		if (err != MPI_SUCCESS)
-			MPI_Abort(MPI_COMM_WORLD,1);
+		MPI_SAFE_CALL(MPI_Waitall(req.size(),&req.get(0),&stat.get(0)));
 
 		// Remove executed request and status
 		req.clear();
@@ -1006,6 +1006,16 @@ static inline Vcluster & create_vcluster()
 	return *global_v_cluster_private;
 }
 
+/*! \brief Check if the library has been initialized
+ *
+ * \return true if the library has been initialized
+ *
+ */
+static inline bool is_openfpm_init()
+{
+	return ofp_initialized;
+}
+
 /*! \brief Initialize the library
  *
  * This function MUST be called before any other function
@@ -1013,7 +1023,14 @@ static inline Vcluster & create_vcluster()
  */
 static inline void openfpm_init(int *argc, char ***argv)
 {
+#ifdef HAVE_PETSC
+
+	PetscInitialize(argc,argv,NULL,NULL);
+
+#endif
+
 	init_global_v_cluster_private(argc,argv);
+	ofp_initialized = true;
 }
 
 /*! \brief Finalize the library
@@ -1023,7 +1040,14 @@ static inline void openfpm_init(int *argc, char ***argv)
  */
 static inline void openfpm_finalize()
 {
+#ifdef HAVE_PETSC
+
+	PetscFinalize();
+
+#endif
+
 	delete_global_v_cluster_private();
+	ofp_initialized = false;
 }
 
 #endif
