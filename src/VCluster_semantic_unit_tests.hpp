@@ -191,50 +191,6 @@ BOOST_AUTO_TEST_CASE (Vcluster_semantic_struct_scatter)
 	}
 }
 
-BOOST_AUTO_TEST_CASE (Vcluster_semantic_gather_ptst)
-{
-	for (size_t i = 0 ; i < 100 ; i++)
-	{
-		Vcluster & vcl = create_vcluster();
-
-		if (vcl.getProcessingUnits() >= 32)
-			return;
-
-		openfpm::vector<aggregate<openfpm::vector<int>>> v1;
-
-		openfpm::vector<int> v1_int;
-
-		v1_int.resize(10);
-
-		for (size_t i = 0; i < v1_int.size(); i++)
-			v1_int.get(i) = 5;
-
-		v1.resize(vcl.getProcessUnitID());
-
-		for(size_t i = 0 ; i < vcl.getProcessUnitID() ; i++)
-			v1.template get<0>(i) = v1_int;
-
-		openfpm::vector<aggregate<openfpm::vector<int>>> v2;
-
-		/*vcl.SGather(v1,v2,(i%vcl.getProcessingUnits()));
-
-		if (vcl.getProcessUnitID() == (i%vcl.getProcessingUnits()))
-		{
-			size_t n = vcl.getProcessingUnits();
-			BOOST_REQUIRE_EQUAL(v2.size(),n*(n-1)/2);
-
-			bool is_five = true;
-			for (size_t i = 0 ; i < v2.size() ; i++)
-				is_five &= (v2.get(i) == 5);
-
-			BOOST_REQUIRE_EQUAL(is_five,true);
-		}*/
-	}
-}
-
-
-
-
 BOOST_AUTO_TEST_CASE (Vcluster_semantic_sendrecv)
 {
 	for (size_t i = 0 ; i < 100 ; i++)
@@ -398,6 +354,47 @@ BOOST_AUTO_TEST_CASE (Vcluster_semantic_struct_sendrecv)
 		BOOST_REQUIRE_EQUAL(v2.size(),0ul);
 		BOOST_REQUIRE_EQUAL(prc_recv2.size(),0ul);
 		BOOST_REQUIRE_EQUAL(sz_recv2.size(),0ul);
+	}
+}
+
+BOOST_AUTO_TEST_CASE (Vcluster_semantic_gather_ptst)
+{
+	for (size_t i = 0 ; i < 100 ; i++)
+	{
+		Vcluster & vcl = create_vcluster();
+
+		if (vcl.getProcessingUnits() >= 32)
+			return;
+
+		openfpm::vector<aggregate<openfpm::vector<int>>> v1;
+
+		openfpm::vector<int> v1_int;
+
+		v1_int.resize(10);
+
+		for (size_t i = 0; i < v1_int.size(); i++)
+			v1_int.get(i) = 5;
+
+		v1.resize(vcl.getProcessUnitID());
+
+		for(size_t i = 0 ; i < vcl.getProcessUnitID() ; i++)
+			v1.template get<0>(i) = v1_int;
+
+		openfpm::vector<aggregate<openfpm::vector<int>>> v2;
+		/*
+		vcl.SGather(v1,v2,(i%vcl.getProcessingUnits()));
+
+		if (vcl.getProcessUnitID() == (i%vcl.getProcessingUnits()))
+		{
+			size_t n = vcl.getProcessingUnits();
+			BOOST_REQUIRE_EQUAL(v2.size(),n*(n-1)/2);
+
+			bool is_five = true;
+			for (size_t i = 0 ; i < v2.size() ; i++)
+				is_five &= (v2.get(i) == 5);
+
+			BOOST_REQUIRE_EQUAL(is_five,true);
+		}*/
 	}
 }
 

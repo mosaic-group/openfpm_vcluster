@@ -9,6 +9,31 @@
 
 private:
 
+	// Structures that do a pack request, depending on the existence of max_prop inside 'send'
+
+	//There is max_prop inside
+	template<bool cond, typename T>
+	struct packRequest_cond
+	{
+		void packingRequest(T & send, size_t & tot_size)
+		{
+			typedef typename ::generate_array_constexpr<unsigned int,T::max_prop, MetaFuncOrd>::result prop_to_pack;
+			Packer<decltype(send),HeapMemory>::packRequest< prop_to_pack::data >(send,tot_size);
+		}
+	};
+
+	
+	//There is no max_prop inside
+	template<typename T>
+	struct packRequest_cond<false, T>
+	{
+		void packingRequest(T & send, size_t & tot_size)
+		{
+			Packer<decltype(send),HeapMemory>::packRequest(send,tot_size);
+		}
+	};
+
+
 /*! \brief Reset the receive buffer
  * 
  * 
@@ -147,6 +172,10 @@ template<typename T, typename S> bool SGather(T & send, S & recv,size_t root)
 	return SGather(send,recv,prc,sz,root);
 }
 
+template<size_t index, size_t N> struct MetaFuncOrd {
+   enum { value = index };
+};
+
 /*! \brief Semantic Gather, gather the data from all processors into one node
  *
  * Semantic communication differ from the normal one. They in general
@@ -180,7 +209,7 @@ template<typename T, typename S> bool SGather(T & send, S & recv, openfpm::vecto
 {
 	// Reset the receive buffer
 	reset_recv_buf();
-	
+
 	// If we are on master collect the information
 	if (getProcessUnitID() == root)
 	{
@@ -203,7 +232,7 @@ template<typename T, typename S> bool SGather(T & send, S & recv, openfpm::vecto
 
 		recv.add(send);
 		prc.add(root);
-		sz.add(send.size());
+		sz.add(send.size()*sizeof(typename T::value_type));
 	}
 	else
 	{
@@ -211,10 +240,22 @@ template<typename T, typename S> bool SGather(T & send, S & recv, openfpm::vecto
 		// remain buffer with size 0
 		openfpm::vector<size_t> send_prc;
 		send_prc.add(root);
+		
+		
+		size_t tot_size = 0;
+			
+		//Pack requesting
+		
+		packRequest_cond<has_max_prop<T>::value, T> pr;
+		pr.packingRequest(send, tot_size);
+		
+		
 		openfpm::vector<const void *> send_buf;
+			
 		send_buf.add(send.getPointer());
 		openfpm::vector<size_t> sz;
-		sz.add(send.size()*sizeof(typename T::value_type));
+		//sz.add(send.size()*sizeof(typename T::value_type));
+		sz.add(tot_size);
 
 		// receive information
 		base_info bi(NULL,prc,sz);
