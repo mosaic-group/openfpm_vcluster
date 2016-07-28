@@ -18,6 +18,7 @@
 #endif
 #include "util/Vcluster_log.hpp"
 #include "memory/BHeapMemory.hpp"
+#include "Packer_Unpacker/has_max_prop.hpp"
 
 #ifdef HAVE_PETSC
 #include <petscvec.h>
