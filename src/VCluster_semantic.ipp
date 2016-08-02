@@ -140,6 +140,8 @@ private:
 			{
 				for (size_t i = 0 ; i < recv_buf.size() ; i++)
 				{
+					
+					//std::cout << "I: " << i << ", Rec_buf.get(i).size(): " << recv_buf.get(i).size() << std::endl;
 					// calculate the number of received elements
 					size_t n_ele = recv_buf.get(i).size() / sizeof(typename T::value_type);
 					
@@ -219,6 +221,8 @@ static void * msg_alloc(size_t msg_i ,size_t total_msg, size_t total_p, size_t i
 	rinfo.recv_buf->resize(ri+1);
 
 	rinfo.recv_buf->get(ri).resize(msg_i);
+	
+	std::cout << "Recv_but.get(ri).size(): " << rinfo.recv_buf->get(ri).size() << std::endl;
 
 	// Receive info
 	rinfo.prc.add(i);
@@ -369,13 +373,13 @@ template<typename T, typename S> bool SGather(T & send, S & recv, openfpm::vecto
 
 		Pack_stat sts;
 
-		pack_unpack_cond<has_max_prop<T, has_value_type<T>::value>::value, T, S>::packing(mem, send, sts);	
+		pack_unpack_cond<has_max_prop<T, has_value_type<T>::value>::value, T, S>::packing(mem, send, sts);
 		
 		openfpm::vector<const void *> send_buf;
 		send_buf.add(mem.getPointer());
 		
-		openfpm::vector<size_t> sz;	
-		sz.add(send.size());
+		openfpm::vector<size_t> sz;
+		sz.add(send.size()*sizeof(typename T::value_type));
 
 		// receive information
 		base_info bi(NULL,prc,sz);
