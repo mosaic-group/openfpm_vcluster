@@ -8,9 +8,7 @@
 #ifndef OPENFPM_VCLUSTER_SRC_VCLUSTER_SEMANTIC_UNIT_TESTS_HPP_
 #define OPENFPM_VCLUSTER_SRC_VCLUSTER_SEMANTIC_UNIT_TESTS_HPP_
 
-#include "data_type/aggregate.hpp"
-
-struct A
+struct Aexample
 {
 	size_t a;
 	float b;
@@ -63,7 +61,7 @@ BOOST_AUTO_TEST_CASE (Vcluster_semantic_struct_gather)
 		if (vcl.getProcessingUnits() >= 32)
 			return;
 
-		openfpm::vector<A> v1;
+		openfpm::vector<Aexample> v1;
 		v1.resize(vcl.getProcessUnitID());
 
 		for(size_t i = 0 ; i < vcl.getProcessUnitID() ; i++)
@@ -73,7 +71,7 @@ BOOST_AUTO_TEST_CASE (Vcluster_semantic_struct_gather)
 			v1.get(i).c = 11.0;
 		}
 
-		openfpm::vector<A> v2;
+		openfpm::vector<Aexample> v2;
 
 		vcl.SGather(v1,v2,(i%vcl.getProcessingUnits()));
 
@@ -190,6 +188,8 @@ BOOST_AUTO_TEST_CASE (Vcluster_semantic_struct_scatter)
 		}
 	}
 }
+
+
 
 BOOST_AUTO_TEST_CASE (Vcluster_semantic_sendrecv)
 {
@@ -357,7 +357,7 @@ BOOST_AUTO_TEST_CASE (Vcluster_semantic_struct_sendrecv)
 	}
 }
 
-BOOST_AUTO_TEST_CASE (Vcluster_semantic_gather_test)
+BOOST_AUTO_TEST_CASE (Vcluster_semantic_gather_2)
 {
 	Vcluster & vcl = create_vcluster();
 
@@ -378,99 +378,12 @@ BOOST_AUTO_TEST_CASE (Vcluster_semantic_gather_test)
 	{
 		size_t n = vcl.getProcessingUnits();
 		BOOST_REQUIRE_EQUAL(v2.size(),n*(n-1)/2);
-		std::cout << v2.size() << std::endl;
 
 		bool is_five = true;
 		for (size_t i = 0 ; i < v2.size() ; i++)
 			is_five &= (v2.get(i) == 5);
 
 		BOOST_REQUIRE_EQUAL(is_five,true);
-	}
-}
-
-BOOST_AUTO_TEST_CASE (Vcluster_semantic_gather_test_2)
-{
-	Vcluster & vcl = create_vcluster();
-
-	if (vcl.getProcessingUnits() >= 32)
-		return;
-
-	openfpm::vector<size_t> v1;
-
-	v1.resize(vcl.getProcessUnitID());
-
-	for(size_t i = 0 ; i < vcl.getProcessUnitID() ; i++)
-		v1.get(i) = 5;
-
-	openfpm::vector<openfpm::vector<size_t>> v2;
-
-	vcl.SGather(v1,v2,0);
-
-	if (vcl.getProcessUnitID() == 0)
-	{
-		size_t n = vcl.getProcessingUnits();
-		BOOST_REQUIRE_EQUAL(v2.size(),n);
-		std::cout << v2.size() << std::endl;
-
-
-	/*	for (size_t i = 0 ; i < v2.size() ; i++)
-		{
-			for (size_t j = 0 ; j < v2.get(i).size() ; j++)
-			{
-				int m = v2.get(i).get(j);
-				BOOST_REQUIRE_EQUAL(m,5);
-			}
-		}*/
-
-		for (size_t i = 0 ; i < v2.size() ; i++)
-		{
-			for (size_t j = 0 ; j < v2.get(i).size() ; j++)
-			{
-				std::cout << v2.get(i).get(j) << " " << std::endl;
-			}
-			std::cout << "Size is " << v2.get(i).size() << " " << std::endl;
-		}
-	}
-}
-
-BOOST_AUTO_TEST_CASE (Vcluster_semantic_gather_test_3)
-{
-	for (size_t i = 0 ; i < 100 ; i++)
-	{
-		Vcluster & vcl = create_vcluster();
-
-		if (vcl.getProcessingUnits() >= 32)
-			return;
-
-		openfpm::vector<aggregate<openfpm::vector<int>>> v1;
-
-		openfpm::vector<int> v1_int;
-
-		v1_int.resize(10);
-
-		for (size_t i = 0; i < v1_int.size(); i++)
-			v1_int.get(i) = 5;
-
-		v1.resize(vcl.getProcessUnitID());
-
-		for(size_t i = 0 ; i < vcl.getProcessUnitID() ; i++)
-			v1.template get<0>(i) = v1_int;
-
-		openfpm::vector<aggregate<openfpm::vector<int>>> v2;
-		/*
-		vcl.SGather(v1,v2,(i%vcl.getProcessingUnits()));
-
-		if (vcl.getProcessUnitID() == (i%vcl.getProcessingUnits()))
-		{
-			size_t n = vcl.getProcessingUnits();
-			BOOST_REQUIRE_EQUAL(v2.size(),n*(n-1)/2);
-
-			bool is_five = true;
-			for (size_t i = 0 ; i < v2.size() ; i++)
-				is_five &= (v2.get(i) == 5);
-
-			BOOST_REQUIRE_EQUAL(is_five,true);
-		}*/
 	}
 }
 
