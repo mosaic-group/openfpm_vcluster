@@ -9,29 +9,25 @@
 
 private:
 
-	// Structures that do a pack request, depending on the existence of max_prop inside 'send'
-
-	//There is max_prop inside
-	template<bool cond, typename T, typename S>
-	struct pack_unpack_cond
+	template<typename T>
+	struct call_serialize_variadic {};
+	
+	template<int ... prp>
+	struct call_serialize_variadic<index_tuple<prp...>>
 	{
-		static void packingRequest(T & send, size_t & tot_size)
+		template<typename T> inline static void call_pr(T & send, size_t & tot_size)
 		{
-			typedef typename ::generate_array_constexpr<unsigned int,T::max_prop, MetaFuncOrd>::result prop_to_pack;
-			Packer<T,HeapMemory>::packRequest< prop_to_pack::data >(send,tot_size);
+			Packer<T,HeapMemory>::template packRequest<prp...>(send,tot_size);
 		}
 		
-		static void packing(ExtPreAlloc<HeapMemory> & mem, T & send, Pack_stat & sts)
+		template<typename T> inline static void call_pack(ExtPreAlloc<HeapMemory> & mem, T & send, Pack_stat & sts)
 		{
-			typedef typename ::generate_array_constexpr<unsigned int, has_max_prop<T, has_value_type<T>::value>::number, MetaFuncOrd>::result prop_to_pack;
-			Packer<T,HeapMemory>::pack< prop_to_pack::data >(mem,send,sts);
+			Packer<T,HeapMemory>::template pack<prp...>(mem,send,sts);
 		}
 		
-		static void unpacking(S & recv, openfpm::vector<BHeapMemory> & recv_buf, Unpack_stat & ps, openfpm::vector<size_t> * sz = NULL)
+		template<typename T, typename S> inline static void call_unpack(S & recv, openfpm::vector<BHeapMemory> & recv_buf, Unpack_stat & ps, openfpm::vector<size_t> * sz = NULL)
 		{
-			typedef typename ::generate_array_constexpr<unsigned int, has_max_prop<T, has_value_type<T>::value>::number, MetaFuncOrd>::result prop_to_pack;
-			
-			if (has_pack_agg<typename T::value_type, prop_to_pack::data >::result::value == true)
+			if (has_pack_agg<typename T::value_type, prp...>::result::value == true)
 			{
 				for (size_t i = 0 ; i < recv_buf.size() ; i++)
 				{
@@ -40,7 +36,7 @@ private:
 					ExtPreAlloc<HeapMemory> & mem = *(new ExtPreAlloc<HeapMemory>(recv_buf.get(i).size(),recv_buf.get(i)));
 					mem.incRef();
 					
-					Unpacker<T,HeapMemory>::unpack< prop_to_pack::data >(mem, unp, ps);
+					Unpacker<T,HeapMemory>::template unpack<prp...>(mem, unp, ps);
 					
 					// Merge the information
 					recv.add(unp);
@@ -72,6 +68,33 @@ private:
 						sz->get(i) = v2.size();
 				}
 			}
+		}		
+	};
+
+	// Structures that do a pack request, depending on the existence of max_prop inside 'send'
+
+	//There is max_prop inside
+	template<bool cond, typename T, typename S>
+	struct pack_unpack_cond
+	{
+		static void packingRequest(T & send, size_t & tot_size)
+		{
+			typedef typename ::generate_indexes<int, has_max_prop<T, has_value_type<T>::value>::number, MetaFuncOrd>::result ind_prop_to_pack;
+//			Packer<T,HeapMemory>::packRequest< prop_to_pack::data >(send,tot_size);
+			call_serialize_variadic<ind_prop_to_pack>::call_pr(send,tot_size);
+		}
+		
+		static void packing(ExtPreAlloc<HeapMemory> & mem, T & send, Pack_stat & sts)
+		{
+			typedef typename ::generate_indexes<int, has_max_prop<T, has_value_type<T>::value>::number, MetaFuncOrd>::result ind_prop_to_pack;
+			//Packer<T,HeapMemory>::pack< prop_to_pack::data >(mem,send,sts);
+			call_serialize_variadic<ind_prop_to_pack>::call_pack(mem,send,sts);
+		}
+		
+		static void unpacking(S & recv, openfpm::vector<BHeapMemory> & recv_buf, Unpack_stat & ps, openfpm::vector<size_t> * sz = NULL)
+		{
+			typedef typename ::generate_indexes<int, has_max_prop<T, has_value_type<T>::value>::number, MetaFuncOrd>::result ind_prop_to_pack;
+			call_serialize_variadic<ind_prop_to_pack>::template call_unpack<T,S>(recv, recv_buf, ps, sz);
 		}	
 	};
 
@@ -84,16 +107,19 @@ private:
 		{
 			//tot_size = send.size()*sizeof(typename T::value_type);
 			Packer<T,HeapMemory>::packRequest(send,tot_size);
+			std::cout << "Inside SGather pack request (no prp) " << std::endl;
 			std::cout << "Tot_size: " << tot_size << std::endl; 
 		}
 		
 		static void packing(ExtPreAlloc<HeapMemory> & mem, T & send, Pack_stat & sts)
 		{
 			Packer<T,HeapMemory>::pack(mem,send,sts);
+			std::cout << "Inside SGather pack (no prp) " << std::endl;
 		}
 
 		static void unpacking(S & recv, openfpm::vector<BHeapMemory> & recv_buf, Unpack_stat & ps, openfpm::vector<size_t> * sz = NULL)
 		{
+			std::cout << "Inside SGather unpack (no prp) " << std::endl;
 			if (has_pack<typename T::value_type>::type::value == true)
 			{
 				for (size_t i = 0 ; i < recv_buf.size() ; i++)
@@ -322,6 +348,7 @@ template<typename T, typename S> bool SGather(T & send, S & recv, openfpm::vecto
 	}
 	else
 	{
+		std::cout << "Inside slave " << std::endl;
 		// send buffer (master does not send anything) so send req and send_buf
 		// remain buffer with size 0
 		openfpm::vector<size_t> send_prc;
