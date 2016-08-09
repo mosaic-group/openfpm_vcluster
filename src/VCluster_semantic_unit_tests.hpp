@@ -8,6 +8,8 @@
 #ifndef OPENFPM_VCLUSTER_SRC_VCLUSTER_SEMANTIC_UNIT_TESTS_HPP_
 #define OPENFPM_VCLUSTER_SRC_VCLUSTER_SEMANTIC_UNIT_TESTS_HPP_
 
+#include "Grid/grid_util_test.hpp"
+
 struct Aexample
 {
 	size_t a;
@@ -386,6 +388,155 @@ BOOST_AUTO_TEST_CASE (Vcluster_semantic_gather_2)
 		BOOST_REQUIRE_EQUAL(is_five,true);
 	}
 }
+
+BOOST_AUTO_TEST_CASE (Vcluster_semantic_gather_3)
+{
+	Vcluster & vcl = create_vcluster();
+
+	if (vcl.getProcessingUnits() >= 32)
+		return;
+
+	openfpm::vector<size_t> v1;
+	v1.resize(vcl.getProcessUnitID());
+
+	for(size_t i = 0 ; i < vcl.getProcessUnitID() ; i++)
+		v1.get(i) = 5;
+
+	openfpm::vector<openfpm::vector<size_t>> v2;
+
+	vcl.SGather(v1,v2,1);
+
+	if (vcl.getProcessUnitID() == 1)
+	{
+		size_t n = vcl.getProcessingUnits();
+		BOOST_REQUIRE_EQUAL(v2.size(),n-1);
+
+		bool is_five = true;
+		for (size_t i = 0 ; i < v2.size() ; i++)
+		{
+			for (size_t j = 0 ; j < v2.get(i).size() ; j++)
+				is_five &= (v2.get(i).get(j) == 5);
+		}
+		BOOST_REQUIRE_EQUAL(is_five,true);
+
+	}
+
+	vcl.SGather(v1,v2,0);
+
+	if (vcl.getProcessUnitID() == 0)
+	{
+		size_t n = vcl.getProcessingUnits();
+		BOOST_REQUIRE_EQUAL(v2.size(),n);
+
+		bool is_five = true;
+		for (size_t i = 0 ; i < v2.size() ; i++)
+		{
+			for (size_t j = 0 ; j < v2.get(i).size() ; j++)
+				is_five &= (v2.get(i).get(j) == 5);
+		}
+		BOOST_REQUIRE_EQUAL(is_five,true);
+
+	}
+}
+
+BOOST_AUTO_TEST_CASE (Vcluster_semantic_gather_4)
+{
+	Vcluster & vcl = create_vcluster();
+
+	if (vcl.getProcessingUnits() >= 32)
+		return;
+
+	size_t sz[] = {16,16};
+	grid_cpu<2,Point_test<float>> g1(sz);
+	g1.setMemory();
+	fill_grid<2>(g1);
+
+	openfpm::vector<grid_cpu<2,Point_test<float>>> v2;
+
+	vcl.SGather(g1,v2,0);
+
+	typedef Point_test<float> p;
+
+	if (vcl.getProcessUnitID() == 0)
+	{
+		size_t n = vcl.getProcessingUnits();
+		BOOST_REQUIRE_EQUAL(v2.size(),n);
+
+		bool match = true;
+		for (size_t i = 0 ; i < v2.size() ; i++)
+		{
+			auto it = v2.get(i).getIterator();
+
+			while (it.isNext())
+			{
+				grid_key_dx<2> key = it.get();
+
+				match &= (v2.get(i).template get<p::x>(key) == g1.template get<p::x>(key));
+				match &= (v2.get(i).template get<p::y>(key) == g1.template get<p::y>(key));
+				match &= (v2.get(i).template get<p::z>(key) == g1.template get<p::z>(key));
+				match &= (v2.get(i).template get<p::s>(key) == g1.template get<p::s>(key));
+
+				match &= (v2.get(i).template get<p::v>(key)[0] == g1.template get<p::v>(key)[0]);
+				match &= (v2.get(i).template get<p::v>(key)[1] == g1.template get<p::v>(key)[1]);
+				match &= (v2.get(i).template get<p::v>(key)[2] == g1.template get<p::v>(key)[2]);
+
+				match &= (v2.get(i).template get<p::t>(key)[0][0] == g1.template get<p::t>(key)[0][0]);
+				match &= (v2.get(i).template get<p::t>(key)[0][1] == g1.template get<p::t>(key)[0][1]);
+				match &= (v2.get(i).template get<p::t>(key)[0][2] == g1.template get<p::t>(key)[0][2]);
+				match &= (v2.get(i).template get<p::t>(key)[1][0] == g1.template get<p::t>(key)[1][0]);
+				match &= (v2.get(i).template get<p::t>(key)[1][1] == g1.template get<p::t>(key)[1][1]);
+				match &= (v2.get(i).template get<p::t>(key)[1][2] == g1.template get<p::t>(key)[1][2]);
+				match &= (v2.get(i).template get<p::t>(key)[2][0] == g1.template get<p::t>(key)[2][0]);
+				match &= (v2.get(i).template get<p::t>(key)[2][1] == g1.template get<p::t>(key)[2][1]);
+				match &= (v2.get(i).template get<p::t>(key)[2][2] == g1.template get<p::t>(key)[2][2]);
+
+				++it;
+			}
+
+		}
+		BOOST_REQUIRE_EQUAL(match,true);
+	}
+}
+
+BOOST_AUTO_TEST_CASE (Vcluster_semantic_gather_5)
+{
+	Vcluster & vcl = create_vcluster();
+
+	if (vcl.getProcessingUnits() >= 32)
+		return;
+
+	openfpm::vector<openfpm::vector<size_t>> v1;
+
+	openfpm::vector<size_t> v3;
+	v3.resize(vcl.getProcessUnitID());
+
+	for(size_t i = 0 ; i < vcl.getProcessUnitID() ; i++)
+		v3.get(i) = 5;
+
+	v1.add(v3);
+	v1.add(v3);
+	v1.add(v3);
+
+	openfpm::vector<openfpm::vector<openfpm::vector<size_t>>> v2;
+
+	vcl.SGather(v1,v2,0);
+
+	if (vcl.getProcessUnitID() == 0)
+	{
+		size_t n = vcl.getProcessingUnits();
+		BOOST_REQUIRE_EQUAL(v2.size(),n);
+
+		bool is_five = true;
+		for (size_t i = 0 ; i < v2.size() ; i++)
+		{
+			for (size_t j = 0 ; j < v2.get(i).size() ; j++)
+				is_five &= (v2.get(i).get(j) == 5);
+		}
+
+		BOOST_REQUIRE_EQUAL(is_five,true);
+	}
+}
+
 
 BOOST_AUTO_TEST_SUITE_END()
 

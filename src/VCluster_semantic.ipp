@@ -9,6 +9,74 @@
 
 private:
 
+	// Structures that do an unpack, depending on the existence of max_prop inside 'send'
+
+	//
+	template<bool result, typename T, typename S>
+	struct unpack_selector
+	{
+		template<int ... prp> static void call_unpack(S & recv, openfpm::vector<BHeapMemory> & recv_buf, openfpm::vector<size_t> * sz = NULL)
+		{
+			std::cout << "Sz.size(): " << sz->size() << std::endl;
+			std::cout << "Unp: " << demangle(typeid(T).name()) << std::endl;
+			for (size_t i = 0 ; i < recv_buf.size() ; i++)
+			{
+				std::cout << "Recv_buf.get(i).size(): " << recv_buf.get(i).size() << std::endl;
+				
+				T unp;
+				
+				ExtPreAlloc<HeapMemory> & mem = *(new ExtPreAlloc<HeapMemory>(recv_buf.get(i).size(),recv_buf.get(i)));
+				mem.incRef();
+				
+				Unpack_stat ps;
+				
+				Unpacker<T,HeapMemory>::template unpack<prp...>(mem, unp, ps);
+				
+				// Merge the information
+				recv.add(unp);
+				
+				/*if (sz != NULL)
+					sz->get(i) = unp.size();*/
+			}
+		}
+	};
+
+	
+	//
+	template<typename T, typename S>
+	struct unpack_selector<true, T, S>
+	{
+		template<int ... prp> static void call_unpack(S & recv, openfpm::vector<BHeapMemory> & recv_buf, openfpm::vector<size_t> * sz = NULL)
+		{
+			for (size_t i = 0 ; i < recv_buf.size() ; i++)
+			{
+				// calculate the number of received elements
+				size_t n_ele = recv_buf.get(i).size() / sizeof(typename T::value_type);
+				
+				// add the received particles to the vector
+				PtrMemory * ptr1 = new PtrMemory(recv_buf.get(i).getPointer(),recv_buf.get(i).size());
+		
+				// create vector representation to a piece of memory already allocated
+				openfpm::vector<typename T::value_type,PtrMemory,typename memory_traits_lin<typename T::value_type>::type, memory_traits_lin,openfpm::grow_policy_identity> v2;
+		
+				v2.setMemory(*ptr1);
+		
+				// resize with the number of elements
+				v2.resize(n_ele);
+				
+				// Merge the information
+				recv.add(v2);
+				
+				if (sz != NULL)
+					sz->get(i) = v2.size();
+			}
+		}
+	};
+	
+	
+	
+	
+
 	template<typename T>
 	struct call_serialize_variadic {};
 	
@@ -25,49 +93,11 @@ private:
 			Packer<T,HeapMemory>::template pack<prp...>(mem,send,sts);
 		}
 		
-		template<typename T, typename S> inline static void call_unpack(S & recv, openfpm::vector<BHeapMemory> & recv_buf, Unpack_stat & ps, openfpm::vector<size_t> * sz = NULL)
+		template<typename T, typename S> inline static void call_unpack(S & recv, openfpm::vector<BHeapMemory> & recv_buf, openfpm::vector<size_t> * sz = NULL)
 		{
-			if (has_pack_agg<typename T::value_type, prp...>::result::value == true)
-			{
-				for (size_t i = 0 ; i < recv_buf.size() ; i++)
-				{
-					T unp;
-					
-					ExtPreAlloc<HeapMemory> & mem = *(new ExtPreAlloc<HeapMemory>(recv_buf.get(i).size(),recv_buf.get(i)));
-					mem.incRef();
-					
-					Unpacker<T,HeapMemory>::template unpack<prp...>(mem, unp, ps);
-					
-					// Merge the information
-					recv.add(unp);
-				}
-			}
+			const bool result = has_pack_agg<typename T::value_type, prp...>::result::value == false && is_vector<T>::value == true;
 			
-			else
-			{
-				for (size_t i = 0 ; i < recv_buf.size() ; i++)
-				{
-					// calculate the number of received elements
-					size_t n_ele = recv_buf.get(i).size() / sizeof(typename T::value_type);
-					
-					// add the received particles to the vector
-					PtrMemory * ptr1 = new PtrMemory(recv_buf.get(i).getPointer(),recv_buf.get(i).size());
-			
-					// create vector representation to a piece of memory already allocated
-					openfpm::vector<typename T::value_type,PtrMemory,typename memory_traits_lin<typename T::value_type>::type, memory_traits_lin,openfpm::grow_policy_identity> v2;
-			
-					v2.setMemory(*ptr1);
-			
-					// resize with the number of elements
-					v2.resize(n_ele);
-					
-					// Merge the information
-					recv.add(v2);
-					
-					if (sz != NULL)
-						sz->get(i) = v2.size();
-				}
-			}
+			unpack_selector<result, T, S>::template call_unpack<prp...>(recv, recv_buf, sz);
 		}		
 	};
 
@@ -77,24 +107,27 @@ private:
 	template<bool cond, typename T, typename S>
 	struct pack_unpack_cond
 	{
-		static void packingRequest(T & send, size_t & tot_size)
+		static void packingRequest(T & send, size_t & tot_size, openfpm::vector<size_t> & sz)
 		{
 			typedef typename ::generate_indexes<int, has_max_prop<T, has_value_type<T>::value>::number, MetaFuncOrd>::result ind_prop_to_pack;
 //			Packer<T,HeapMemory>::packRequest< prop_to_pack::data >(send,tot_size);
 			call_serialize_variadic<ind_prop_to_pack>::call_pr(send,tot_size);
+			std::cout << "Tot_size: " << tot_size << std::endl;
+			sz.add(tot_size);
 		}
 		
-		static void packing(ExtPreAlloc<HeapMemory> & mem, T & send, Pack_stat & sts)
+		static void packing(ExtPreAlloc<HeapMemory> & mem, T & send, Pack_stat & sts, openfpm::vector<const void *> & send_buf)
 		{
 			typedef typename ::generate_indexes<int, has_max_prop<T, has_value_type<T>::value>::number, MetaFuncOrd>::result ind_prop_to_pack;
 			//Packer<T,HeapMemory>::pack< prop_to_pack::data >(mem,send,sts);
 			call_serialize_variadic<ind_prop_to_pack>::call_pack(mem,send,sts);
+			send_buf.add(mem.getPointerBase());
 		}
 		
-		static void unpacking(S & recv, openfpm::vector<BHeapMemory> & recv_buf, Unpack_stat & ps, openfpm::vector<size_t> * sz = NULL)
+		static void unpacking(S & recv, openfpm::vector<BHeapMemory> & recv_buf, openfpm::vector<size_t> * sz = NULL)
 		{
 			typedef typename ::generate_indexes<int, has_max_prop<T, has_value_type<T>::value>::number, MetaFuncOrd>::result ind_prop_to_pack;
-			call_serialize_variadic<ind_prop_to_pack>::template call_unpack<T,S>(recv, recv_buf, ps, sz);
+			call_serialize_variadic<ind_prop_to_pack>::template call_unpack<T,S>(recv, recv_buf, sz);
 		}	
 	};
 
@@ -103,21 +136,40 @@ private:
 	template<typename T, typename S>
 	struct pack_unpack_cond<false, T, S>
 	{
-		static void packingRequest(T & send, size_t & tot_size)
+		static void packingRequest(T & send, size_t & tot_size, openfpm::vector<size_t> & sz)
 		{
-			//tot_size = send.size()*sizeof(typename T::value_type);
-			Packer<T,HeapMemory>::packRequest(send,tot_size);
-			std::cout << "Inside SGather pack request (no prp) " << std::endl;
-			std::cout << "Tot_size: " << tot_size << std::endl; 
+			if (has_pack<typename T::value_type>::type::value == true)
+			{
+				//tot_size = send.size()*sizeof(typename T::value_type);
+				std::cout << "Inside SGather pack request (no prp) " << std::endl;
+				Packer<T,HeapMemory>::packRequest(send,tot_size);		
+				std::cout << "Tot_size: " << tot_size << std::endl; 
+				sz.add(tot_size);
+			}
+			
+			else
+			{
+				sz.add(send.size()*sizeof(typename T::value_type));
+			}
 		}
 		
-		static void packing(ExtPreAlloc<HeapMemory> & mem, T & send, Pack_stat & sts)
+		static void packing(ExtPreAlloc<HeapMemory> & mem, T & send, Pack_stat & sts, openfpm::vector<const void *> & send_buf)
 		{
-			Packer<T,HeapMemory>::pack(mem,send,sts);
 			std::cout << "Inside SGather pack (no prp) " << std::endl;
+			if (has_pack<typename T::value_type>::type::value == true)
+			{
+				Packer<T,HeapMemory>::pack(mem,send,sts);
+				send_buf.add(mem.getPointer());
+			}
+			
+			else
+			{
+				std::cout << "Inside SGather pack (no prp) (no pack inside) " << std::endl;
+				send_buf.add(send.getPointer());
+			}
 		}
 
-		static void unpacking(S & recv, openfpm::vector<BHeapMemory> & recv_buf, Unpack_stat & ps, openfpm::vector<size_t> * sz = NULL)
+		static void unpacking(S & recv, openfpm::vector<BHeapMemory> & recv_buf, openfpm::vector<size_t> * sz = NULL)
 		{
 			std::cout << "Inside SGather unpack (no prp) " << std::endl;
 			if (has_pack<typename T::value_type>::type::value == true)
@@ -129,15 +181,19 @@ private:
 					ExtPreAlloc<HeapMemory> & mem = *(new ExtPreAlloc<HeapMemory>(recv_buf.get(i).size(),recv_buf.get(i)));
 					mem.incRef();
 					
+					Unpack_stat ps;
+					
 					Unpacker<T,HeapMemory>::unpack(mem, unp, ps);
 					
 					// Merge the information
+					
 					recv.add(unp);
 				}
 			}
 			
 			else
 			{
+				std::cout << "Inside SGather unpack (no prp) (no pack inside) " << std::endl;
 				for (size_t i = 0 ; i < recv_buf.size() ; i++)
 				{
 					
@@ -244,10 +300,8 @@ template<typename T, typename S> void process_receive_buffer(S & recv, openfpm::
 {
 	if (sz != NULL)
 		sz->resize(recv_buf.size());
-	
-	Unpack_stat ps;
 
-	pack_unpack_cond<has_max_prop<T, has_value_type<T>::value>::value, T, S>::unpacking(recv, recv_buf, ps, sz);
+	pack_unpack_cond<has_max_prop<T, has_value_type<T>::value>::value, T, S>::unpacking(recv, recv_buf, sz);
 }
 
 public:
@@ -339,10 +393,6 @@ template<typename T, typename S> bool SGather(T & send, S & recv, openfpm::vecto
 		// Send and recv multiple messages
 		sendrecvMultipleMessagesNBX(send_req.size(),NULL,NULL,NULL,msg_alloc,&bi);
 
-		// Convert the received byte into number of elements
-		/*for (size_t i = 0 ; i < sz.size() ; i++)
-			sz.get(i) /= sizeof(typename T::value_type);*/
-
 		// process the received information
 		process_receive_buffer<T,S>(recv,&sz);
 
@@ -362,7 +412,9 @@ template<typename T, typename S> bool SGather(T & send, S & recv, openfpm::vecto
 			
 		//Pack requesting
 		
-		pack_unpack_cond<has_max_prop<T, has_value_type<T>::value>::value, T, S>::packingRequest(send, tot_size);
+		openfpm::vector<size_t> sz;
+		
+		pack_unpack_cond<has_max_prop<T, has_value_type<T>::value>::value, T, S>::packingRequest(send, tot_size, sz);
 		
 		HeapMemory pmem;
 		
@@ -372,14 +424,9 @@ template<typename T, typename S> bool SGather(T & send, S & recv, openfpm::vecto
 		//Packing
 
 		Pack_stat sts;
-
-		pack_unpack_cond<has_max_prop<T, has_value_type<T>::value>::value, T, S>::packing(mem, send, sts);
-		
 		openfpm::vector<const void *> send_buf;
-		send_buf.add(mem.getPointer());
 		
-		openfpm::vector<size_t> sz;
-		sz.add(send.size()*sizeof(typename T::value_type));
+		pack_unpack_cond<has_max_prop<T, has_value_type<T>::value>::value, T, S>::packing(mem, send, sts, send_buf);
 
 		// receive information
 		base_info bi(NULL,prc,sz);
