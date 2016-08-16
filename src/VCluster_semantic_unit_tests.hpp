@@ -203,11 +203,11 @@ BOOST_AUTO_TEST_CASE (Vcluster_semantic_gather_4)
 
 		openfpm::vector<grid_cpu<2,Point_test<float>>> v2;
 
-		vcl.SGather(g1,v2,2);
+		vcl.SGather(g1,v2,1);
 
 		typedef Point_test<float> p;
 
-		if (vcl.getProcessUnitID() == 2)
+		if (vcl.getProcessUnitID() == 1)
 		{
 			size_t n = vcl.getProcessingUnits();
 			BOOST_REQUIRE_EQUAL(v2.size(),n);
@@ -544,7 +544,8 @@ BOOST_AUTO_TEST_CASE (Vcluster_semantic_sendrecv)
 		vcl.SSendRecv(v1,v3,prc_send,prc_recv3,sz_recv3);
 
 		BOOST_REQUIRE_EQUAL(v2.size(),n_ele);
-		BOOST_REQUIRE_EQUAL(v3.size(),vcl.getProcessingUnits()-1-nc);
+		size_t nc_check = (vcl.getProcessingUnits()-1) / SSCATTER_MAX;
+		BOOST_REQUIRE_EQUAL(v3.size(),vcl.getProcessingUnits()-1-nc_check);
 
 		bool match = true;
 		size_t s = 0;
@@ -614,7 +615,8 @@ BOOST_AUTO_TEST_CASE (Vcluster_semantic_struct_sendrecv)
 		vcl.SSendRecv(v1,v3,prc_send,prc_recv3,sz_recv3);
 
 		BOOST_REQUIRE_EQUAL(v2.size(),n_ele);
-		BOOST_REQUIRE_EQUAL(v3.size(),vcl.getProcessingUnits()-1-nc);
+		size_t nc_check = (vcl.getProcessingUnits()-1) / SSCATTER_MAX;
+		BOOST_REQUIRE_EQUAL(v3.size(),vcl.getProcessingUnits()-1-nc_check);
 
 		bool match = true;
 		size_t s = 0;
