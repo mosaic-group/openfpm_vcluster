@@ -8,7 +8,7 @@
 #ifndef OPENFPM_VCLUSTER_SRC_VCLUSTER_SEMANTIC_UNIT_TESTS_HPP_
 #define OPENFPM_VCLUSTER_SRC_VCLUSTER_SEMANTIC_UNIT_TESTS_HPP_
 
-struct A
+struct Aexample
 {
 	size_t a;
 	float b;
@@ -61,7 +61,7 @@ BOOST_AUTO_TEST_CASE (Vcluster_semantic_struct_gather)
 		if (vcl.getProcessingUnits() >= 32)
 			return;
 
-		openfpm::vector<A> v1;
+		openfpm::vector<Aexample> v1;
 		v1.resize(vcl.getProcessUnitID());
 
 		for(size_t i = 0 ; i < vcl.getProcessUnitID() ; i++)
@@ -71,7 +71,7 @@ BOOST_AUTO_TEST_CASE (Vcluster_semantic_struct_gather)
 			v1.get(i).c = 11.0;
 		}
 
-		openfpm::vector<A> v2;
+		openfpm::vector<Aexample> v2;
 
 		vcl.SGather(v1,v2,(i%vcl.getProcessingUnits()));
 
@@ -229,7 +229,8 @@ BOOST_AUTO_TEST_CASE (Vcluster_semantic_sendrecv)
 		vcl.SSendRecv(v1,v3,prc_send,prc_recv3,sz_recv3);
 
 		BOOST_REQUIRE_EQUAL(v2.size(),n_ele);
-		BOOST_REQUIRE_EQUAL(v3.size(),vcl.getProcessingUnits()-1-nc);
+		size_t nc_check = (vcl.getProcessingUnits() - 1) / SSCATTER_MAX;
+		BOOST_REQUIRE_EQUAL(v3.size(),vcl.getProcessingUnits()-1-nc_check);
 
 		bool match = true;
 		size_t s = 0;
@@ -299,7 +300,8 @@ BOOST_AUTO_TEST_CASE (Vcluster_semantic_struct_sendrecv)
 		vcl.SSendRecv(v1,v3,prc_send,prc_recv3,sz_recv3);
 
 		BOOST_REQUIRE_EQUAL(v2.size(),n_ele);
-		BOOST_REQUIRE_EQUAL(v3.size(),vcl.getProcessingUnits()-1-nc);
+		size_t nc_check = (vcl.getProcessingUnits() - 1) / SSCATTER_MAX;
+		BOOST_REQUIRE_EQUAL(v3.size(),vcl.getProcessingUnits()-1-nc_check);
 
 		bool match = true;
 		size_t s = 0;

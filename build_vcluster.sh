@@ -21,6 +21,7 @@ if [ "$2" == "gin" ]; then
  echo "Compiling on gin\n"
  module load gcc/4.9.2
  module load openmpi/1.8.1
+
 elif [ "$2" == "wetcluster" ]; then
  echo "Compiling on wetcluster"
 
