@@ -74,23 +74,6 @@ BOOST_AUTO_TEST_CASE (Vcluster_semantic_gather_2)
 
 		openfpm::vector<openfpm::vector<size_t>> v2;
 
-		vcl.SGather(v1,v2,1);
-
-		if (vcl.getProcessUnitID() == 1)
-		{
-			size_t n = vcl.getProcessingUnits();
-			BOOST_REQUIRE_EQUAL(v2.size(),n-1);
-
-			bool is_five = true;
-			for (size_t i = 0 ; i < v2.size() ; i++)
-			{
-				for (size_t j = 0 ; j < v2.get(i).size() ; j++)
-					is_five &= (v2.get(i).get(j) == 5);
-			}
-			BOOST_REQUIRE_EQUAL(is_five,true);
-
-		}
-
 		vcl.SGather(v1,v2,0);
 
 		if (vcl.getProcessUnitID() == 0)
@@ -103,6 +86,25 @@ BOOST_AUTO_TEST_CASE (Vcluster_semantic_gather_2)
 			{
 				for (size_t j = 0 ; j < v2.get(i).size() ; j++)
 					is_five &= (v2.get(i).get(j) == 5);
+			}
+			BOOST_REQUIRE_EQUAL(is_five,true);
+
+		}
+
+		openfpm::vector<openfpm::vector<size_t>> v3;
+
+		vcl.SGather(v1,v3,1);
+
+		if (vcl.getProcessUnitID() == 1)
+		{
+			size_t n = vcl.getProcessingUnits();
+			BOOST_REQUIRE_EQUAL(v3.size(),n-1);
+
+			bool is_five = true;
+			for (size_t i = 0 ; i < v3.size() ; i++)
+			{
+				for (size_t j = 0 ; j < v3.get(i).size() ; j++)
+					is_five &= (v3.get(i).get(j) == 5);
 			}
 			BOOST_REQUIRE_EQUAL(is_five,true);
 
@@ -120,6 +122,7 @@ BOOST_AUTO_TEST_CASE (Vcluster_semantic_gather_3)
 			return;
 
 		openfpm::vector<openfpm::vector<aggregate<float, openfpm::vector<size_t>, Point_test<float>>> > v1;
+
 		openfpm::vector<aggregate<float, openfpm::vector<size_t>, Point_test<float>>> v1_int;
 		aggregate<float, openfpm::vector<size_t>, Point_test<float>> aggr;
 		openfpm::vector<size_t> v1_int2;
@@ -203,11 +206,11 @@ BOOST_AUTO_TEST_CASE (Vcluster_semantic_gather_4)
 
 		openfpm::vector<grid_cpu<2,Point_test<float>>> v2;
 
-		vcl.SGather(g1,v2,1);
+		vcl.SGather(g1,v2,0);
 
 		typedef Point_test<float> p;
 
-		if (vcl.getProcessUnitID() == 1)
+		if (vcl.getProcessUnitID() == 0)
 		{
 			size_t n = vcl.getProcessingUnits();
 			BOOST_REQUIRE_EQUAL(v2.size(),n);
@@ -362,8 +365,116 @@ BOOST_AUTO_TEST_CASE (Vcluster_semantic_gather_6)
 			}
 			BOOST_REQUIRE_EQUAL(is_seven,true);
 		}
-		if (vcl.getProcessUnitID() == 0 && i == 99)
-			std::cout << "Semantic gather test stop" << std::endl;
+	}
+}
+
+BOOST_AUTO_TEST_CASE (Vcluster_semantic_gather_7)
+{
+	for (size_t i = 0 ; i < 100 ; i++)
+	{
+		Vcluster & vcl = create_vcluster();
+
+		if (vcl.getProcessingUnits() >= 32)
+			return;
+
+		openfpm::vector<Point_test<float>> v1;
+
+		Point_test<float> p1;
+		p1.fill();
+
+		v1.resize(vcl.getProcessUnitID());
+
+		for(size_t i = 0 ; i < vcl.getProcessUnitID() ; i++)
+			v1.get(i) = p1;
+
+		openfpm::vector<openfpm::vector<Point_test<float>>> v2;
+
+		vcl.SGather(v1,v2,0);
+
+		typedef Point_test<float> p;
+
+		if (vcl.getProcessUnitID() == 0)
+		{
+			size_t n = vcl.getProcessingUnits();
+			BOOST_REQUIRE_EQUAL(v2.size(),n);
+
+			bool match = true;
+
+			for (size_t i = 0 ; i < v2.size() ; i++)
+			{
+				for (size_t j = 0 ; j < v2.get(i).size() ; j++)
+				{
+					Point_test<float> p2 = v2.get(i).get(j);
+					//BOOST_REQUIRE(p2 == p1);
+
+					match &= (p2.template get<p::x>() == p1.template get<p::x>());
+					match &= (p2.template get<p::y>() == p1.template get<p::y>());
+					match &= (p2.template get<p::z>() == p1.template get<p::z>());
+					match &= (p2.template get<p::s>() == p1.template get<p::s>());
+
+					match &= (p2.template get<p::v>()[0] == p1.template get<p::v>()[0]);
+					match &= (p2.template get<p::v>()[1] == p1.template get<p::v>()[1]);
+					match &= (p2.template get<p::v>()[2] == p1.template get<p::v>()[2]);
+
+					match &= (p2.template get<p::t>()[0][0] == p1.template get<p::t>()[0][0]);
+					match &= (p2.template get<p::t>()[0][1] == p1.template get<p::t>()[0][1]);
+					match &= (p2.template get<p::t>()[0][2] == p1.template get<p::t>()[0][2]);
+					match &= (p2.template get<p::t>()[1][0] == p1.template get<p::t>()[1][0]);
+					match &= (p2.template get<p::t>()[1][1] == p1.template get<p::t>()[1][1]);
+					match &= (p2.template get<p::t>()[1][2] == p1.template get<p::t>()[1][2]);
+					match &= (p2.template get<p::t>()[2][0] == p1.template get<p::t>()[2][0]);
+					match &= (p2.template get<p::t>()[2][1] == p1.template get<p::t>()[2][1]);
+					match &= (p2.template get<p::t>()[2][2] == p1.template get<p::t>()[2][2]);
+				}
+			}
+			BOOST_REQUIRE_EQUAL(match,true);
+		}
+	}
+}
+
+BOOST_AUTO_TEST_CASE (Vcluster_semantic_gather_8)
+{
+	for (size_t i = 0 ; i < 100 ; i++)
+	{
+		Vcluster & vcl = create_vcluster();
+
+		if (vcl.getProcessingUnits() >= 32)
+			return;
+
+		openfpm::vector<Box<3,size_t>> v1;
+
+		Box<3,size_t> bx;
+		bx.setLow(0, 1);
+		bx.setLow(1, 2);
+		bx.setLow(2, 3);
+		bx.setHigh(0, 4);
+		bx.setHigh(1, 5);
+		bx.setHigh(2, 6);
+
+
+		v1.resize(vcl.getProcessUnitID());
+
+		for(size_t i = 0 ; i < vcl.getProcessUnitID() ; i++)
+			v1.get(i) = bx;
+
+		openfpm::vector<openfpm::vector<Box<3,size_t>>> v2;
+
+		vcl.SGather(v1,v2,0);
+
+		if (vcl.getProcessUnitID() == 0)
+		{
+			size_t n = vcl.getProcessingUnits();
+			BOOST_REQUIRE_EQUAL(v2.size(),n);
+
+			for (size_t i = 0 ; i < v2.size() ; i++)
+			{
+				for (size_t j = 0 ; j < v2.get(i).size() ; j++)
+				{
+					Box<3,size_t> b2 = v2.get(i).get(j);
+					BOOST_REQUIRE(bx == b2);
+				}
+			}
+		}
 	}
 }
 
@@ -405,6 +516,8 @@ BOOST_AUTO_TEST_CASE (Vcluster_semantic_struct_gather)
 
 			BOOST_REQUIRE_EQUAL(is_correct,true);
 		}
+		if (vcl.getProcessUnitID() == 0 && i == 99)
+			std::cout << "Semantic gather test stop" << std::endl;
 	}
 }
 
