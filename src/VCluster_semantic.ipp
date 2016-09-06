@@ -78,10 +78,14 @@ private:
 				v2.resize(n_ele);
 				
 				// Merge the information
-				recv.add(v2);
 				
+				size_t recv_size_old = recv.size();
+				// Merge the information
+				recv.add(v2);
+				size_t recv_size_new = recv.size();
+							
 				if (sz != NULL)
-					sz->get(i) = v2.size();
+					sz->get(i) = recv_size_new - recv_size_old;
 			}
 		}
 	};
@@ -108,7 +112,8 @@ private:
 		
 		template<typename T, typename S> inline static void call_unpack(S & recv, openfpm::vector<BHeapMemory> & recv_buf, openfpm::vector<size_t> * sz = NULL)
 		{
-			const bool result = has_pack<typename T::value_type>::type::value == false && is_vector<T>::value == true;
+			const bool result = has_pack_gen<typename T::value_type>::value == false && is_vector<T>::value == true;
+			//const bool result = has_pack<typename T::value_type>::type::value == false && has_pack_agg<typename T::value_type>::result::value == false && is_vector<T>::value == true;
 			unpack_selector<result, T, S>::template call_unpack<prp...>(recv, recv_buf, sz);
 		}		
 	};
@@ -122,15 +127,19 @@ private:
 		static void packingRequest(T & send, size_t & tot_size, openfpm::vector<size_t> & sz)
 		{
 			typedef typename ::generate_indexes<int, has_max_prop<T, has_value_type<T>::value>::number, MetaFuncOrd>::result ind_prop_to_pack;
-			if (has_pack<typename T::value_type>::type::value == false && is_vector<T>::value == true)
+			if (has_pack_gen<typename T::value_type>::value == false && is_vector<T>::value == true)
+			//if (has_pack<typename T::value_type>::type::value == false && has_pack_agg<typename T::value_type>::result::value == false && is_vector<T>::value == true)
 			{
+#ifdef DEBUG
+				std::cout << "Inside SGather pack request (has prp) (vector case) " << std::endl;
+#endif
 				sz.add(send.size()*sizeof(typename T::value_type));	
 			}
 			else
 			{
 				call_serialize_variadic<ind_prop_to_pack>::call_pr(send,tot_size);
-#ifdef DEBUG			
-				std::cout << "Tot_size: " << tot_size << std::endl;
+#ifdef DEBUG
+				std::cout << "Inside SGather pack request (has prp) (general case) " << std::endl;
 #endif
 				sz.add(tot_size);
 			}
@@ -139,21 +148,22 @@ private:
 		static void packing(ExtPreAlloc<HeapMemory> & mem, T & send, Pack_stat & sts, openfpm::vector<const void *> & send_buf)
 		{
 			typedef typename ::generate_indexes<int, has_max_prop<T, has_value_type<T>::value>::number, MetaFuncOrd>::result ind_prop_to_pack;
-			if (has_pack<typename T::value_type>::type::value == false && is_vector<T>::value == true)
+			if (has_pack_gen<typename T::value_type>::value == false && is_vector<T>::value == true)
+			//if (has_pack<typename T::value_type>::type::value == false && has_pack_agg<typename T::value_type>::result::value == false && is_vector<T>::value == true)
 			{
 #ifdef DEBUG
 				std::cout << "Inside SGather pack (has prp) (vector case) " << std::endl;
 #endif
+				//std::cout << demangle(typeid(T).name()) << std::endl;
 				send_buf.add(send.getPointer());
-
 			}
 			else
 			{
 #ifdef DEBUG
 				std::cout << "Inside SGather pack (has prp) (general case) " << std::endl;
 #endif
-				call_serialize_variadic<ind_prop_to_pack>::call_pack(mem,send,sts);
-				send_buf.add(mem.getPointerBase());
+				send_buf.add(mem.getPointerEnd());
+				call_serialize_variadic<ind_prop_to_pack>::call_pack(mem,send,sts);			
 			}			
 		}
 		
@@ -207,8 +217,8 @@ private:
 #ifdef DEBUG
 				std::cout << "Inside SGather pack (no prp) (genaral case) " << std::endl;
 #endif
-				Packer<T,HeapMemory>::pack(mem,send,sts);
-				send_buf.add(mem.getPointerBase());		
+				send_buf.add(mem.getPointerEnd());	
+				Packer<T,HeapMemory>::pack(mem,send,sts);			
 			}
 		}
 
@@ -563,19 +573,24 @@ template<typename T, typename S> bool SSendRecv(openfpm::vector<T> & send, S & r
 
 	openfpm::vector<size_t> sz_byte;
 	
+	size_t tot_size = 0;
+	
+	for (size_t i = 0; i < send.size() ; i++)
+		{
+			size_t req = 0;
+			
+			//Pack requesting		
+			pack_unpack_cond<has_max_prop<T, has_value_type<T>::value>::value, T, S>::packingRequest(send.get(i), req, sz_byte);
+			tot_size += req;
+		}
+	
+	HeapMemory pmem;
+	
+	ExtPreAlloc<HeapMemory> & mem = *(new ExtPreAlloc<HeapMemory>(tot_size,pmem));
+	mem.incRef();
+	
 	for (size_t i = 0; i < send.size() ; i++)
 	{
-		size_t tot_size = 0;
-	
-		//Pack requesting
-		
-		pack_unpack_cond<has_max_prop<T, has_value_type<T>::value>::value, T, S>::packingRequest(send.get(i), tot_size, sz_byte);
-		
-		HeapMemory pmem;
-		
-		ExtPreAlloc<HeapMemory> & mem = *(new ExtPreAlloc<HeapMemory>(tot_size,pmem));
-		mem.incRef();
-
 		//Packing
 
 		Pack_stat sts;

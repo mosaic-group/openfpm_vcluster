@@ -625,6 +625,10 @@ BOOST_AUTO_TEST_CASE (Vcluster_semantic_sendrecv)
 	{
 		Vcluster & vcl = create_vcluster();
 
+		if (vcl.getProcessUnitID() == 0 && i == 0)
+			std::cout << "Semantic sendrecv test start" << std::endl;
+
+
 		if (vcl.getProcessingUnits() >= 32)
 			return;
 
@@ -665,18 +669,18 @@ BOOST_AUTO_TEST_CASE (Vcluster_semantic_sendrecv)
 
 		for (size_t i = 0 ; i < sz_recv2.size() ; i++)
 		{
-			for (size_t j = 0 ; j < sz_recv2.get(i) % SSCATTER_MAX ; j++)
+			for (size_t j = 0 ; j < sz_recv2.get(i); j++)
 			{
 				match &= v2.get(s+j) == j;
 			}
-			s += sz_recv2.get(i) % SSCATTER_MAX;
+			s += sz_recv2.get(i);
 		}
 
 		BOOST_REQUIRE_EQUAL(match,true);
 
-		for (size_t i = 0 ; i < sz_recv3.size() ; i++)
+		for (size_t i = 0 ; i < v3.size() ; i++)
 		{
-			for (size_t j = 0 ; j < sz_recv3.get(i) % SSCATTER_MAX ; j++)
+			for (size_t j = 0 ; j < v3.get(i).size() ; j++)
 			{
 				match &= v3.get(i).get(j) == j;
 			}
@@ -736,20 +740,20 @@ BOOST_AUTO_TEST_CASE (Vcluster_semantic_struct_sendrecv)
 
 		for (size_t i = 0 ; i < sz_recv2.size() ; i++)
 		{
-			for (size_t j = 0 ; j < sz_recv2.get(i) % SSCATTER_MAX ; j++)
+			for (size_t j = 0 ; j < sz_recv2.get(i); j++)
 			{
 				Box<3,size_t> b({j,j,j},{j,j,j});
 				Box<3,size_t> bt = v2.get(s+j);
 				match &= bt == b;
 			}
-			s += sz_recv2.get(i) % SSCATTER_MAX;
+			s += sz_recv2.get(i);
 		}
 
 		BOOST_REQUIRE_EQUAL(match,true);
 
-		for (size_t i = 0 ; i < sz_recv3.size() ; i++)
+		for (size_t i = 0 ; i < v3.size() ; i++)
 		{
-			for (size_t j = 0 ; j < sz_recv3.get(i) % SSCATTER_MAX ; j++)
+			for (size_t j = 0 ; j < v3.get(i).size() ; j++)
 			{
 				Box<3,size_t> b({j,j,j},{j,j,j});
 				Box<3,size_t> bt = v3.get(i).get(j);
@@ -784,6 +788,587 @@ BOOST_AUTO_TEST_CASE (Vcluster_semantic_struct_sendrecv)
 		BOOST_REQUIRE_EQUAL(v2.size(),0ul);
 		BOOST_REQUIRE_EQUAL(prc_recv2.size(),0ul);
 		BOOST_REQUIRE_EQUAL(sz_recv2.size(),0ul);
+	}
+}
+
+BOOST_AUTO_TEST_CASE (Vcluster_semantic_sendrecv_2)
+{
+	for (size_t i = 0 ; i < 100 ; i++)
+	{
+		Vcluster & vcl = create_vcluster();
+
+		if (vcl.getProcessingUnits() >= 32)
+			return;
+
+		openfpm::vector<size_t> prc_recv2;
+		openfpm::vector<size_t> prc_recv3;
+		openfpm::vector<size_t> prc_send;
+		openfpm::vector<size_t> sz_recv2;
+		openfpm::vector<size_t> sz_recv3;
+
+		openfpm::vector<openfpm::vector<aggregate<openfpm::vector<size_t>>> > v1;
+		openfpm::vector<aggregate<openfpm::vector<size_t>>> v2;
+		openfpm::vector<openfpm::vector<aggregate<openfpm::vector<size_t>>> > v3;
+
+		openfpm::vector<aggregate<openfpm::vector<size_t>>> v1_int;
+		aggregate<openfpm::vector<size_t>> aggr;
+		openfpm::vector<size_t> v1_int2;
+
+		v1_int2.add(7);
+		v1_int2.add(7);
+		v1_int2.add(7);
+
+		aggr.template get<0>() = v1_int2;
+
+		v1_int.add(aggr);
+		v1_int.add(aggr);
+		v1_int.add(aggr);
+
+		v1.resize(vcl.getProcessingUnits());
+
+		for(size_t i = 0 ; i < v1.size() ; i++)
+		{
+			for (size_t j = 0 ; j < i % SSCATTER_MAX ; j++)
+			{
+				v1.get(i).add(aggr);
+			}
+
+			prc_send.add((i + vcl.getProcessUnitID()) % vcl.getProcessingUnits());
+		}
+
+		size_t nc = vcl.getProcessingUnits() / SSCATTER_MAX;
+		size_t nr = vcl.getProcessingUnits() - nc * SSCATTER_MAX;
+		nr = ((nr-1) * nr) / 2;
+
+		size_t n_ele = nc * SSCATTER_MAX * (SSCATTER_MAX - 1) / 2 + nr;
+
+		vcl.SSendRecv(v1,v2,prc_send,prc_recv2,sz_recv2);
+
+		vcl.SSendRecv(v1,v3,prc_send,prc_recv3,sz_recv3);
+
+		BOOST_REQUIRE_EQUAL(v2.size(),n_ele);
+
+		BOOST_REQUIRE_EQUAL(v3.size(),vcl.getProcessingUnits());
+
+		bool match = true;
+		bool is_seven = true;
+		size_t s = 0;
+
+		for (size_t i = 0 ; i < sz_recv2.size() ; i++)
+		{
+			for (size_t j = 0 ; j < sz_recv2.get(i); j++)
+			{
+				for (size_t k = 0; k < v2.get(s+j).template get<0>().size(); k++)
+					is_seven &= (v2.get(s+j).template get<0>().get(k) == 7);
+			}
+			s += sz_recv2.get(i);
+		}
+
+		BOOST_REQUIRE_EQUAL(is_seven,true);
+		BOOST_REQUIRE_EQUAL(match,true);
+
+		for (size_t i = 0 ; i < v3.size() ; i++)
+		{
+			for (size_t j = 0 ; j < v3.get(i).size(); j++)
+			{
+				for (size_t k = 0; k < v3.get(i).template get<0>(j).size(); k++)
+					is_seven &= (v3.get(i).template get<0>(j).get(k) == 7);
+			}
+		}
+
+		BOOST_REQUIRE_EQUAL(is_seven,true);
+		BOOST_REQUIRE_EQUAL(match,true);
+	}
+}
+
+BOOST_AUTO_TEST_CASE (Vcluster_semantic_sendrecv_3)
+{
+	for (size_t i = 0 ; i < 100 ; i++)
+	{
+		Vcluster & vcl = create_vcluster();
+
+		if (vcl.getProcessingUnits() >= 32)
+			return;
+
+		openfpm::vector<size_t> prc_recv2;
+		openfpm::vector<size_t> prc_recv3;
+		openfpm::vector<size_t> prc_send;
+		openfpm::vector<size_t> sz_recv2;
+		openfpm::vector<size_t> sz_recv3;
+
+		openfpm::vector<openfpm::vector<aggregate<float, openfpm::vector<size_t>, Point_test<float>>> > v1;
+		openfpm::vector<aggregate<float, openfpm::vector<size_t>, Point_test<float>>> v2;
+		openfpm::vector<openfpm::vector<aggregate<float, openfpm::vector<size_t>, Point_test<float>>> > v3;
+
+		openfpm::vector<aggregate<float, openfpm::vector<size_t>, Point_test<float>>> v1_int;
+		aggregate<float, openfpm::vector<size_t>, Point_test<float>> aggr;
+		openfpm::vector<size_t> v1_int2;
+
+		v1_int2.add((size_t)7);
+		v1_int2.add((size_t)7);
+
+		aggr.template get<0>() = 7;
+		aggr.template get<1>() = v1_int2;
+
+		typedef Point_test<float> p;
+		p p1;
+		p1.fill();
+		aggr.template get<2>() = p1;
+
+		v1_int.add(aggr);
+		v1_int.add(aggr);
+		v1_int.add(aggr);
+
+		v1.resize(vcl.getProcessingUnits());
+
+		for(size_t i = 0 ; i < v1.size() ; i++)
+		{
+			for (size_t j = 0 ; j < i % SSCATTER_MAX ; j++)
+			{
+				v1.get(i).add(aggr);
+			}
+
+			prc_send.add((i + vcl.getProcessUnitID()) % vcl.getProcessingUnits());
+		}
+
+		size_t nc = vcl.getProcessingUnits() / SSCATTER_MAX;
+		size_t nr = vcl.getProcessingUnits() - nc * SSCATTER_MAX;
+		nr = ((nr-1) * nr) / 2;
+
+		size_t n_ele = nc * SSCATTER_MAX * (SSCATTER_MAX - 1) / 2 + nr;
+
+		vcl.SSendRecv(v1,v2,prc_send,prc_recv2,sz_recv2);
+
+		vcl.SSendRecv(v1,v3,prc_send,prc_recv3,sz_recv3);
+
+		BOOST_REQUIRE_EQUAL(v2.size(),n_ele);
+
+		BOOST_REQUIRE_EQUAL(v3.size(),vcl.getProcessingUnits());
+
+		bool match = true;
+		bool is_seven = true;
+		size_t s = 0;
+
+		for (size_t i = 0 ; i < sz_recv2.size() ; i++)
+		{
+			for (size_t j = 0 ; j < sz_recv2.get(i); j++)
+			{
+				is_seven &= (v2.get(s+j).template get<0>() == 7);
+
+				for (size_t k = 0; k < v2.get(s+j).template get<1>().size(); k++)
+					is_seven &= (v2.get(s+j).template get<1>().get(k) == 7);
+
+				Point_test<float> p2 = v2.get(s+j).template get<2>();
+
+				match &= (p2.template get<p::x>() == p1.template get<p::x>());
+				match &= (p2.template get<p::y>() == p1.template get<p::y>());
+				match &= (p2.template get<p::z>() == p1.template get<p::z>());
+				match &= (p2.template get<p::s>() == p1.template get<p::s>());
+
+				match &= (p2.template get<p::v>()[0] == p1.template get<p::v>()[0]);
+				match &= (p2.template get<p::v>()[1] == p1.template get<p::v>()[1]);
+				match &= (p2.template get<p::v>()[2] == p1.template get<p::v>()[2]);
+
+				match &= (p2.template get<p::t>()[0][0] == p1.template get<p::t>()[0][0]);
+				match &= (p2.template get<p::t>()[0][1] == p1.template get<p::t>()[0][1]);
+				match &= (p2.template get<p::t>()[0][2] == p1.template get<p::t>()[0][2]);
+				match &= (p2.template get<p::t>()[1][0] == p1.template get<p::t>()[1][0]);
+				match &= (p2.template get<p::t>()[1][1] == p1.template get<p::t>()[1][1]);
+				match &= (p2.template get<p::t>()[1][2] == p1.template get<p::t>()[1][2]);
+				match &= (p2.template get<p::t>()[2][0] == p1.template get<p::t>()[2][0]);
+				match &= (p2.template get<p::t>()[2][1] == p1.template get<p::t>()[2][1]);
+				match &= (p2.template get<p::t>()[2][2] == p1.template get<p::t>()[2][2]);
+			}
+			s += sz_recv2.get(i);
+		}
+
+		BOOST_REQUIRE_EQUAL(is_seven,true);
+		BOOST_REQUIRE_EQUAL(match,true);
+
+		for (size_t i = 0 ; i < v3.size() ; i++)
+		{
+			for (size_t j = 0 ; j < v3.get(i).size(); j++)
+			{
+				is_seven &= (v3.get(i).get(j).template get<0>() == 7);
+
+				for (size_t k = 0; k < v3.get(i).get(j).template get<1>().size(); k++)
+					is_seven &= (v3.get(i).get(j).template get<1>().get(k) == 7);
+
+				Point_test<float> p2 = v3.get(i).get(j).template get<2>();
+
+				match &= (p2.template get<p::x>() == p1.template get<p::x>());
+				match &= (p2.template get<p::y>() == p1.template get<p::y>());
+				match &= (p2.template get<p::z>() == p1.template get<p::z>());
+				match &= (p2.template get<p::s>() == p1.template get<p::s>());
+
+				match &= (p2.template get<p::v>()[0] == p1.template get<p::v>()[0]);
+				match &= (p2.template get<p::v>()[1] == p1.template get<p::v>()[1]);
+				match &= (p2.template get<p::v>()[2] == p1.template get<p::v>()[2]);
+
+				match &= (p2.template get<p::t>()[0][0] == p1.template get<p::t>()[0][0]);
+				match &= (p2.template get<p::t>()[0][1] == p1.template get<p::t>()[0][1]);
+				match &= (p2.template get<p::t>()[0][2] == p1.template get<p::t>()[0][2]);
+				match &= (p2.template get<p::t>()[1][0] == p1.template get<p::t>()[1][0]);
+				match &= (p2.template get<p::t>()[1][1] == p1.template get<p::t>()[1][1]);
+				match &= (p2.template get<p::t>()[1][2] == p1.template get<p::t>()[1][2]);
+				match &= (p2.template get<p::t>()[2][0] == p1.template get<p::t>()[2][0]);
+				match &= (p2.template get<p::t>()[2][1] == p1.template get<p::t>()[2][1]);
+				match &= (p2.template get<p::t>()[2][2] == p1.template get<p::t>()[2][2]);
+			}
+		}
+
+		BOOST_REQUIRE_EQUAL(is_seven,true);
+		BOOST_REQUIRE_EQUAL(match,true);
+	}
+}
+
+BOOST_AUTO_TEST_CASE (Vcluster_semantic_sendrecv_4)
+{
+	for (size_t i = 0 ; i < 100 ; i++)
+	{
+		Vcluster & vcl = create_vcluster();
+
+		if (vcl.getProcessingUnits() >= 32)
+			return;
+
+		openfpm::vector<size_t> prc_recv2;
+		openfpm::vector<size_t> prc_recv3;
+		openfpm::vector<size_t> prc_send;
+		openfpm::vector<size_t> sz_recv2;
+		openfpm::vector<size_t> sz_recv3;
+		openfpm::vector<openfpm::vector<aggregate<float,Point_test<float>>> > v1;
+		openfpm::vector<aggregate<float,Point_test<float>> > v2;
+		openfpm::vector<openfpm::vector<aggregate<float,Point_test<float>>> > v3;
+
+		v1.resize(vcl.getProcessingUnits());
+
+		size_t nc = vcl.getProcessingUnits() / SSCATTER_MAX;
+		size_t nr = vcl.getProcessingUnits() - nc * SSCATTER_MAX;
+		nr = ((nr-1) * nr) / 2;
+
+		size_t n_ele = nc * SSCATTER_MAX * (SSCATTER_MAX - 1) / 2 + nr;
+
+		//Prepare an aggregate
+		aggregate<float, Point_test<float> > aggr;
+
+		typedef Point_test<float> p;
+
+		p p1;
+		p1.fill();
+
+		aggr.template get<0>() = 7;
+		aggr.template get<1>() = p1;
+
+		//Fill v1 with aggregates
+		for(size_t i = 0 ; i < v1.size() ; i++)
+		{
+			for (size_t j = 0 ; j < i % SSCATTER_MAX ; j++)
+			{
+				v1.get(i).add(aggr);
+			}
+
+			prc_send.add((i + vcl.getProcessUnitID()) % vcl.getProcessingUnits());
+		}
+
+		vcl.SSendRecv(v1,v2,prc_send,prc_recv2,sz_recv2);
+		vcl.SSendRecv(v1,v3,prc_send,prc_recv3,sz_recv3);
+
+		BOOST_REQUIRE_EQUAL(v2.size(),n_ele);
+		size_t nc_check = (vcl.getProcessingUnits()-1) / SSCATTER_MAX;
+		BOOST_REQUIRE_EQUAL(v3.size(),vcl.getProcessingUnits()-1-nc_check);
+		bool match = true;
+		bool is_seven = true;
+		size_t s = 0;
+
+		for (size_t i = 0 ; i < sz_recv2.size() ; i++)
+		{
+			for (size_t j = 0 ; j < sz_recv2.get(i); j++)
+			{
+				is_seven &= (v2.get(s+j).template get<0>() == 7);
+
+				Point_test<float> p2 = v2.get(s+j).template get<1>();
+
+				match &= (p2.template get<p::x>() == p1.template get<p::x>());
+				match &= (p2.template get<p::y>() == p1.template get<p::y>());
+				match &= (p2.template get<p::z>() == p1.template get<p::z>());
+				match &= (p2.template get<p::s>() == p1.template get<p::s>());
+
+				match &= (p2.template get<p::v>()[0] == p1.template get<p::v>()[0]);
+				match &= (p2.template get<p::v>()[1] == p1.template get<p::v>()[1]);
+				match &= (p2.template get<p::v>()[2] == p1.template get<p::v>()[2]);
+
+				match &= (p2.template get<p::t>()[0][0] == p1.template get<p::t>()[0][0]);
+				match &= (p2.template get<p::t>()[0][1] == p1.template get<p::t>()[0][1]);
+				match &= (p2.template get<p::t>()[0][2] == p1.template get<p::t>()[0][2]);
+				match &= (p2.template get<p::t>()[1][0] == p1.template get<p::t>()[1][0]);
+				match &= (p2.template get<p::t>()[1][1] == p1.template get<p::t>()[1][1]);
+				match &= (p2.template get<p::t>()[1][2] == p1.template get<p::t>()[1][2]);
+				match &= (p2.template get<p::t>()[2][0] == p1.template get<p::t>()[2][0]);
+				match &= (p2.template get<p::t>()[2][1] == p1.template get<p::t>()[2][1]);
+				match &= (p2.template get<p::t>()[2][2] == p1.template get<p::t>()[2][2]);
+			}
+			s += sz_recv2.get(i);
+		}
+
+		BOOST_REQUIRE_EQUAL(is_seven,true);
+		BOOST_REQUIRE_EQUAL(match,true);
+
+		for (size_t i = 0 ; i < v3.size() ; i++)
+		{
+			for (size_t j = 0 ; j < v3.get(i).size() ; j++)
+			{
+				is_seven &= (v3.get(i).get(j).template get<0>() == 7);
+
+				Point_test<float> p2 = v3.get(i).get(j).template get<1>();
+
+				match &= (p2.template get<p::x>() == p1.template get<p::x>());
+				match &= (p2.template get<p::y>() == p1.template get<p::y>());
+				match &= (p2.template get<p::z>() == p1.template get<p::z>());
+				match &= (p2.template get<p::s>() == p1.template get<p::s>());
+
+				match &= (p2.template get<p::v>()[0] == p1.template get<p::v>()[0]);
+				match &= (p2.template get<p::v>()[1] == p1.template get<p::v>()[1]);
+				match &= (p2.template get<p::v>()[2] == p1.template get<p::v>()[2]);
+
+				match &= (p2.template get<p::t>()[0][0] == p1.template get<p::t>()[0][0]);
+				match &= (p2.template get<p::t>()[0][1] == p1.template get<p::t>()[0][1]);
+				match &= (p2.template get<p::t>()[0][2] == p1.template get<p::t>()[0][2]);
+				match &= (p2.template get<p::t>()[1][0] == p1.template get<p::t>()[1][0]);
+				match &= (p2.template get<p::t>()[1][1] == p1.template get<p::t>()[1][1]);
+				match &= (p2.template get<p::t>()[1][2] == p1.template get<p::t>()[1][2]);
+				match &= (p2.template get<p::t>()[2][0] == p1.template get<p::t>()[2][0]);
+				match &= (p2.template get<p::t>()[2][1] == p1.template get<p::t>()[2][1]);
+				match &= (p2.template get<p::t>()[2][2] == p1.template get<p::t>()[2][2]);
+			}
+		}
+
+		BOOST_REQUIRE_EQUAL(is_seven,true);
+		BOOST_REQUIRE_EQUAL(match,true);
+	}
+}
+
+BOOST_AUTO_TEST_CASE (Vcluster_semantic_sendrecv_5)
+{
+	for (size_t i = 0 ; i < 100 ; i++)
+	{
+		Vcluster & vcl = create_vcluster();
+
+		if (vcl.getProcessingUnits() >= 32)
+			return;
+
+		openfpm::vector<size_t> prc_recv2;
+		openfpm::vector<size_t> prc_recv3;
+		openfpm::vector<size_t> prc_send;
+		openfpm::vector<size_t> sz_recv2;
+		openfpm::vector<size_t> sz_recv3;
+
+		size_t sz[] = {16,16};
+
+		grid_cpu<2,Point_test<float>> g1(sz);
+		g1.setMemory();
+		fill_grid<2>(g1);
+
+		aggregate<grid_cpu<2,Point_test<float>>> aggr;
+		aggr.template get<0>() = g1;
+
+
+		openfpm::vector<openfpm::vector<aggregate<grid_cpu<2,Point_test<float>>>> > v1;
+		openfpm::vector<aggregate<grid_cpu<2,Point_test<float>>> > v2;
+		openfpm::vector<openfpm::vector<aggregate<grid_cpu<2,Point_test<float>>>> > v3;
+
+		v1.resize(vcl.getProcessingUnits());
+
+		for(size_t i = 0 ; i < v1.size() ; i++)
+		{
+			for (size_t j = 0 ; j < i % SSCATTER_MAX ; j++)
+			{
+				v1.get(i).add(aggr);
+			}
+
+			prc_send.add((i + vcl.getProcessUnitID()) % vcl.getProcessingUnits());
+		}
+
+		size_t nc = vcl.getProcessingUnits() / SSCATTER_MAX;
+		size_t nr = vcl.getProcessingUnits() - nc * SSCATTER_MAX;
+		nr = ((nr-1) * nr) / 2;
+
+		size_t n_ele = nc * SSCATTER_MAX * (SSCATTER_MAX - 1) / 2 + nr;
+
+		vcl.SSendRecv(v1,v2,prc_send,prc_recv2,sz_recv2);
+
+		vcl.SSendRecv(v1,v3,prc_send,prc_recv3,sz_recv3);
+
+		BOOST_REQUIRE_EQUAL(v2.size(),n_ele);
+
+		BOOST_REQUIRE_EQUAL(v3.size(),vcl.getProcessingUnits());
+
+		bool match = true;
+		size_t s = 0;
+		typedef Point_test<float> p;
+
+		for (size_t i = 0 ; i < sz_recv2.size() ; i++)
+		{
+			for (size_t j = 0 ; j < sz_recv2.get(i); j++)
+			{
+				grid_cpu<2,Point_test<float>> g2 = v2.get(s+j).template get<0>();
+
+				auto it = g2.getIterator();
+
+				while (it.isNext())
+				{
+					grid_key_dx<2> key = it.get();
+
+					match &= (g2.template get<p::x>(key) == g1.template get<p::x>(key));
+					match &= (g2.template get<p::y>(key) == g1.template get<p::y>(key));
+					match &= (g2.template get<p::z>(key) == g1.template get<p::z>(key));
+					match &= (g2.template get<p::s>(key) == g1.template get<p::s>(key));
+
+					match &= (g2.template get<p::v>(key)[0] == g1.template get<p::v>(key)[0]);
+					match &= (g2.template get<p::v>(key)[1] == g1.template get<p::v>(key)[1]);
+					match &= (g2.template get<p::v>(key)[2] == g1.template get<p::v>(key)[2]);
+
+					match &= (g2.template get<p::t>(key)[0][0] == g1.template get<p::t>(key)[0][0]);
+					match &= (g2.template get<p::t>(key)[0][1] == g1.template get<p::t>(key)[0][1]);
+					match &= (g2.template get<p::t>(key)[0][2] == g1.template get<p::t>(key)[0][2]);
+					match &= (g2.template get<p::t>(key)[1][0] == g1.template get<p::t>(key)[1][0]);
+					match &= (g2.template get<p::t>(key)[1][1] == g1.template get<p::t>(key)[1][1]);
+					match &= (g2.template get<p::t>(key)[1][2] == g1.template get<p::t>(key)[1][2]);
+					match &= (g2.template get<p::t>(key)[2][0] == g1.template get<p::t>(key)[2][0]);
+					match &= (g2.template get<p::t>(key)[2][1] == g1.template get<p::t>(key)[2][1]);
+					match &= (g2.template get<p::t>(key)[2][2] == g1.template get<p::t>(key)[2][2]);
+
+					++it;
+				}
+			}
+			s += sz_recv2.get(i);
+		}
+		BOOST_REQUIRE_EQUAL(match,true);
+
+		for (size_t i = 0 ; i < v3.size() ; i++)
+		{
+			for (size_t j = 0 ; j < v3.get(i).size(); j++)
+			{
+				grid_cpu<2,Point_test<float>> g2 = v3.get(i).get(j).template get<0>();
+
+				auto it = g2.getIterator();
+
+				while (it.isNext())
+				{
+					grid_key_dx<2> key = it.get();
+
+					match &= (g2.template get<p::x>(key) == g1.template get<p::x>(key));
+					match &= (g2.template get<p::y>(key) == g1.template get<p::y>(key));
+					match &= (g2.template get<p::z>(key) == g1.template get<p::z>(key));
+					match &= (g2.template get<p::s>(key) == g1.template get<p::s>(key));
+
+					match &= (g2.template get<p::v>(key)[0] == g1.template get<p::v>(key)[0]);
+					match &= (g2.template get<p::v>(key)[1] == g1.template get<p::v>(key)[1]);
+					match &= (g2.template get<p::v>(key)[2] == g1.template get<p::v>(key)[2]);
+
+					match &= (g2.template get<p::t>(key)[0][0] == g1.template get<p::t>(key)[0][0]);
+					match &= (g2.template get<p::t>(key)[0][1] == g1.template get<p::t>(key)[0][1]);
+					match &= (g2.template get<p::t>(key)[0][2] == g1.template get<p::t>(key)[0][2]);
+					match &= (g2.template get<p::t>(key)[1][0] == g1.template get<p::t>(key)[1][0]);
+					match &= (g2.template get<p::t>(key)[1][1] == g1.template get<p::t>(key)[1][1]);
+					match &= (g2.template get<p::t>(key)[1][2] == g1.template get<p::t>(key)[1][2]);
+					match &= (g2.template get<p::t>(key)[2][0] == g1.template get<p::t>(key)[2][0]);
+					match &= (g2.template get<p::t>(key)[2][1] == g1.template get<p::t>(key)[2][1]);
+					match &= (g2.template get<p::t>(key)[2][2] == g1.template get<p::t>(key)[2][2]);
+
+					++it;
+				}
+			}
+		}
+		BOOST_REQUIRE_EQUAL(match,true);
+	}
+}
+
+BOOST_AUTO_TEST_CASE (Vcluster_semantic_sendrecv_6)
+{
+	for (size_t i = 0 ; i < 100 ; i++)
+	{
+		Vcluster & vcl = create_vcluster();
+
+		if (vcl.getProcessingUnits() >= 32)
+			return;
+
+		openfpm::vector<size_t> prc_recv2;
+		openfpm::vector<size_t> prc_recv3;
+		openfpm::vector<size_t> prc_send;
+		openfpm::vector<size_t> sz_recv2;
+		openfpm::vector<size_t> sz_recv3;
+
+		size_t sz[] = {8,10};
+
+		grid_cpu<2,Point_test<float>> g1(sz);
+		g1.setMemory();
+		fill_grid<2>(g1);
+
+		openfpm::vector<grid_cpu<2,Point_test<float>>> v1;
+		openfpm::vector<grid_cpu<2,Point_test<float>>> v3;
+
+		v1.resize(vcl.getProcessingUnits());
+
+		for(size_t i = 0 ; i < v1.size() ; i++)
+		{
+			for (size_t j = 0 ; j < i % SSCATTER_MAX ; j++)
+			{
+				v1.get(i) = g1;
+			}
+
+			prc_send.add((i + vcl.getProcessUnitID()) % vcl.getProcessingUnits());
+		}
+
+		size_t nc = vcl.getProcessingUnits() / SSCATTER_MAX;
+		size_t nr = vcl.getProcessingUnits() - nc * SSCATTER_MAX;
+		nr = ((nr-1) * nr) / 2;
+
+		vcl.SSendRecv(v1,v3,prc_send,prc_recv3,sz_recv3);
+
+		BOOST_REQUIRE_EQUAL(v3.size(),vcl.getProcessingUnits());
+
+		bool match = true;
+		typedef Point_test<float> p;
+
+		for (size_t i = 0 ; i < v3.size() ; i++)
+		{
+			for (size_t j = 0 ; j < v3.get(i).size(); j++)
+			{
+				grid_cpu<2,Point_test<float>> g2 = v3.get(i);
+
+				auto it = g2.getIterator();
+
+				while (it.isNext())
+				{
+					grid_key_dx<2> key = it.get();
+
+					match &= (g2.template get<p::x>(key) == g1.template get<p::x>(key));
+					match &= (g2.template get<p::y>(key) == g1.template get<p::y>(key));
+					match &= (g2.template get<p::z>(key) == g1.template get<p::z>(key));
+					match &= (g2.template get<p::s>(key) == g1.template get<p::s>(key));
+
+					match &= (g2.template get<p::v>(key)[0] == g1.template get<p::v>(key)[0]);
+					match &= (g2.template get<p::v>(key)[1] == g1.template get<p::v>(key)[1]);
+					match &= (g2.template get<p::v>(key)[2] == g1.template get<p::v>(key)[2]);
+
+					match &= (g2.template get<p::t>(key)[0][0] == g1.template get<p::t>(key)[0][0]);
+					match &= (g2.template get<p::t>(key)[0][1] == g1.template get<p::t>(key)[0][1]);
+					match &= (g2.template get<p::t>(key)[0][2] == g1.template get<p::t>(key)[0][2]);
+					match &= (g2.template get<p::t>(key)[1][0] == g1.template get<p::t>(key)[1][0]);
+					match &= (g2.template get<p::t>(key)[1][1] == g1.template get<p::t>(key)[1][1]);
+					match &= (g2.template get<p::t>(key)[1][2] == g1.template get<p::t>(key)[1][2]);
+					match &= (g2.template get<p::t>(key)[2][0] == g1.template get<p::t>(key)[2][0]);
+					match &= (g2.template get<p::t>(key)[2][1] == g1.template get<p::t>(key)[2][1]);
+					match &= (g2.template get<p::t>(key)[2][2] == g1.template get<p::t>(key)[2][2]);
+
+					++it;
+				}
+			}
+		}
+		BOOST_REQUIRE_EQUAL(match,true);
+
+		if (vcl.getProcessUnitID() == 0 && i == 99)
+			std::cout << "Semantic sendrecv test start" << std::endl;
 	}
 }
 
