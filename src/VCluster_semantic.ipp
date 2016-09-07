@@ -58,7 +58,10 @@ static void * msg_alloc(size_t msg_i ,size_t total_msg, size_t total_p, size_t i
 	base_info & rinfo = *(base_info *)ptr;
 
 	if (rinfo.recv_buf == NULL)
+	{
 		std::cerr << __FILE__ << ":" << __LINE__ << " Internal error this processor is not suppose to receive\n";
+		return NULL;
+	}
 
 	rinfo.recv_buf->resize(ri+1);
 
