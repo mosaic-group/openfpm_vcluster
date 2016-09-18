@@ -19,6 +19,7 @@
 #include "util/Vcluster_log.hpp"
 #include "memory/BHeapMemory.hpp"
 #include "Packer_Unpacker/has_max_prop.hpp"
+#include "data_type/aggregate.hpp"
 
 #ifdef HAVE_PETSC
 #include <petscvec.h>
@@ -48,18 +49,73 @@ template<typename T> void assign(T * ptr1, T * ptr2)
 	*ptr1 = *ptr2;
 };
 
+template<bool sr>
+struct op_ssend_recv_add_sr
+{
+	template<typename T, typename D, typename S, int ... prp> static void execute(D & recv,S & v2, size_t i)
+	{
+		// Merge the information
+		recv.template add_prp<typename T::value_type,PtrMemory,openfpm::grow_policy_identity,openfpm::vect_isel<typename T::value_type>::value,prp...>(v2);
+	}
+};
+
+template<>
+struct op_ssend_recv_add_sr<true>
+{
+	template<typename T, typename D, typename S, int ... prp> static void execute(D & recv,S & v2, size_t i)
+	{
+		// Merge the information
+		recv.template add_prp<typename T::value_type,HeapMemory,openfpm::grow_policy_double,openfpm::vect_isel<typename T::value_type>::value, prp...>(v2);
+	}
+};
+
+
+template<typename op>
+struct op_ssend_recv_add
+{
+	template<bool sr, typename T, typename D, typename S, int ... prp> static void execute(D & recv,S & v2, size_t i)
+	{
+		// Merge the information
+		op_ssend_recv_add_sr<sr>::template execute<T,D,S,prp...>(recv,v2,i);
+	}
+};
+
+template<template<typename,typename> class op>
+struct op_ssend_recv_merge
+{
+	openfpm::vector<openfpm::vector<aggregate<size_t,size_t>>> & opart;
+
+	op_ssend_recv_merge(openfpm::vector<openfpm::vector<aggregate<size_t,size_t>>> & opart)
+	:opart(opart)
+	{}
+
+	template<bool sr, typename T, typename D, typename S, int ... prp> void execute(D & recv,S & v2,size_t i)
+	{
+		// Merge the information
+		recv.template merge_prp_v<op,typename T::value_type, PtrMemory, openfpm::grow_policy_identity, prp...>(v2,opart.get(i));
+	}
+};
+
 //////////////////////////////////////////////////
 
-// temporal buffer for reductions
+//! temporal buffer for reductions
 union red
 {
+	//! char
 	char c;
+	//! unsigned char
 	unsigned char uc;
+	//! signed
 	short s;
+	//! unsigned short
 	unsigned short us;
+	//! integer
 	int i;
+	//! unsigned integer
 	unsigned int ui;
+	//! float
 	float f;
+	//! double
 	double d;
 };
 
@@ -103,6 +159,7 @@ class exec_exception: public std::exception
 
 class Vcluster
 {
+	//! log file
 	Vcluster_log log;
 
 	//! NBX has a potential pitfall that must be addressed,
@@ -121,20 +178,20 @@ class Vcluster
 	//! messages come from other send or subsequent NBX procedures
 	size_t NBX_cnt;
 
-	// temporal vector used for meta-communication
-	// ( or meta-data before the real communication )
+	//! temporal vector used for meta-communication
+	//! ( or meta-data before the real communication )
 	openfpm::vector<size_t> proc_com;
 
-	// vector that contain the scatter map (it is basically an array of one)
+	//! vector that contain the scatter map (it is basically an array of one)
 	openfpm::vector<int> map_scatter;
 
-	// vector of MPI requests
+	//! vector of MPI requests
 	openfpm::vector<MPI_Request> req;
 
-	// vector of MPI status
+	//! vector of MPI status
 	openfpm::vector<MPI_Status> stat;
 
-	// vector of functions to execute after all the request has been performed
+	//! vector of functions to execute after all the request has been performed
 	std::vector<int> post_exe;
 
 	// Object array
@@ -142,15 +199,15 @@ class Vcluster
 
 	// Single objects
 
-	// number of processes
+	//! number of processes
 	int size;
-	// actual rank
+	//! actual rank
 	int rank;
 
-	// number of processing unit per process
+	//! number of processing unit per process
 	int numPE = 1;
 
-	/* This buffer is a temporal buffer for reductions
+	/*! This buffer is a temporal buffer for reductions
 	 *
 	 * MPI_Iallreduce does not accept recv and send buffer to be the same
 	 * r is used to overcome this problem (is given as second parameter)
@@ -159,16 +216,16 @@ class Vcluster
 	 */
 	std::vector<red> r;
 
-	// vector of pointers of send buffers
+	//! vector of pointers of send buffers
 	openfpm::vector<void *> ptr_send;
 
-	// vector of the size of send buffers
+	//! vector of the size of send buffers
 	openfpm::vector<size_t> sz_send;
 
-	// sending map
+	//! sending map
 	openfpm::vector<size_t> map;
 
-	// Receive buffers
+	//! Receive buffers
 	openfpm::vector<BHeapMemory> recv_buf;
 
 	// barrier request
