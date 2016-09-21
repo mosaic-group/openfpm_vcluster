@@ -566,7 +566,7 @@ void reorder_buffer(openfpm::vector<size_t> & prc, openfpm::vector<size_t> & sz_
 		recv_buff_reorder()	{};
 
 		//! needed to reorder
-		bool operator<(recv_buff_reorder & rd)
+		bool operator<(const recv_buff_reorder & rd)
 		{
 			return proc < rd.proc;
 		}
