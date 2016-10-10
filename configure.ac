@@ -109,6 +109,26 @@ INCLUDES_PATH+=" -I/usr/local/include -I. -Iconfig -I../../openfpm_devices/src -
 
 ########
 
+###### Checking for compiler flags -fext-numeric-literals
+
+AC_LANG_PUSH([C++])
+
+my_save_cflags="$CXXFLAGS"
+CXXFLAGS=-fext-numeric-literals
+AC_MSG_CHECKING([whether CXX supports -fext-numeric-literals])
+AC_COMPILE_IFELSE([AC_LANG_PROGRAM([])],
+    [AC_MSG_RESULT([yes])
+     AM_CXXFLAGS="-fext-numeric-literals"
+    ],
+    [
+     AC_MSG_RESULT([no])
+    ]
+)
+AC_LANG_POP([C++])
+CXXFLAGS="$my_save_cflags"
+AC_SUBST([AM_CXXFLAGS])
+
+
 ## Enable scan coverty
 
 AC_MSG_CHECKING(whether to build for scan coverty compilation)

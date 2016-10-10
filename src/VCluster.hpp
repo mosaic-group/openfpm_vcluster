@@ -49,9 +49,11 @@ template<typename T> void assign(T * ptr1, T * ptr2)
 	*ptr1 = *ptr2;
 };
 
+//! Helper class to add data without serialization
 template<bool sr>
 struct op_ssend_recv_add_sr
 {
+	//! Add data
 	template<typename T, typename D, typename S, int ... prp> static void execute(D & recv,S & v2, size_t i)
 	{
 		// Merge the information
@@ -59,9 +61,11 @@ struct op_ssend_recv_add_sr
 	}
 };
 
+//! Helper class to add data with serialization
 template<>
 struct op_ssend_recv_add_sr<true>
 {
+	//! Add data
 	template<typename T, typename D, typename S, int ... prp> static void execute(D & recv,S & v2, size_t i)
 	{
 		// Merge the information
@@ -69,10 +73,11 @@ struct op_ssend_recv_add_sr<true>
 	}
 };
 
-
+//! Helper class to add data
 template<typename op>
 struct op_ssend_recv_add
 {
+	//! Add data
 	template<bool sr, typename T, typename D, typename S, int ... prp> static void execute(D & recv,S & v2, size_t i)
 	{
 		// Merge the information
@@ -80,19 +85,46 @@ struct op_ssend_recv_add
 	}
 };
 
+//! Helper class to merge data without serialization
+template<bool sr,template<typename,typename> class op>
+struct op_ssend_recv_merge_impl
+{
+	//! Merge the
+	template<typename T, typename D, typename S, int ... prp> inline static void execute(D & recv,S & v2,size_t i,openfpm::vector<openfpm::vector<aggregate<size_t,size_t>>> & opart)
+	{
+		// Merge the information
+		recv.template merge_prp_v<op,typename T::value_type, PtrMemory, openfpm::grow_policy_identity, prp...>(v2,opart.get(i));
+	}
+};
+
+//! Helper class to merge data with serialization
+template<template<typename,typename> class op>
+struct op_ssend_recv_merge_impl<true,op>
+{
+	//! merge the data
+	template<typename T, typename D, typename S, int ... prp> inline static void execute(D & recv,S & v2,size_t i,openfpm::vector<openfpm::vector<aggregate<size_t,size_t>>> & opart)
+	{
+		// Merge the information
+		recv.template merge_prp_v<op,typename T::value_type, HeapMemory, openfpm::grow_policy_double, prp...>(v2,opart.get(i));
+	}
+};
+
+//! Helper class to merge data
 template<template<typename,typename> class op>
 struct op_ssend_recv_merge
 {
+	//! For each processor contain the list of the particles with which I must merge the information
 	openfpm::vector<openfpm::vector<aggregate<size_t,size_t>>> & opart;
 
+	//! constructor
 	op_ssend_recv_merge(openfpm::vector<openfpm::vector<aggregate<size_t,size_t>>> & opart)
 	:opart(opart)
 	{}
 
+	//! execute the merge
 	template<bool sr, typename T, typename D, typename S, int ... prp> void execute(D & recv,S & v2,size_t i)
 	{
-		// Merge the information
-		recv.template merge_prp_v<op,typename T::value_type, PtrMemory, openfpm::grow_policy_identity, prp...>(v2,opart.get(i));
+		op_ssend_recv_merge_impl<sr,op>::template execute<T,D,S,prp...>(recv,v2,i,opart);
 	}
 };
 
@@ -119,19 +151,6 @@ union red
 	double d;
 };
 
-/*! \brief Virtual Cluster exception
- *
- * This a a class that signal an exception on MPI_WaitAll
- *
- */
-
-class exec_exception: public std::exception
-{
-  virtual const char* what() const throw()
-  {
-    return "One or more request has failed or reported an error";
-  }
-};
 
 /*! \brief This class virtualize the cluster of PC as a set of processes that communicate
  *
@@ -228,14 +247,19 @@ class Vcluster
 	//! Receive buffers
 	openfpm::vector<BHeapMemory> recv_buf;
 
-	// barrier request
+	//! barrier request
 	MPI_Request bar_req;
-	// barrier status
+
+	//! barrier status
 	MPI_Status bar_stat;
 
+	//! disable operator=
 	Vcluster & operator=(const Vcluster &)	{return *this;};
 
-	Vcluster(const Vcluster &) {};
+	//! disable copy constructor
+	Vcluster(const Vcluster &)
+	:NBX_cnt(0)
+	{};
 
 public:
 
@@ -464,7 +488,7 @@ public:
 	 *
 	 * \param prc list of processors you should communicate with [1,1,6,7,8]
 	 *
-	 * \param v vector containing the data to send [v=vector<vector<int>>, v.size()=4, T=vector<int>], T at the moment
+	 * \param data vector containing the data to send [v=vector<vector<int>>, v.size()=4, T=vector<int>], T at the moment
 	 *          is only tested for vectors of 0 or more generic elements (without pointers)
 	 *
 	 * \param msg_alloc This is a call-back with the purpose to allocate space
@@ -479,6 +503,8 @@ public:
 	 *        * ri request id (it is an id that goes from 0 to total_p, and is incremented
 	 *           every time message_alloc is called)
 	 *        * void pointer, parameter for additional data to pass to the call-back
+	 *
+	 * \param ptr_arg data passed to the call-back function specified
 	 *
 	 * \param opt options, only NONE supported
 	 *
@@ -515,7 +541,7 @@ public:
 	 *
 	 * \param prc list of processors you should communicate with [1,1,6,7,8]
 	 *
-	 * \param v vector containing the data to send [v=vector<vector<int>>, v.size()=4, T=vector<int>], T at the moment
+	 * \param data vector containing the data to send [v=vector<vector<int>>, v.size()=4, T=vector<int>], T at the moment
 	 *          is only tested for vectors of 0 or more generic elements (without pointers)
 	 *
 	 * \param msg_alloc This is a call-back with the purpose to allocate space
@@ -530,6 +556,8 @@ public:
 	 *        * ri request id (it is an id that goes from 0 to total_p, and is incremented
 	 *           every time message_alloc is called)
 	 *        * void pointer, parameter for additional data to pass to the call-back
+	 *
+	 * \param ptr_arg data passed to the call-back function specified
 	 *
 	 * \param opt options, only NONE supported
 	 *
@@ -596,6 +624,8 @@ public:
 	 *        * ri request id (it is an id that goes from 0 to total_p, and is incremented
 	 *           every time message_alloc is called)
 	 *        * void pointer, parameter for additional data to pass to the call-back
+	 *
+	 * \param ptr_arg data passed to the call-back function specified
 	 *
 	 * \param opt options, NONE (ignored in this moment)
 	 *
@@ -741,6 +771,8 @@ public:
 	 *        * ri request id (it is an id that goes from 0 to total_p, and is incremented
 	 *           every time message_alloc is called)
 	 *        * void pointer, parameter for additional data to pass to the call-back
+	 *
+	 * \param ptr_arg pointer passed to the call-back function
 	 *
 	 * \param opt options, NONE (ignored in this moment)
 	 *

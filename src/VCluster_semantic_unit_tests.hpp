@@ -1372,6 +1372,47 @@ BOOST_AUTO_TEST_CASE (Vcluster_semantic_sendrecv_6)
 	}
 }
 
+BOOST_AUTO_TEST_CASE (Vcluster_semantic_bench_all_all)
+{
+                Vcluster & vcl = create_vcluster();
+
+                if (vcl.getProcessingUnits() >= 32)
+                        return;
+
+                openfpm::vector<size_t> prc_recv2;
+                openfpm::vector<size_t> prc_recv3;
+                openfpm::vector<size_t> prc_send;
+                openfpm::vector<size_t> sz_recv2;
+                openfpm::vector<size_t> sz_recv3;
+                openfpm::vector<openfpm::vector<Box<3,size_t>>> v1;
+                openfpm::vector<Box<3,size_t>> v2;
+                openfpm::vector<openfpm::vector<Box<3,size_t>>> v3;
+
+                v1.resize(vcl.getProcessingUnits());
+
+                for(size_t i = 0 ; i < v1.size() ; i++)
+                {
+                        for (size_t j = 0 ; j < 1000000 ; j++)
+                        {
+                                Box<3,size_t> b({j,j,j},{j,j,j});
+                                v1.get(i).add(b);
+                        }
+
+                        prc_send.add(i);
+                }
+
+                timer comm_time;
+                comm_time.start();
+
+                vcl.SSendRecv(v1,v2,prc_send,prc_recv2,sz_recv2);
+
+                comm_time.stop();
+                std::cout << "Communication time " << comm_time.getwct() << std::endl;
+
+                std::cout << "END" << std::endl;
+}
+
+
 BOOST_AUTO_TEST_SUITE_END()
 
 #endif /* OPENFPM_VCLUSTER_SRC_VCLUSTER_SEMANTIC_UNIT_TESTS_HPP_ */

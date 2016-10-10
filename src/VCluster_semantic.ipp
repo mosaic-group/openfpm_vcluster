@@ -15,14 +15,8 @@ private:
 	{
 		template<typename op, int ... prp> static void call_unpack(S & recv, openfpm::vector<BHeapMemory> & recv_buf, openfpm::vector<size_t> * sz, op & op_param)
 		{
-#ifdef DEBUG
-			std::cout << "Sz.size(): " << sz->size() << std::endl;
-#endif
 			for (size_t i = 0 ; i < recv_buf.size() ; i++)
 			{
-#ifdef DEBUG
-				std::cout << "Recv_buf.get(i).size(): " << recv_buf.get(i).size() << std::endl;
-#endif
 				T unp;
 
 				ExtPreAlloc<HeapMemory> & mem = *(new ExtPreAlloc<HeapMemory>(recv_buf.get(i).size(),recv_buf.get(i)));
@@ -116,17 +110,12 @@ private:
 			if (has_pack_gen<typename T::value_type>::value == false && is_vector<T>::value == true)
 			//if (has_pack<typename T::value_type>::type::value == false && has_pack_agg<typename T::value_type>::result::value == false && is_vector<T>::value == true)
 			{
-#ifdef DEBUG
-				std::cout << "Inside SGather pack request (has prp) (vector case) " << std::endl;
-#endif
 				sz.add(send.size()*sizeof(typename T::value_type));
 			}
 			else
 			{
 				call_serialize_variadic<ind_prop_to_pack>::call_pr(send,tot_size);
-#ifdef DEBUG
-				std::cout << "Inside SGather pack request (has prp) (general case) " << std::endl;
-#endif
+
 				sz.add(tot_size);
 			}
 		}
@@ -137,17 +126,11 @@ private:
 			if (has_pack_gen<typename T::value_type>::value == false && is_vector<T>::value == true)
 			//if (has_pack<typename T::value_type>::type::value == false && has_pack_agg<typename T::value_type>::result::value == false && is_vector<T>::value == true)
 			{
-#ifdef DEBUG
-				std::cout << "Inside SGather pack (has prp) (vector case) " << std::endl;
-#endif
 				//std::cout << demangle(typeid(T).name()) << std::endl;
 				send_buf.add(send.getPointer());
 			}
 			else
 			{
-#ifdef DEBUG
-				std::cout << "Inside SGather pack (has prp) (general case) " << std::endl;
-#endif
 				send_buf.add(mem.getPointerEnd());
 				call_serialize_variadic<ind_prop_to_pack>::call_pack(mem,send,sts);
 			}
@@ -563,7 +546,9 @@ void reorder_buffer(openfpm::vector<size_t> & prc, openfpm::vector<size_t> & sz_
 		size_t pos;
 
 		//! default constructor
-		recv_buff_reorder()	{};
+		recv_buff_reorder()
+		:proc(0),pos(0)
+		{};
 
 		//! needed to reorder
 		bool operator<(const recv_buff_reorder & rd) const
