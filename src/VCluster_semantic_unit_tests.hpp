@@ -11,10 +11,16 @@
 #include "Grid/grid_util_test.hpp"
 #include "data_type/aggregate.hpp"
 
+//! Example structure
 struct Aexample
 {
+	//! Example size_t
 	size_t a;
+
+	//! Example float
 	float b;
+
+	//! Example double
 	double c;
 };
 
@@ -1408,6 +1414,8 @@ BOOST_AUTO_TEST_CASE (Vcluster_semantic_bench_all_all)
 
                 comm_time.stop();
                 std::cout << "Communication time " << comm_time.getwct() << std::endl;
+
+                std::cout << "Total sent: " << tot_sent << "    Tot recv: "  << tot_recv << std::endl;
 
                 std::cout << "END" << std::endl;
 }

@@ -41,6 +41,8 @@ extern size_t n_vcluster;
 extern bool global_mpi_init;
 // initialization flag
 extern bool ofp_initialized;
+extern size_t tot_sent;
+extern size_t tot_recv;
 
 ///////////////////// Post functions /////////////
 
@@ -125,6 +127,53 @@ struct op_ssend_recv_merge
 	template<bool sr, typename T, typename D, typename S, int ... prp> void execute(D & recv,S & v2,size_t i)
 	{
 		op_ssend_recv_merge_impl<sr,op>::template execute<T,D,S,prp...>(recv,v2,i,opart);
+	}
+};
+
+//! Helper class to merge data without serialization
+template<bool sr>
+struct op_ssend_gg_recv_merge_impl
+{
+	//! Merge the
+	template<typename T, typename D, typename S, int ... prp> inline static void execute(D & recv,S & v2,size_t i,size_t & start)
+	{
+		// Merge the information
+		recv.template merge_prp_v<replace_,typename T::value_type, PtrMemory, openfpm::grow_policy_identity, prp...>(v2,start);
+
+		start += v2.size();
+	}
+};
+
+//! Helper class to merge data with serialization
+template<>
+struct op_ssend_gg_recv_merge_impl<true>
+{
+	//! merge the data
+	template<typename T, typename D, typename S, int ... prp> inline static void execute(D & recv,S & v2,size_t i,size_t & start)
+	{
+		// Merge the information
+		recv.template merge_prp_v<replace_,typename T::value_type, HeapMemory, openfpm::grow_policy_double, prp...>(v2,start);
+
+		// from
+		start += v2.size();
+	}
+};
+
+//! Helper class to merge data
+struct op_ssend_gg_recv_merge
+{
+	//! starting marker
+	size_t start;
+
+	//! constructor
+	op_ssend_gg_recv_merge(size_t start)
+	:start(start)
+	{}
+
+	//! execute the merge
+	template<bool sr, typename T, typename D, typename S, int ... prp> void execute(D & recv,S & v2,size_t i)
+	{
+		op_ssend_gg_recv_merge_impl<sr>::template execute<T,D,S,prp...>(recv,v2,i,start);
 	}
 };
 
@@ -650,6 +699,7 @@ public:
 				check_valid(ptr[i],sz[i]);
 #endif
 
+				tot_sent += sz[i];
 				MPI_SAFE_CALL(MPI_Issend(ptr[i], sz[i], MPI_BYTE, prc[i], SEND_SPARSE + NBX_cnt, MPI_COMM_WORLD,&req.last()));
 				log.logSend(prc[i]);
 			}
@@ -692,6 +742,7 @@ public:
 #ifdef SE_CLASS2
 				check_valid(ptr,msize);
 #endif
+				tot_recv += msize;
 				MPI_SAFE_CALL(MPI_Recv(ptr,msize,MPI_BYTE,stat_t.MPI_SOURCE,SEND_SPARSE+NBX_cnt,MPI_COMM_WORLD,&stat_t));
 
 #ifdef SE_CLASS2
