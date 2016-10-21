@@ -1378,7 +1378,7 @@ BOOST_AUTO_TEST_CASE (Vcluster_semantic_sendrecv_6)
 	}
 }
 
-BOOST_AUTO_TEST_CASE (Vcluster_semantic_bench_all_all)
+/*BOOST_AUTO_TEST_CASE (Vcluster_semantic_bench_all_all)
 {
                 Vcluster & vcl = create_vcluster();
 
@@ -1418,7 +1418,7 @@ BOOST_AUTO_TEST_CASE (Vcluster_semantic_bench_all_all)
                 std::cout << "Total sent: " << tot_sent << "    Tot recv: "  << tot_recv << std::endl;
 
                 std::cout << "END" << std::endl;
-}
+}*/
 
 
 BOOST_AUTO_TEST_SUITE_END()
