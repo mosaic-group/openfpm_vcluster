@@ -14,7 +14,7 @@ parallel (
 
                     stage ('run_nyu')
                     {
-		      parallel(
+		      parallel (
                         "proc2" : {sh "cd openfpm_vcluster && ./run.sh $WORKSPACE $NODE_NAME 2"}
                         "proc3" : {sh "cd openfpm_vcluster && ./run.sh $WORKSPACE $NODE_NAME 3"}
                       )
@@ -40,7 +40,7 @@ parallel (
 
                     stage ('run_sb15')
                     {
-                      parallel(
+                      parallel (
                         "proc2" : {sh "cd openfpm_vcluster && ./run.sh $WORKSPACE $NODE_NAME 2"}
                         "proc3" : {sh "cd openfpm_vcluster && ./run.sh $WORKSPACE $NODE_NAME 3"}
                       )
