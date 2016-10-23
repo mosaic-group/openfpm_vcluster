@@ -15,12 +15,12 @@ parallel (
                     stage ('run_nyu')
                     {
 		      parallel(
-                        "proc2" : {sh "cd openfpm_data && ./run.sh $WORKSPACE $NODE_NAME 2"}
-                        "proc3" : {sh "cd openfpm_data && ./run.sh $WORKSPACE $NODE_NAME 3"}
+                        "proc2" : {sh "cd openfpm_vcluster && ./run.sh $WORKSPACE $NODE_NAME 2"}
+                        "proc3" : {sh "cd openfpm_vcluster && ./run.sh $WORKSPACE $NODE_NAME 3"}
                       )
 
-                      sh "cd openfpm_data && ./run.sh $WORKSPACE $NODE_NAME 4"
-                      sh "cd openfpm_data && ./run.sh $WORKSPACE $NODE_NAME 5"
+                      sh "cd openfpm_vcluster && ./run.sh $WORKSPACE $NODE_NAME 4"
+                      sh "cd openfpm_vcluster && ./run.sh $WORKSPACE $NODE_NAME 5"
                     }
                   }
                  },
@@ -41,14 +41,14 @@ parallel (
                     stage ('run_sb15')
                     {
                       parallel(
-                        "proc2" : {sh "cd openfpm_data && ./run.sh $WORKSPACE $NODE_NAME 2"}
-                        "proc3" : {sh "cd openfpm_data && ./run.sh $WORKSPACE $NODE_NAME 3"}
+                        "proc2" : {sh "cd openfpm_vcluster && ./run.sh $WORKSPACE $NODE_NAME 2"}
+                        "proc3" : {sh "cd openfpm_vcluster && ./run.sh $WORKSPACE $NODE_NAME 3"}
                       )
 
-                      sh "cd openfpm_data && ./run.sh $WORKSPACE $NODE_NAME 4"
-                      sh "cd openfpm_data && ./run.sh $WORKSPACE $NODE_NAME 5"
-                      sh "cd openfpm_data && ./run.sh $WORKSPACE $NODE_NAME 6"
-                      sh "cd openfpm_data && ./run.sh $WORKSPACE $NODE_NAME 7"
+                      sh "cd openfpm_vcluster && ./run.sh $WORKSPACE $NODE_NAME 4"
+                      sh "cd openfpm_vcluster && ./run.sh $WORKSPACE $NODE_NAME 5"
+                      sh "cd openfpm_vcluster && ./run.sh $WORKSPACE $NODE_NAME 6"
+                      sh "cd openfpm_vcluster && ./run.sh $WORKSPACE $NODE_NAME 7"
                     }
                   }
                  }
