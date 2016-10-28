@@ -18,7 +18,7 @@ parallel (
                       sh "cd openfpm_vcluster && ./run.sh $WORKSPACE $NODE_NAME 3"
                       sh "cd openfpm_vcluster && ./run.sh $WORKSPACE $NODE_NAME 4"
                       sh "cd openfpm_vcluster && ./run.sh $WORKSPACE $NODE_NAME 5"
-                      sh "./success.sh 2 nyu openfpm_vcluster"
+                      sh "cd openfpm_vcluster && ./success.sh 2 nyu openfpm_vcluster"
                     }
                   }
                  },
@@ -44,7 +44,7 @@ parallel (
                       sh "cd openfpm_vcluster && ./run.sh $WORKSPACE $NODE_NAME 5"
                       sh "cd openfpm_vcluster && ./run.sh $WORKSPACE $NODE_NAME 6"
                       sh "cd openfpm_vcluster && ./run.sh $WORKSPACE $NODE_NAME 7"
-                      sh "./success.sh 2 sbalzarini-mac-15 openfpm_vcluster"
+                      sh "cd openfpm_vcluster && ./success.sh 2 sbalzarini-mac-15 openfpm_vcluster"
                     }
                   }
                  }
