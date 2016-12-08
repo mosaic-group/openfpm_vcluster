@@ -153,16 +153,23 @@ BOOST_AUTO_TEST_CASE( VCluster_use_sendrecv)
 
 	totp_check = false;
 	test<NBX>();
-	totp_check = true;
-	test<PCX>();
 
 	totp_check = false;
 	test_no_send_some_peer<NBX>();
-	totp_check = false;
-	test_no_send_some_peer<PCX>();
 
 	std::cout << "VCluster unit test stop" << "\n";
 }
+
+BOOST_AUTO_TEST_CASE( VCluster_use_sendrecv_known)
+{
+	std::cout << "VCluster unit test start" << "\n";
+
+	test_known<NBX>();
+
+	std::cout << "VCluster unit test stop" << "\n";
+}
+
+
 
 BOOST_AUTO_TEST_SUITE_END()
 

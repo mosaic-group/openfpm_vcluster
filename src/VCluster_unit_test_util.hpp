@@ -13,7 +13,6 @@
 #include "Vector/vector_test_util.hpp"
 
 #define NBX 1
-#define PCX 2
 
 #define N_TRY 2
 #define N_LOOP 67108864
@@ -88,50 +87,23 @@ void * msg_alloc3(size_t msg_i ,size_t total_msg, size_t total_p, size_t i, size
 
 template<unsigned int ip, typename T> void commFunc(Vcluster & vcl,openfpm::vector< size_t > & prc, openfpm::vector< T > & data, void * (* msg_alloc)(size_t,size_t,size_t,size_t,size_t,void *), void * ptr_arg)
 {
-	if (ip == PCX)
-		vcl.sendrecvMultipleMessagesPCX(prc,data,msg_alloc,ptr_arg);
-	else if (ip == NBX)
-		vcl.sendrecvMultipleMessagesNBX(prc,data,msg_alloc,ptr_arg);
+	vcl.sendrecvMultipleMessagesNBX(prc,data,msg_alloc,ptr_arg);
 }
 
 template<unsigned int ip, typename T> void commFunc_null_odd(Vcluster & vcl,openfpm::vector< size_t > & prc, openfpm::vector< T > & data, void * (* msg_alloc)(size_t,size_t,size_t,size_t,size_t,void *), void * ptr_arg)
 {
-	if (ip == PCX)
+	if (vcl.getProcessUnitID() % 2 == 0)
+		vcl.sendrecvMultipleMessagesNBX(prc,data,msg_alloc,ptr_arg);
+	else
 	{
-		if (vcl.getProcessUnitID() % 2 == 0)
-			vcl.sendrecvMultipleMessagesPCX(prc,data,msg_alloc,ptr_arg);
-		else
-		{
-			openfpm::vector<size_t> map;
-
-			// resize map with the number of processors
-			map.resize(vcl.getProcessingUnits());
-
-			// reset the sending buffer
-			map.fill(0);
-
-			// No send check if passing null to sendrecv sendrecvMultipleMessagePCX work
-			vcl.sendrecvMultipleMessagesPCX(prc.size(),(size_t *)map.getPointer(),(size_t *)NULL,(size_t *)NULL,(void **)NULL,msg_alloc,ptr_arg,NONE);
-		}
-	}
-	else if (ip == NBX)
-	{
-		if (vcl.getProcessUnitID() % 2 == 0)
-			vcl.sendrecvMultipleMessagesNBX(prc,data,msg_alloc,ptr_arg);
-		else
-		{
-			// No send check if passing null to sendrecv sendrecvMultipleMessagePCX work
-			vcl.sendrecvMultipleMessagesNBX(prc.size(),(size_t *)NULL,(size_t *)NULL,(void **)NULL,msg_alloc,ptr_arg,NONE);
-		}
+		// No send check if passing null to sendrecv  work
+		vcl.sendrecvMultipleMessagesNBX(prc.size(),(size_t *)NULL,(size_t *)NULL,(void **)NULL,msg_alloc,ptr_arg,NONE);
 	}
 }
 
 template <unsigned int ip> std::string method()
 {
-	if (ip == PCX)
-		return std::string("PCX");
-	else if (ip == NBX)
-		return std::string("NBX");
+	return std::string("NBX");
 }
 
 template<unsigned int ip> void test_no_send_some_peer()
@@ -222,6 +194,114 @@ template<unsigned int ip> void test_no_send_some_peer()
 		else
 		{
 			BOOST_REQUIRE_EQUAL((size_t)0,recv_message.get(p_id).size());
+		}
+	}
+}
+
+template<unsigned int ip> void test_known()
+{
+	Vcluster & vcl = create_vcluster();
+
+	// send/recv messages
+
+	global_rank = vcl.getProcessUnitID();
+	size_t n_proc = vcl.getProcessingUnits();
+
+	// Checking short communication pattern
+
+	for (size_t s = 0 ; s < N_TRY ; s++)
+	{
+		for (size_t j = 32 ; j < N_LOOP ; j*=2)
+		{
+			global_step = j;
+			// send message
+			openfpm::vector<openfpm::vector<unsigned char>> message;
+			// recv message
+			openfpm::vector<openfpm::vector<unsigned char>> recv_message(n_proc);
+			recv_message.reserve(n_proc);
+
+			openfpm::vector<size_t> prc_recv;
+			openfpm::vector<size_t> recv_sz;
+
+			openfpm::vector<size_t> prc;
+
+			for (size_t i = 0 ; i < 8  && i < n_proc ; i++)
+			{
+				size_t p_id = (i + 1 + vcl.getProcessUnitID()) % n_proc;
+				if (p_id != vcl.getProcessUnitID())
+				{
+					prc.add(p_id);
+					message.add();
+					std::ostringstream msg;
+					msg << "Hello from " << vcl.getProcessUnitID() << " to " << p_id;
+					std::string str(msg.str());
+					message.last().resize(j);
+					memset(message.last().getPointer(),0,j);
+					std::copy(str.c_str(),&(str.c_str())[msg.str().size()],&(message.last().get(0)));
+				}
+			}
+
+			recv_message.resize(n_proc);
+			// The pattern is not really random preallocate the receive buffer
+			for (size_t i = 0 ; i < 8  && i < n_proc ; i++)
+			{
+				long int p_id = vcl.getProcessUnitID() - i - 1;
+				if (p_id < 0)
+					p_id += n_proc;
+				else
+					p_id = p_id % n_proc;
+
+				if (p_id != (long int)vcl.getProcessUnitID())
+				{
+					prc_recv.add(p_id);
+					recv_message.get(p_id).resize(j);
+					recv_sz.add(j);
+				}
+			}
+
+#ifdef VERBOSE_TEST
+			timer t;
+			t.start();
+#endif
+
+			vcl.sendrecvMultipleMessagesNBX(prc,message,prc_recv,recv_sz,msg_alloc,&recv_message);
+
+#ifdef VERBOSE_TEST
+			t.stop();
+
+			double clk = t.getwct();
+			double clk_max = clk;
+
+			size_t size_send_recv = 2 * j * (prc.size());
+			vcl.sum(size_send_recv);
+			vcl.max(clk_max);
+			vcl.execute();
+
+			if (vcl.getProcessUnitID() == 0)
+				std::cout << "(Short pattern: " << method<ip>() << ")Buffer size: " << j << "    Bandwidth (Average): " << size_send_recv / vcl.getProcessingUnits() / clk / 1e6 << " MB/s  " << "    Bandwidth (Total): " << size_send_recv / clk / 1e6 << " MB/s    Clock: " << clk << "   Clock MAX: " << clk_max <<"\n";
+#endif
+
+			// Check the message
+			for (size_t i = 0 ; i < 8  && i < n_proc ; i++)
+			{
+				long int p_id = vcl.getProcessUnitID() - i - 1;
+				if (p_id < 0)
+					p_id += n_proc;
+				else
+					p_id = p_id % n_proc;
+
+				if (p_id != (long int)vcl.getProcessUnitID())
+				{
+					std::ostringstream msg;
+					msg << "Hello from " << p_id << " to " << vcl.getProcessUnitID();
+					std::string str(msg.str());
+					BOOST_REQUIRE_EQUAL(std::equal(str.c_str(),str.c_str() + str.size() ,&(recv_message.get(p_id).get(0))),true);
+				}
+				else
+				{
+					BOOST_REQUIRE_EQUAL((size_t)0,recv_message.get(p_id).size());
+				}
+			}
 		}
 	}
 }

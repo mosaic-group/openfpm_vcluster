@@ -9,12 +9,14 @@
 
 private:
 
-
 	template<bool result, typename T, typename S>
 	struct unpack_selector_with_prp
 	{
-		template<typename op, int ... prp> static void call_unpack(S & recv, openfpm::vector<BHeapMemory> & recv_buf, openfpm::vector<size_t> * sz, op & op_param)
+		template<typename op, int ... prp> static void call_unpack(S & recv, openfpm::vector<BHeapMemory> & recv_buf, openfpm::vector<size_t> * sz, openfpm::vector<size_t> * sz_byte, op & op_param)
 		{
+			if (sz_byte != NULL)
+				sz_byte->resize(recv_buf.size());
+
 			for (size_t i = 0 ; i < recv_buf.size() ; i++)
 			{
 				T unp;
@@ -33,8 +35,13 @@ private:
 
 				size_t recv_size_new = recv.size();
 
+				if (sz_byte != NULL)
+					sz_byte->get(i) = recv_buf.get(i).size();
 				if (sz != NULL)
 					sz->get(i) = recv_size_new - recv_size_old;
+
+				mem.decRef();
+				delete &mem;
 			}
 		}
 	};
@@ -43,8 +50,11 @@ private:
 	template<typename T, typename S>
 	struct unpack_selector_with_prp<true,T,S>
 	{
-		template<typename op, unsigned int ... prp> static void call_unpack(S & recv, openfpm::vector<BHeapMemory> & recv_buf, openfpm::vector<size_t> * sz, op & op_param)
+		template<typename op, unsigned int ... prp> static void call_unpack(S & recv, openfpm::vector<BHeapMemory> & recv_buf, openfpm::vector<size_t> * sz, openfpm::vector<size_t> * sz_byte, op & op_param)
 		{
+			if (sz_byte != NULL)
+				sz_byte->resize(recv_buf.size());
+
 			for (size_t i = 0 ; i < recv_buf.size() ; i++)
 			{
 				// calculate the number of received elements
@@ -69,6 +79,8 @@ private:
 
 				size_t recv_size_new = recv.size();
 
+				if (sz_byte != NULL)
+					sz_byte->get(i) = recv_buf.get(i).size();
 				if (sz != NULL)
 					sz->get(i) = recv_size_new - recv_size_old;
 			}
@@ -92,11 +104,11 @@ private:
 			Packer<T,HeapMemory>::template pack<prp...>(mem,send,sts);
 		}
 		
-		template<typename op, typename T, typename S> inline static void call_unpack(S & recv, openfpm::vector<BHeapMemory> & recv_buf, openfpm::vector<size_t> * sz, op & op_param)
+		template<typename op, typename T, typename S> inline static void call_unpack(S & recv, openfpm::vector<BHeapMemory> & recv_buf, openfpm::vector<size_t> * sz, openfpm::vector<size_t> * sz_byte, op & op_param)
 		{
 			const bool result = has_pack_gen<typename T::value_type>::value == false && is_vector<T>::value == true;
-			//const bool result = has_pack<typename T::value_type>::type::value == false && has_pack_agg<typename T::value_type>::result::value == false && is_vector<T>::value == true;
-			unpack_selector_with_prp<result, T, S>::template call_unpack<op,prp...>(recv, recv_buf, sz, op_param);
+
+			unpack_selector_with_prp<result, T, S>::template call_unpack<op,prp...>(recv, recv_buf, sz, sz_byte, op_param);
 		}
 	};
 	
@@ -136,10 +148,10 @@ private:
 			}
 		}
 
-		static void unpacking(S & recv, openfpm::vector<BHeapMemory> & recv_buf, openfpm::vector<size_t> * sz, op & op_param)
+		static void unpacking(S & recv, openfpm::vector<BHeapMemory> & recv_buf, openfpm::vector<size_t> * sz, openfpm::vector<size_t> * sz_byte, op & op_param)
 		{
 			typedef index_tuple<prp...> ind_prop_to_pack;
-			call_serialize_variadic<ind_prop_to_pack>::template call_unpack<op,T,S>(recv, recv_buf, sz, op_param);
+			call_serialize_variadic<ind_prop_to_pack>::template call_unpack<op,T,S>(recv, recv_buf, sz, sz_byte, op_param);
 		}
 	};
 
@@ -149,17 +161,16 @@ private:
 	template<int ... prp>
 	struct index_gen<index_tuple<prp...>>
 	{
-		template<typename op, typename T, typename S> inline static void process_recv(Vcluster & vcl, S & recv, openfpm::vector<size_t> * sz_recv, op & op_param)
+		template<typename op, typename T, typename S> inline static void process_recv(Vcluster & vcl, S & recv, openfpm::vector<size_t> * sz_recv, openfpm::vector<size_t> * sz_recv_byte, op & op_param)
 		{
-			vcl.process_receive_buffer_with_prp<op,T,S,prp...>(recv,sz_recv,op_param);
+			vcl.process_receive_buffer_with_prp<op,T,S,prp...>(recv,sz_recv,sz_recv_byte,op_param);
 		}
 	};
 
 
-template<typename op, typename T, typename S> void prepare_send_buffer(openfpm::vector<T> & send, S & recv, openfpm::vector<size_t> & prc_send, openfpm::vector<size_t> & prc_recv, openfpm::vector<size_t> & sz_recv)
+template<typename op, typename T, typename S> void prepare_send_buffer(openfpm::vector<T> & send, S & recv, openfpm::vector<size_t> & prc_send, openfpm::vector<size_t> & prc_recv, openfpm::vector<size_t> & sz_recv, size_t opt)
 {
-	prc_recv.clear();
-	sz_recv.clear();
+	openfpm::vector<size_t> sz_recv_byte(sz_recv.size());
 
 	// Reset the receive buffer
 	reset_recv_buf();
@@ -173,8 +184,7 @@ template<typename op, typename T, typename S> void prepare_send_buffer(openfpm::
 
 	// Prepare the sending buffer
 	openfpm::vector<const void *> send_buf;
-
-	openfpm::vector<size_t> sz_byte;
+	openfpm::vector<size_t> send_sz_byte;
 
 	size_t tot_size = 0;
 
@@ -183,7 +193,7 @@ template<typename op, typename T, typename S> void prepare_send_buffer(openfpm::
 		size_t req = 0;
 
 		//Pack requesting
-		pack_unpack_cond_with_prp<has_max_prop<T, has_value_type<T>::value>::value,op, T, S>::packingRequest(send.get(i), req, sz_byte);
+		pack_unpack_cond_with_prp<has_max_prop<T, has_value_type<T>::value>::value,op, T, S>::packingRequest(send.get(i), req, send_sz_byte);
 		tot_size += req;
 	}
 
@@ -199,17 +209,41 @@ template<typename op, typename T, typename S> void prepare_send_buffer(openfpm::
 		Pack_stat sts;
 
 		pack_unpack_cond_with_prp<has_max_prop<T, has_value_type<T>::value>::value, op, T, S>::packing(mem, send.get(i), sts, send_buf);
-
 	}
 
 	// receive information
-	base_info bi(&recv_buf,prc_recv,sz_recv);
+	base_info bi(&recv_buf,prc_recv,sz_recv_byte);
 
 	// Send and recv multiple messages
-	sendrecvMultipleMessagesNBX(prc_send.size(),(size_t *)sz_byte.getPointer(),(size_t *)prc_send.getPointer(),(void **)send_buf.getPointer(),msg_alloc,(void *)&bi);
+	if (opt & RECEIVE_KNOWN)
+	{
+		// We we are passing the number of element but not the byte, calculate the byte
+		if (opt & KNOWN_ELEMENT_OR_BYTE)
+		{
+			// We know the number of element convert to byte (ONLY if it is possible)
+			if (has_pack_gen<typename T::value_type>::value == false && is_vector<T>::value == true)
+			{
+				for (size_t i = 0 ; i < sz_recv.size() ; i++)
+					sz_recv_byte.get(i) = sz_recv.get(i) * sizeof(typename T::value_type);
+			}
+			else
+				std::cout << __FILE__ << ":" << __LINE__ << " Error " << demangle(typeid(T).name()) << " the type does not work with the option RECEIVE_KNOWN or NO_CHANGE_ELEMENTS" << std::endl;
+		}
+
+		sendrecvMultipleMessagesNBX(prc_send.size(),(size_t *)send_sz_byte.getPointer(),(size_t *)prc_send.getPointer(),(void **)send_buf.getPointer(),
+				                    prc_recv.size(),(size_t *)prc_recv.getPointer(),(size_t *)sz_recv_byte.getPointer(),msg_alloc_known,(void *)&bi);
+	}
+	else
+	{
+		prc_recv.clear();
+		sendrecvMultipleMessagesNBX(prc_send.size(),(size_t *)send_sz_byte.getPointer(),(size_t *)prc_send.getPointer(),(void **)send_buf.getPointer(),msg_alloc,(void *)&bi);
+	}
 
 	// Reorder the buffer
-	reorder_buffer(prc_recv,sz_recv);
+	reorder_buffer(prc_recv,sz_recv_byte);
+
+	mem.decRef();
+	delete &mem;
 }
 
 
@@ -279,6 +313,38 @@ static void * msg_alloc(size_t msg_i ,size_t total_msg, size_t total_p, size_t i
 	return rinfo.recv_buf->last().getPointer();
 }
 
+
+/*! \brief Call-back to allocate buffer to receive data
+ *
+ * \param msg_i size required to receive the message from i
+ * \param total_msg total size to receive from all the processors
+ * \param total_p the total number of processor that want to communicate with you
+ * \param i processor id
+ * \param ri request id (it is an id that goes from 0 to total_p, and is unique
+ *           every time message_alloc is called)
+ * \param ptr a pointer to the vector_dist structure
+ *
+ * \return the pointer where to store the message for the processor i
+ *
+ */
+static void * msg_alloc_known(size_t msg_i ,size_t total_msg, size_t total_p, size_t i, size_t ri, void * ptr)
+{
+	base_info & rinfo = *(base_info *)ptr;
+
+	if (rinfo.recv_buf == NULL)
+	{
+		std::cerr << __FILE__ << ":" << __LINE__ << " Internal error this processor is not suppose to receive\n";
+		return NULL;
+	}
+
+	rinfo.recv_buf->resize(ri+1);
+
+	rinfo.recv_buf->get(ri).resize(msg_i);
+
+	// return the pointer
+	return rinfo.recv_buf->last().getPointer();
+}
+
 /*! \brief Process the receive buffer
  *
  * \tparam T type of sending object
@@ -288,12 +354,12 @@ static void * msg_alloc(size_t msg_i ,size_t total_msg, size_t total_p, size_t i
  * \param recv receive object
  *
  */
-template<typename op, typename T, typename S, unsigned int ... prp > void process_receive_buffer_with_prp(S & recv, openfpm::vector<size_t> * sz, op & op_param)
+template<typename op, typename T, typename S, unsigned int ... prp > void process_receive_buffer_with_prp(S & recv, openfpm::vector<size_t> * sz, openfpm::vector<size_t> * sz_byte, op & op_param)
 {
 	if (sz != NULL)
 		sz->resize(recv_buf.size());
 
-	pack_unpack_cond_with_prp<has_max_prop<T, has_value_type<T>::value>::value,op, T, S, prp... >::unpacking(recv, recv_buf, sz, op_param);
+	pack_unpack_cond_with_prp<has_max_prop<T, has_value_type<T>::value>::value,op, T, S, prp... >::unpacking(recv, recv_buf, sz, sz_byte, op_param);
 }
 
 public:
@@ -395,7 +461,7 @@ template<typename T, typename S> bool SGather(T & send, S & recv, openfpm::vecto
 		// operation object
 		op_ssend_recv_add<void> opa;
 
-		index_gen<ind_prop_to_pack>::template process_recv<op_ssend_recv_add<void>,T,S>(*this,recv,&sz,opa);
+		index_gen<ind_prop_to_pack>::template process_recv<op_ssend_recv_add<void>,T,S>(*this,recv,&sz,NULL,opa);
 
 		recv.add(send);
 		prc.add(root);
@@ -436,7 +502,10 @@ template<typename T, typename S> bool SGather(T & send, S & recv, openfpm::vecto
 		base_info bi(NULL,prc,sz);
 
 		// Send and recv multiple messages
-		sendrecvMultipleMessagesNBX(send_prc.size(),(size_t *)sz.getPointer(),(size_t *)send_prc.getPointer(),(void **)send_buf.getPointer(),msg_alloc,(void *)&bi);
+		sendrecvMultipleMessagesNBX(send_prc.size(),(size_t *)sz.getPointer(),(size_t *)send_prc.getPointer(),(void **)send_buf.getPointer(),msg_alloc,(void *)&bi,NONE);
+
+		mem.decRef();
+		delete &mem;
 	}
 	
 	return true;
@@ -504,7 +573,7 @@ template<typename T, typename S> bool SScatter(T & send, S & recv, openfpm::vect
 		// operation object
 		op_ssend_recv_add<void> opa;
 
-		index_gen<ind_prop_to_pack>::template process_recv<op_ssend_recv_add<void>,T,S>(*this,recv,NULL,opa);
+		index_gen<ind_prop_to_pack>::template process_recv<op_ssend_recv_add<void>,T,S>(*this,recv,NULL,NULL,opa);
 	}
 	else
 	{
@@ -523,7 +592,7 @@ template<typename T, typename S> bool SScatter(T & send, S & recv, openfpm::vect
 		// operation object
 		op_ssend_recv_add<void> opa;
 
-		index_gen<ind_prop_to_pack>::template process_recv<op_ssend_recv_add<void>,T,S>(*this,recv,NULL,opa);
+		index_gen<ind_prop_to_pack>::template process_recv<op_ssend_recv_add<void>,T,S>(*this,recv,NULL,NULL,opa);
 	}
 
 	return true;
@@ -600,7 +669,7 @@ void reorder_buffer(openfpm::vector<size_t> & prc, openfpm::vector<size_t> & sz_
  * Semantic communication differ from the normal one. They in general
  * follow the following model.
  *
- * SSendRecv(T,S,...,op=add);
+ * Recv(T,S,...,op=add);
  *
  * "SendRecv" indicate the communication pattern, or how the information flow
  * T is the object to send, S is the object that will receive the data.
@@ -621,16 +690,57 @@ void reorder_buffer(openfpm::vector<size_t> & prc, openfpm::vector<size_t> & sz_
  * \return true if the function completed succefully
  *
  */
-template<typename T, typename S> bool SSendRecv(openfpm::vector<T> & send, S & recv, openfpm::vector<size_t> & prc_send, openfpm::vector<size_t> & prc_recv, openfpm::vector<size_t> & sz_recv)
+template<typename T, typename S> bool SSendRecv(openfpm::vector<T> & send, S & recv, openfpm::vector<size_t> & prc_send, openfpm::vector<size_t> & prc_recv, openfpm::vector<size_t> & sz_recv, size_t opt = NONE)
 {
-	prepare_send_buffer<op_ssend_recv_add<void>,T,S>(send,recv,prc_send,prc_recv,sz_recv);
+	prepare_send_buffer<op_ssend_recv_add<void>,T,S>(send,recv,prc_send,prc_recv,sz_recv,opt);
 
 	// we generate the list of the properties to pack
 	typedef typename ::generate_indexes<int, has_max_prop<T, has_value_type<T>::value>::number, MetaFuncOrd>::result ind_prop_to_pack;
 
 	op_ssend_recv_add<void> opa;
 
-	index_gen<ind_prop_to_pack>::template process_recv<op_ssend_recv_add<void>,T,S>(*this,recv,&sz_recv,opa);
+	index_gen<ind_prop_to_pack>::template process_recv<op_ssend_recv_add<void>,T,S>(*this,recv,&sz_recv,NULL,opa);
+
+	return true;
+}
+
+
+/*! \brief Semantic Send and receive, send the data to processors and receive from the other processors
+ *
+ * Semantic communication differ from the normal one. They in general
+ * follow the following model.
+ *
+ * SSendRecv(T,S,...,op=add);
+ *
+ * "SendRecv" indicate the communication pattern, or how the information flow
+ * T is the object to send, S is the object that will receive the data.
+ * In order to work S must implement the interface S.add<prp...>(T).
+ *
+ * ### Example scatter a vector of structures, to other processors
+ * \snippet VCluster_semantic_unit_tests.hpp Scatter the data from master
+ *
+ * \tparam T type of sending object
+ * \tparam S type of receiving object
+ * \tparam prp properties for merging
+ *
+ * \param Object to send
+ * \param Object to receive
+ * \param prc processor involved in the scatter
+ * \param sz size of each chunks
+ * \param root which processor should scatter the information
+ *
+ * \return true if the function completed succefully
+ *
+ */
+template<typename T, typename S, int ... prp> bool SSendRecvP(openfpm::vector<T> & send, S & recv, openfpm::vector<size_t> & prc_send, openfpm::vector<size_t> & prc_recv, openfpm::vector<size_t> & sz_recv, openfpm::vector<size_t> & sz_recv_byte)
+{
+	prepare_send_buffer<op_ssend_recv_add<void>,T,S>(send,recv,prc_send,prc_recv,sz_recv,NONE);
+
+	// operation object
+	op_ssend_recv_add<void> opa;
+
+	// process the received information
+	process_receive_buffer_with_prp<op_ssend_recv_add<void>,T,S,prp...>(recv,&sz_recv,&sz_recv_byte,opa);
 
 	return true;
 }
@@ -665,13 +775,13 @@ template<typename T, typename S> bool SSendRecv(openfpm::vector<T> & send, S & r
  */
 template<typename T, typename S, int ... prp> bool SSendRecvP(openfpm::vector<T> & send, S & recv, openfpm::vector<size_t> & prc_send, openfpm::vector<size_t> & prc_recv, openfpm::vector<size_t> & sz_recv)
 {
-	prepare_send_buffer<op_ssend_recv_add<void>,T,S>(send,recv,prc_send,prc_recv,sz_recv);
+	prepare_send_buffer<op_ssend_recv_add<void>,T,S>(send,recv,prc_send,prc_recv,sz_recv,NONE);
 
 	// operation object
 	op_ssend_recv_add<void> opa;
 
 	// process the received information
-	process_receive_buffer_with_prp<op_ssend_recv_add<void>,T,S,prp...>(recv,&sz_recv,opa);
+	process_receive_buffer_with_prp<op_ssend_recv_add<void>,T,S,prp...>(recv,&sz_recv,NULL,opa);
 
 	return true;
 }
@@ -699,16 +809,26 @@ template<typename T, typename S, int ... prp> bool SSendRecvP(openfpm::vector<T>
  * \param Object to receive
  * \param prc processor involved in the send and receive
  * \param op_param operation object
+ * \param sz_recv size of each receiving buffer. This parameters are output
+ *        with RECEIVE_KNOWN you must feed this parameter
+ * \param prc_recv from which processor we receive messages
+ *        with RECEIVE_KNOWN you must feed this parameter
+ * \param opt options default is NONE, another is RECEIVE_KNOWN. In this case each
+ *        processor is assumed to know from which processor receive, and the size of
+ *        the message. in such case prc_recv and sz_recv are not anymore parameters
+ *        but must be input.
+ *
  *
  * \return true if the function completed succeful
  *
  */
-template<typename op, typename T, typename S, int ... prp> bool SSendRecvP_op(openfpm::vector<T> & send, S & recv, openfpm::vector<size_t> & prc_send,op & op_param, openfpm::vector<size_t> & prc_recv, openfpm::vector<size_t> & sz_recv)
+template<typename op, typename T, typename S, int ... prp> bool SSendRecvP_op(openfpm::vector<T> & send, S & recv, openfpm::vector<size_t> & prc_send,op & op_param, openfpm::vector<size_t> & prc_recv, openfpm::vector<size_t> & recv_sz, size_t opt = NONE)
 {
-	prepare_send_buffer<op,T,S>(send,recv,prc_send,prc_recv,sz_recv);
+	prepare_send_buffer<op,T,S>(send,recv,prc_send,prc_recv,recv_sz,opt);
 
 	// process the received information
-	process_receive_buffer_with_prp<op,T,S,prp...>(recv,&sz_recv,op_param);
+	process_receive_buffer_with_prp<op,T,S,prp...>(recv,NULL,NULL,op_param);
 
 	return true;
 }
+

@@ -35,6 +35,9 @@
 #define SEND_RECV_BASE 8192
 #define GATHER_BASE 24576
 
+#define RECEIVE_KNOWN 4
+#define KNOWN_ELEMENT_OR_BYTE 8
+
 // number of vcluster instances
 extern size_t n_vcluster;
 // Global MPI initialization
@@ -290,9 +293,6 @@ class Vcluster
 	//! vector of the size of send buffers
 	openfpm::vector<size_t> sz_send;
 
-	//! sending map
-	openfpm::vector<size_t> map;
-
 	//! Receive buffers
 	openfpm::vector<BHeapMemory> recv_buf;
 
@@ -522,12 +522,135 @@ public:
 		MPI_IallreduceW<T>::reduce(num,MPI_MIN,req.last());
 	}
 
+	/*! \brief Send and receive multiple messages
+	 *
+	 * It send multiple messages to a set of processors the and receive
+	 * multiple messages from another set of processors, all the processor must call this
+	 * function. In this particular case the receiver know from which processor is going
+	 * to receive.
+	 *
+	 *
+	 * suppose the following situation the calling processor want to communicate
+	 * * 2 messages of size 100 byte to processor 1
+	 * * 1 message of size 50 byte to processor 6
+	 * * 1 message of size 48 byte to processor 7
+	 * * 1 message of size 70 byte to processor 8
+	 *
+	 * \param n_send number of send for this processor [4]
+	 *
+	 * \param prc list of processor with which it should communicate
+	 *        [1,1,6,7,8]
+	 *
+	 * \param sz the array contain the size of the message for each processor
+	 *        (zeros must not be presents) [100,100,50,48,70]
+	 *
+	 * \param ptr array that contain the pointers to the message to send
+	 *
+	 * \param msg_alloc This is a call-back with the purpose of allocate space
+	 *        for the incoming message and give back a valid pointer, supposing that this call-back has been triggered by
+	 *        the processor of id 5 that want to communicate with me a message of size 100 byte the call-back will have
+	 *        the following 6 parameters
+	 *        in the call-back are in order:
+	 *        * message size required to receive the message [100]
+	 *        * total message size to receive from all the processors (NBX does not provide this information)
+	 *        * the total number of processor want to communicate with you (NBX does not provide this information)
+	 *        * processor id [5]
+	 *        * ri request id (it is an id that goes from 0 to total_p, and is incremented
+	 *           every time message_alloc is called)
+	 *        * void pointer, parameter for additional data to pass to the call-back
+	 *
+	 * \param ptr_arg data passed to the call-back function specified
+	 *
+	 * \param opt options, NONE (ignored in this moment)
+	 *
+	 */
+	template<typename T> void sendrecvMultipleMessagesNBX(openfpm::vector< size_t > & prc, openfpm::vector< T > & data, openfpm::vector< size_t > prc_recv, openfpm::vector< size_t > & recv_sz ,void * (* msg_alloc)(size_t,size_t,size_t,size_t,size_t,void *), void * ptr_arg, long int opt=NONE)
+	{
+		// Allocate the buffers
+
+		for (size_t i = 0 ; i < prc.size() ; i++)
+			send(prc.get(i),SEND_SPARSE + NBX_cnt,data.get(i).getPointer(),data.get(i).size());
+
+		for (size_t i = 0 ; i < prc_recv.size() ; i++)
+		{
+			void * ptr_recv = msg_alloc(recv_sz.get(i),0,0,prc_recv.get(i),i,ptr_arg);
+
+			recv(prc_recv.get(i),SEND_SPARSE + NBX_cnt,ptr_recv,recv_sz.get(i));
+		}
+
+		execute();
+
+		// Circular counter
+		NBX_cnt = (NBX_cnt + 1) % 1024;
+	}
 
 	/*! \brief Send and receive multiple messages
 	 *
 	 * It send multiple messages to a set of processors the and receive
 	 * multiple messages from another set of processors, all the processor must call this
-	 * function, NBX is more performant than PCX with more processors (1000+)
+	 * function. In this particular case the receiver know from which processor is going
+	 * to receive.
+	 *
+	 *
+	 * suppose the following situation the calling processor want to communicate
+	 * * 2 messages of size 100 byte to processor 1
+	 * * 1 message of size 50 byte to processor 6
+	 * * 1 message of size 48 byte to processor 7
+	 * * 1 message of size 70 byte to processor 8
+	 *
+	 * \param n_send number of send for this processor [4]
+	 *
+	 * \param prc list of processor with which it should communicate
+	 *        [1,1,6,7,8]
+	 *
+	 * \param sz the array contain the size of the message for each processor
+	 *        (zeros must not be presents) [100,100,50,48,70]
+	 *
+	 * \param ptr array that contain the pointers to the message to send
+	 *
+	 * \param msg_alloc This is a call-back with the purpose of allocate space
+	 *        for the incoming message and give back a valid pointer, supposing that this call-back has been triggered by
+	 *        the processor of id 5 that want to communicate with me a message of size 100 byte the call-back will have
+	 *        the following 6 parameters
+	 *        in the call-back are in order:
+	 *        * message size required to receive the message [100]
+	 *        * total message size to receive from all the processors (NBX does not provide this information)
+	 *        * the total number of processor want to communicate with you (NBX does not provide this information)
+	 *        * processor id [5]
+	 *        * ri request id (it is an id that goes from 0 to total_p, and is incremented
+	 *           every time message_alloc is called)
+	 *        * void pointer, parameter for additional data to pass to the call-back
+	 *
+	 * \param ptr_arg data passed to the call-back function specified
+	 *
+	 * \param opt options, NONE (ignored in this moment)
+	 *
+	 */
+	void sendrecvMultipleMessagesNBX(size_t n_send , size_t sz[], size_t prc[] , void * ptr[], size_t n_recv, size_t prc_recv[] , size_t sz_recv[] ,void * (* msg_alloc)(size_t,size_t,size_t,size_t,size_t,void *), void * ptr_arg, long int opt=NONE)
+	{
+		// Allocate the buffers
+
+		for (size_t i = 0 ; i < n_send ; i++)
+			send(prc[i],SEND_SPARSE + NBX_cnt,ptr[i],sz[i]);
+
+		for (size_t i = 0 ; i < n_recv ; i++)
+		{
+			void * ptr_recv = msg_alloc(sz_recv[i],0,0,prc_recv[i],i,ptr_arg);
+
+			recv(prc_recv[i],SEND_SPARSE + NBX_cnt,ptr_recv,sz_recv[i]);
+		}
+
+		execute();
+
+		// Circular counter
+		NBX_cnt = (NBX_cnt + 1) % 1024;
+	}
+
+	/*! \brief Send and receive multiple messages
+	 *
+	 * It send multiple messages to a set of processors the and receive
+	 * multiple messages from another set of processors, all the processor must call this
+	 * function
 	 *
 	 * suppose the following situation the calling processor want to communicate
 	 * * 2 vector of 100 integers to processor 1
@@ -576,74 +699,13 @@ public:
 		sendrecvMultipleMessagesNBX(prc.size(),(size_t *)sz_send.getPointer(),(size_t *)prc.getPointer(),(void **)ptr_send.getPointer(),msg_alloc,ptr_arg,opt);
 	}
 
-	/*! \brief Send and receive multiple messages
-	 *
-	 * It sends multiple messages to a set of processors and receives
-	 * multiple messages from another set of processors, all the processor must call this
-	 * function, NBX is more performant than PCX with more processors (1000+)
-	 *
-	 * suppose the following situation the calling processor want to communicate
-	 * * 2 vector of 100 integers to processor 1
-	 * * 1 vector of 50 integers to processor 6
-	 * * 1 vector of 48 integers to processor 7
-	 * * 1 vector of 70 integers to processor 8
-	 *
-	 * \param prc list of processors you should communicate with [1,1,6,7,8]
-	 *
-	 * \param data vector containing the data to send [v=vector<vector<int>>, v.size()=4, T=vector<int>], T at the moment
-	 *          is only tested for vectors of 0 or more generic elements (without pointers)
-	 *
-	 * \param msg_alloc This is a call-back with the purpose to allocate space
-	 *        for the incoming messages and give back a valid pointer, supposing that this call-back has been triggered by
-	 *        the processor of id 5 that want to communicate with me a message of size 100 byte the call-back will have
-	 *        the following 6 parameters
-	 *        in the call-back in order:
-	 *        * message size required to receive the message [100]
-	 *        * total message size to receive from all the processors (NBX does not provide this information)
-	 *        * the total number of processor want to communicate with you (NBX does not provide this information)
-	 *        * processor id [5]
-	 *        * ri request id (it is an id that goes from 0 to total_p, and is incremented
-	 *           every time message_alloc is called)
-	 *        * void pointer, parameter for additional data to pass to the call-back
-	 *
-	 * \param ptr_arg data passed to the call-back function specified
-	 *
-	 * \param opt options, only NONE supported
-	 *
-	 */
-	template<typename T> void sendrecvMultipleMessagesPCX(openfpm::vector< size_t > & prc, openfpm::vector< T > & data, void * (* msg_alloc)(size_t,size_t,size_t,size_t,size_t,void *), void * ptr_arg, long int opt=NONE)
-	{
-#ifdef DEBUG
-		checkType<typename T::value_type>();
-#endif
-		// resize map with the number of processors
-		map.resize(size);
 
-		// reset the sending buffer
-		map.fill(0);
-
-		// create sending map
-		for (size_t i = 0 ; i < prc.size() ; i++)
-		{map.get(prc.get(i)) = 1;}
-
-		// resize the pointer list
-		ptr_send.resize(prc.size());
-		sz_send.resize(prc.size());
-
-		for (size_t i = 0 ; i < prc.size() ; i++)
-		{
-			ptr_send.get(i) = data.get(i).getPointer();
-			sz_send.get(i) = data.get(i).size() * sizeof(typename T::value_type);
-		}
-
-		sendrecvMultipleMessagesPCX(prc.size(),(size_t *)map.getPointer(),(size_t *)sz_send.getPointer(),(size_t *)prc.getPointer(),(void **)ptr_send.getPointer(),msg_alloc,ptr_arg,opt);
-	}
 
 	/*! \brief Send and receive multiple messages
 	 *
 	 * It send multiple messages to a set of processors the and receive
 	 * multiple messages from another set of processors, all the processor must call this
-	 * function, NBX is more performant than PCX with more processors (1000+)
+	 * function
 	 *
 	 * suppose the following situation the calling processor want to communicate
 	 * * 2 messages of size 100 byte to processor 1
@@ -682,7 +744,7 @@ public:
 	void sendrecvMultipleMessagesNBX(size_t n_send , size_t sz[], size_t prc[] , void * ptr[], void * (* msg_alloc)(size_t,size_t,size_t,size_t,size_t,void *), void * ptr_arg, long int opt = NONE)
 	{
 		if (stat.size() != 0 || req.size() != 0)
-			std::cerr << "Error: " << __FILE__ << ":" << __LINE__ << " this function must be called when no other requests are in progress \n";
+			std::cerr << "Error: " << __FILE__ << ":" << __LINE__ << " this function must be called when no other requests are in progress. Please remember that id you use function like max(),sum(),send(),recv() check that you did not miss to call the function execute() \n";
 
 
 		stat.clear();
@@ -784,152 +846,6 @@ public:
 		NBX_cnt = (NBX_cnt + 1) % 1024;
 	}
 
-	/*! \brief Send and receive multiple messages
-	 *
-	 * It send multiple messages to a set of processors the and receive
-	 * multiple messages from another set of processors, all the processor must call this
-	 * function, NBX is more performant than PCX with more processors (1000+)
-	 *
-	 * suppose the following situation the calling processor want to communicate
-	 * * 2 messages of size 100 byte to processor 1
-	 * * 1 message of size 50 byte to processor 6
-	 * * 1 message of size 48 byte to processor 7
-	 * * 1 message of size 70 byte to processor 8
-	 *
-	 * \param n_send number of send for this processor [4]
-	 *
-	 * \param prc list of processor with which it should communicate
-	 *        [1,1,6,7,8]
-	 *
-	 * \param map array containing an array of the number of messages for
-	 *        each processor the colling processor want to communicate
-	 *        [0 2 0 0 0 0 1 1 1]
-	 *
-	 * \param sz the array contain the size of the message for each processor
-	 *        (zeros must not be presents) [100,100,50,48,70]
-	 *
-	 * \param ptr array that contain the pointers to the message to send
-	 *
-	 * \param msg_alloc This is a call-back with the purpose of allocate space
-	 *        for the incoming message and give back a valid pointer, supposing that this call-back has been triggered by
-	 *        the processor of id 5 that want to communicate with me a message of size 100 byte the call-back will have
-	 *        the following 6 parameters
-	 *        in the call-back are in order:
-	 *        * message size required to receive the message [100]
-	 *        * total message size to receive from all the processors
-	 *        * the total number of processor want to communicate with the calling processor
-	 *        * processor id [5]
-	 *        * ri request id (it is an id that goes from 0 to total_p, and is incremented
-	 *           every time message_alloc is called)
-	 *        * void pointer, parameter for additional data to pass to the call-back
-	 *
-	 * \param ptr_arg pointer passed to the call-back function
-	 *
-	 * \param opt options, NONE (ignored in this moment)
-	 *
-	 */
-	void sendrecvMultipleMessagesPCX(size_t n_send, size_t * map, size_t sz[], size_t prc[] , void * ptr[], void * (* msg_alloc)(size_t,size_t,size_t,size_t,size_t,void *), void * ptr_arg, long int opt)
-	{
-		if (stat.size() != 0 || req.size() != 0)
-			std::cerr << "Error: " << __FILE__ << ":" << __LINE__ << " this function must be called when no other requests are in progress \n";
-
-		stat.clear();
-		req.clear();
-
-		req.add();
-		stat.add();
-
-		proc_com.resize(1);
-
-		MPI_SAFE_CALL(MPI_Ireduce_scatter(map,&proc_com.get(0),&map_scatter.get(0),MPI_UNSIGNED_LONG,MPI_SUM,MPI_COMM_WORLD,&req.last()));
-		MPI_SAFE_CALL(MPI_Waitall(req.size(),&req.get(0),&stat.get(0)));
-
-		// Remove the executed request
-
-		req.clear();
-		stat.clear();
-
-		// Allocate the temporal buffer to store the message size for each processor
-
-		size_t n_proc_com = proc_com.get(0);
-		proc_com.resize(n_proc_com * 2);
-
-		// queue n_proc_com MPI_Irecv with source ANY_SOURCE to get
-		// the message length from each processor and
-		//  send the message length to each processor
-
-		for (size_t i = 0 ; i < n_proc_com ; i++)
-		{
-			req.add();
-			MPI_SAFE_CALL(MPI_Irecv(&proc_com.get(i),1,MPI_UNSIGNED_LONG,MPI_ANY_SOURCE,MSG_LENGTH,MPI_COMM_WORLD,&req.last()));
-		}
-
-		for (size_t i = 0 ; i < n_send ; i++)
-		{
-			req.add();
-			MPI_SAFE_CALL(MPI_Isend(&sz[i],1,MPI_UNSIGNED_LONG,prc[i],MSG_LENGTH,MPI_COMM_WORLD,&req.last()));
-		}
-
-		stat.resize(req.size());
-		if (req.size() != 0) {MPI_SAFE_CALL(MPI_Waitall(req.size(),&req.get(0),&stat.get(0)));}
-
-		// Use proc_com to get the processor id that try to communicate
-
-		for (size_t i = 0 ; i < n_proc_com ; i++)
-		{
-			proc_com.get(n_proc_com+i) = stat.get(i).MPI_SOURCE;
-		}
-
-		// Remove the executed request
-
-		req.clear();
-		stat.clear();
-
-		// Calculate the total size of the message
-
-		size_t total_msg = 0;
-
-		for (size_t i = 0 ; i < n_proc_com ; i++)
-		{
-			total_msg += proc_com.get(i);
-		}
-
-		// Receive the message
-
-		for (size_t i = 0 ; i < n_proc_com ; i++)
-		{
-			void * ptr = msg_alloc(proc_com.get(i),total_msg,n_proc_com,proc_com.get(n_proc_com+i),i,ptr_arg);
-
-			req.add();
-
-#ifdef SE_CLASS2
-				check_valid(ptr,proc_com.get(i));
-#endif
-
-			MPI_SAFE_CALL(MPI_Irecv(ptr,proc_com.get(i),MPI_BYTE,proc_com.get(i+n_proc_com),MSG_SEND_RECV,MPI_COMM_WORLD,&req.last()));
-		}
-
-		// Send all the messages this processor must send
-
-		for (size_t i = 0 ; i < n_send ; i++)
-		{
-			req.add();
-
-#ifdef SE_CLASS2
-			check_valid(ptr[i],sz[i]);
-#endif
-
-			MPI_SAFE_CALL(MPI_Isend(ptr[i],sz[i],MPI_BYTE,prc[i],MSG_SEND_RECV,MPI_COMM_WORLD,&req.last()));
-		}
-
-		stat.resize(req.size());
-		if (req.size() != 0) {MPI_SAFE_CALL(MPI_Waitall(req.size(),&req.get(0),&stat.get(0)));}
-
-		// Remove the executed request
-		req.clear();
-		stat.clear();
-	}
-
 	/*! \brief Send data to a processor
 	 *
 	 * \warning In order to avoid deadlock every send must be coupled with a recv
@@ -1000,11 +916,11 @@ public:
 	 *
 	 * \warning In order to avoid deadlock every recv must be coupled with a send
 	 *          in case you want to send data without knowledge from the other side
-	 *          consider to use sendrecvMultipleMessagesPCX or sendrecvMultipleMessagesNBX
+	 *          consider to use or sendrecvMultipleMessagesNBX
 	 *
 	 * \warning operation is asynchronous execute must be called to ensure they are executed
 	 *
-	 * \see sendrecvMultipleMessagesPCX sendrecvMultipleMessagesNBX
+	 * \see sendrecvMultipleMessagesNBX
 	 *
 	 * \param proc processor id
 	 * \param tag id
@@ -1031,11 +947,11 @@ public:
      *
      * \warning In order to avoid deadlock every recv must be coupled with a send
      *          in case you want to send data without knowledge from the other side
-     *          consider to use sendrecvMultipleMessagesPCX sendrecvMultipleMessagesNBX
+     *          consider to use sendrecvMultipleMessagesNBX
      *
      * \warning operation is asynchronous execute must be called to ensure they are executed
      *
-     * \see sendrecvMultipleMessagesPCX sendrecvMultipleMessagesNBX
+     * \see sendrecvMultipleMessagesNBX
      *
      * \param proc processor id
      * \param tag id
@@ -1171,6 +1087,19 @@ static inline void openfpm_init(int *argc, char ***argv)
 #endif
 
 	init_global_v_cluster_private(argc,argv);
+
+#ifdef SE_CLASS1
+
+	std::cout << "OpenFPM is compiled with debug mode LEVEL:1. Remember to remove SE_CLASS1 when you go in production" << std::endl;
+
+#endif
+
+#ifdef SE_CLASS2
+
+	std::cout << "OpenFPM is compiled with debug mode LEVEL:2. Remember to remove SE_CLASS2 when you go in production" << std::endl;
+
+#endif
+
 	ofp_initialized = true;
 }
 
