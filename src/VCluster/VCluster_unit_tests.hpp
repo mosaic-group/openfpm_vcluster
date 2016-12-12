@@ -8,13 +8,13 @@
 #ifndef VCLUSTER_UNIT_TESTS_HPP_
 #define VCLUSTER_UNIT_TESTS_HPP_
 
-#include "VCluster.hpp"
 #include <sstream>
 #include <boost/test/included/unit_test.hpp>
 #include "timer.hpp"
 #include <random>
 #include "VCluster_unit_test_util.hpp"
 #include "Point_test.hpp"
+#include "VCluster_base.hpp"
 #include "Vector/vector_test_util.hpp"
 
 BOOST_AUTO_TEST_SUITE( VCluster_test )
@@ -28,6 +28,9 @@ BOOST_AUTO_TEST_CASE (Vcluster_robustness)
 
 BOOST_AUTO_TEST_CASE( VCluster_use_reductions)
 {
+
+	//! [max min sum]
+
 	Vcluster & vcl = create_vcluster();
 
 	unsigned char uc = 1;
@@ -88,6 +91,8 @@ BOOST_AUTO_TEST_CASE( VCluster_use_reductions)
 	vcl.max(f_max);
 	vcl.max(d_max);
 	vcl.execute();
+
+	//! [max min sum]
 
 	if ( vcl.getProcessingUnits() < 128 )
 	{BOOST_REQUIRE_EQUAL(c_max,(char)vcl.getProcessingUnits()-1);}

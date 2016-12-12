@@ -8,8 +8,8 @@
 #ifndef VCLUSTER_UNIT_TEST_UTIL_HPP_
 #define VCLUSTER_UNIT_TEST_UTIL_HPP_
 
-#include "VCluster.hpp"
 #include "Point_test.hpp"
+#include "VCluster_base.hpp"
 #include "Vector/vector_test_util.hpp"
 
 #define NBX 1
@@ -35,9 +35,15 @@ int mod(int x, int m) {
 
 // Alloc the buffer to receive the messages
 
+//! [message alloc]
+
 void * msg_alloc(size_t msg_i ,size_t total_msg, size_t total_p, size_t i,size_t ri, void * ptr)
 {
+	// convert the void pointer argument into a pointer to receiving buffers
 	openfpm::vector<openfpm::vector<unsigned char>> * v = static_cast<openfpm::vector<openfpm::vector<unsigned char>> *>(ptr);
+
+	/////////////////////// IGNORE THESE LINES IN VCLUSTER DOCUMENTATION ////////////////////////
+	/////////////////////// THEY COME FROM UNIT TESTING /////////////////////////////////////////
 
 	if (create_vcluster().getProcessingUnits() <= 8)
 	{if (totp_check) BOOST_REQUIRE_EQUAL(total_p,create_vcluster().getProcessingUnits()-1);}
@@ -45,10 +51,19 @@ void * msg_alloc(size_t msg_i ,size_t total_msg, size_t total_p, size_t i,size_t
 	{if (totp_check) BOOST_REQUIRE_EQUAL(total_p,(size_t)8);}
 
 	BOOST_REQUIRE_EQUAL(msg_i, global_step);
+
+	//////////////////////////////////////////////////////////////////////////
+
+	// Create the memory to receive the message
+	// msg_i contain the size of the message to receive
+	// i contain the processor id
 	v->get(i).resize(msg_i);
 
+	// return the pointer of the allocated memory
 	return &(v->get(i).get(0));
 }
+
+//! [message alloc]
 
 // Alloc the buffer to receive the messages
 
@@ -322,19 +337,30 @@ template<unsigned int ip> void test()
 		for (size_t j = 32 ; j < N_LOOP ; j*=2)
 		{
 			global_step = j;
-			// send message
-			openfpm::vector<openfpm::vector<unsigned char>> message;
-			// recv message
-			openfpm::vector<openfpm::vector<unsigned char>> recv_message(n_proc);
-			recv_message.reserve(n_proc);
 
+			//! [dsde]
+
+			// We send one message for each processor (one message is an openfpm::vector<unsigned char>)
+			// or an array of bytes
+			openfpm::vector<openfpm::vector<unsigned char>> message;
+
+			// receving messages. Each receiving message is an openfpm::vector<unsigned char>
+			// or an array if bytes
+			openfpm::vector<openfpm::vector<unsigned char>> recv_message(n_proc);
+
+			// each processor communicate based on a list of processor
 			openfpm::vector<size_t> prc;
 
+			// We construct the processor list in particular in this case
+			// each processor communicate with the 8 next (in id) processors
 			for (size_t i = 0 ; i < 8  && i < n_proc ; i++)
 			{
 				size_t p_id = (i + 1 + vcl.getProcessUnitID()) % n_proc;
+
+				// avoid to communicate with yourself
 				if (p_id != vcl.getProcessUnitID())
 				{
+					// Create an hello message
 					prc.add(p_id);
 					message.add();
 					std::ostringstream msg;
@@ -346,7 +372,9 @@ template<unsigned int ip> void test()
 				}
 			}
 
+			// For simplicity we create in advance a receiving buffer for all processors
 			recv_message.resize(n_proc);
+
 			// The pattern is not really random preallocate the receive buffer
 			for (size_t i = 0 ; i < 8  && i < n_proc ; i++)
 			{
@@ -360,12 +388,16 @@ template<unsigned int ip> void test()
 					recv_message.get(p_id).resize(j);
 			}
 
+			// Send and receive
+			vcl.sendrecvMultipleMessagesNBX(prc,message,msg_alloc,&recv_message);
+
+			//! [dsde]
+
 #ifdef VERBOSE_TEST
 			timer t;
 			t.start();
 #endif
 
-			commFunc<ip>(vcl,prc,message,msg_alloc,&recv_message);
 
 #ifdef VERBOSE_TEST
 			t.stop();

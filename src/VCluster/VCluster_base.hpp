@@ -1,10 +1,9 @@
-#ifndef VCLUSTER
-#define VCLUSTER
+#ifndef VCLUSTER_BASE_HPP_
+#define VCLUSTER_BASE_HPP_
 
 #include "config.h"
 #include <mpi.h>
 #include "MPI_wrapper/MPI_util.hpp"
-#include "VCluster_object.hpp"
 #include "Vector/map_vector.hpp"
 #include "MPI_wrapper/MPI_IallreduceW.hpp"
 #include "MPI_wrapper/MPI_IrecvW.hpp"
@@ -54,133 +53,6 @@ template<typename T> void assign(T * ptr1, T * ptr2)
 	*ptr1 = *ptr2;
 };
 
-//! Helper class to add data without serialization
-template<bool sr>
-struct op_ssend_recv_add_sr
-{
-	//! Add data
-	template<typename T, typename D, typename S, int ... prp> static void execute(D & recv,S & v2, size_t i)
-	{
-		// Merge the information
-		recv.template add_prp<typename T::value_type,PtrMemory,openfpm::grow_policy_identity,openfpm::vect_isel<typename T::value_type>::value,prp...>(v2);
-	}
-};
-
-//! Helper class to add data with serialization
-template<>
-struct op_ssend_recv_add_sr<true>
-{
-	//! Add data
-	template<typename T, typename D, typename S, int ... prp> static void execute(D & recv,S & v2, size_t i)
-	{
-		// Merge the information
-		recv.template add_prp<typename T::value_type,HeapMemory,openfpm::grow_policy_double,openfpm::vect_isel<typename T::value_type>::value, prp...>(v2);
-	}
-};
-
-//! Helper class to add data
-template<typename op>
-struct op_ssend_recv_add
-{
-	//! Add data
-	template<bool sr, typename T, typename D, typename S, int ... prp> static void execute(D & recv,S & v2, size_t i)
-	{
-		// Merge the information
-		op_ssend_recv_add_sr<sr>::template execute<T,D,S,prp...>(recv,v2,i);
-	}
-};
-
-//! Helper class to merge data without serialization
-template<bool sr,template<typename,typename> class op>
-struct op_ssend_recv_merge_impl
-{
-	//! Merge the
-	template<typename T, typename D, typename S, int ... prp> inline static void execute(D & recv,S & v2,size_t i,openfpm::vector<openfpm::vector<aggregate<size_t,size_t>>> & opart)
-	{
-		// Merge the information
-		recv.template merge_prp_v<op,typename T::value_type, PtrMemory, openfpm::grow_policy_identity, prp...>(v2,opart.get(i));
-	}
-};
-
-//! Helper class to merge data with serialization
-template<template<typename,typename> class op>
-struct op_ssend_recv_merge_impl<true,op>
-{
-	//! merge the data
-	template<typename T, typename D, typename S, int ... prp> inline static void execute(D & recv,S & v2,size_t i,openfpm::vector<openfpm::vector<aggregate<size_t,size_t>>> & opart)
-	{
-		// Merge the information
-		recv.template merge_prp_v<op,typename T::value_type, HeapMemory, openfpm::grow_policy_double, prp...>(v2,opart.get(i));
-	}
-};
-
-//! Helper class to merge data
-template<template<typename,typename> class op>
-struct op_ssend_recv_merge
-{
-	//! For each processor contain the list of the particles with which I must merge the information
-	openfpm::vector<openfpm::vector<aggregate<size_t,size_t>>> & opart;
-
-	//! constructor
-	op_ssend_recv_merge(openfpm::vector<openfpm::vector<aggregate<size_t,size_t>>> & opart)
-	:opart(opart)
-	{}
-
-	//! execute the merge
-	template<bool sr, typename T, typename D, typename S, int ... prp> void execute(D & recv,S & v2,size_t i)
-	{
-		op_ssend_recv_merge_impl<sr,op>::template execute<T,D,S,prp...>(recv,v2,i,opart);
-	}
-};
-
-//! Helper class to merge data without serialization
-template<bool sr>
-struct op_ssend_gg_recv_merge_impl
-{
-	//! Merge the
-	template<typename T, typename D, typename S, int ... prp> inline static void execute(D & recv,S & v2,size_t i,size_t & start)
-	{
-		// Merge the information
-		recv.template merge_prp_v<replace_,typename T::value_type, PtrMemory, openfpm::grow_policy_identity, prp...>(v2,start);
-
-		start += v2.size();
-	}
-};
-
-//! Helper class to merge data with serialization
-template<>
-struct op_ssend_gg_recv_merge_impl<true>
-{
-	//! merge the data
-	template<typename T, typename D, typename S, int ... prp> inline static void execute(D & recv,S & v2,size_t i,size_t & start)
-	{
-		// Merge the information
-		recv.template merge_prp_v<replace_,typename T::value_type, HeapMemory, openfpm::grow_policy_double, prp...>(v2,start);
-
-		// from
-		start += v2.size();
-	}
-};
-
-//! Helper class to merge data
-struct op_ssend_gg_recv_merge
-{
-	//! starting marker
-	size_t start;
-
-	//! constructor
-	op_ssend_gg_recv_merge(size_t start)
-	:start(start)
-	{}
-
-	//! execute the merge
-	template<bool sr, typename T, typename D, typename S, int ... prp> void execute(D & recv,S & v2,size_t i)
-	{
-		op_ssend_gg_recv_merge_impl<sr>::template execute<T,D,S,prp...>(recv,v2,i,start);
-	}
-};
-
-//////////////////////////////////////////////////
 
 //! temporal buffer for reductions
 union red
@@ -202,7 +74,6 @@ union red
 	//! double
 	double d;
 };
-
 
 /*! \brief This class virtualize the cluster of PC as a set of processes that communicate
  *
@@ -228,7 +99,7 @@ union red
  *
  */
 
-class Vcluster
+class Vcluster_base
 {
 	//! log file
 	Vcluster_log log;
@@ -293,9 +164,6 @@ class Vcluster
 	//! vector of the size of send buffers
 	openfpm::vector<size_t> sz_send;
 
-	//! Receive buffers
-	openfpm::vector<BHeapMemory> recv_buf;
-
 	//! barrier request
 	MPI_Request bar_req;
 
@@ -303,17 +171,22 @@ class Vcluster
 	MPI_Status bar_stat;
 
 	//! disable operator=
-	Vcluster & operator=(const Vcluster &)	{return *this;};
+	Vcluster_base & operator=(const Vcluster_base &)	{return *this;};
 
 	//! disable copy constructor
-	Vcluster(const Vcluster &)
+	Vcluster_base(const Vcluster_base &)
 	:NBX_cnt(0)
 	{};
+
+protected:
+
+	//! Receive buffers
+	openfpm::vector<BHeapMemory> recv_buf;
 
 public:
 
 	// Finalize the MPI program
-	~Vcluster()
+	~Vcluster_base()
 	{
 #ifdef SE_CLASS2
 		check_delete(this);
@@ -342,7 +215,7 @@ public:
 	 * \param argv pointer to arguments vector passed to the program
 	 *
 	 */
-	Vcluster(int *argc, char ***argv)
+	Vcluster_base(int *argc, char ***argv)
 	:NBX_cnt(0)
 	{
 #ifdef SE_CLASS2
@@ -1024,101 +897,10 @@ public:
 		req.clear();
 		stat.clear();
 	}
-
-
-	/////////////////////// Semantic communication ///////////////////////
-	#include "VCluster_semantic.ipp"
 };
 
-// Function to initialize the global VCluster //
 
-extern Vcluster * global_v_cluster_private;
 
-/*! \brief Initialize a global instance of Runtime Virtual Cluster Machine
- *
- * Initialize a global instance of Runtime Virtual Cluster Machine
- *
- */
-
-static inline void init_global_v_cluster_private(int *argc, char ***argv)
-{
-	if (global_v_cluster_private == NULL)
-		global_v_cluster_private = new Vcluster(argc,argv);
-}
-
-static inline void delete_global_v_cluster_private()
-{
-	delete global_v_cluster_private;
-}
-
-static inline Vcluster & create_vcluster()
-{
-#ifdef SE_CLASS1
-
-	if (global_v_cluster_private == NULL)
-		std::cerr << __FILE__ << ":" << __LINE__ << " Error you must call openfpm_init before using any distributed data structures";
-
-#endif
-
-	return *global_v_cluster_private;
-}
-
-/*! \brief Check if the library has been initialized
- *
- * \return true if the library has been initialized
- *
- */
-static inline bool is_openfpm_init()
-{
-	return ofp_initialized;
-}
-
-/*! \brief Initialize the library
- *
- * This function MUST be called before any other function
- *
- */
-static inline void openfpm_init(int *argc, char ***argv)
-{
-#ifdef HAVE_PETSC
-
-	PetscInitialize(argc,argv,NULL,NULL);
-
-#endif
-
-	init_global_v_cluster_private(argc,argv);
-
-#ifdef SE_CLASS1
-
-	std::cout << "OpenFPM is compiled with debug mode LEVEL:1. Remember to remove SE_CLASS1 when you go in production" << std::endl;
-
-#endif
-
-#ifdef SE_CLASS2
-
-	std::cout << "OpenFPM is compiled with debug mode LEVEL:2. Remember to remove SE_CLASS2 when you go in production" << std::endl;
-
-#endif
-
-	ofp_initialized = true;
-}
-
-/*! \brief Finalize the library
- *
- * This function MUST be called at the end of the program
- *
- */
-static inline void openfpm_finalize()
-{
-#ifdef HAVE_PETSC
-
-	PetscFinalize();
-
-#endif
-
-	delete_global_v_cluster_private();
-	ofp_initialized = false;
-}
 
 #endif
 

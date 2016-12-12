@@ -650,28 +650,53 @@ BOOST_AUTO_TEST_CASE (Vcluster_semantic_sendrecv)
 		sz_recv2.clear();
 		sz_recv3.clear();
 
+		//! [dsde with complex objects1]
+
+		// A vector of vector we want to send each internal vector to one specified processor
 		openfpm::vector<openfpm::vector<size_t>> v1;
+
+		// We use this empty vector to receive data
 		openfpm::vector<size_t> v2;
+
+		// We use this empty vector to receive data
 		openfpm::vector<openfpm::vector<size_t>> v3;
 
+		// in this case each processor will send a message of different size to all the other processor
+		// but can also be a subset of processors
 		v1.resize(vcl.getProcessingUnits());
+
+		// We fill the send buffer with some sense-less data
+		for(size_t i = 0 ; i < v1.size() ; i++)
+		{
+			// each vector is filled with a different message size
+			for (size_t j = 0 ; j < i % SSCATTER_MAX ; j++)
+				v1.get(i).add(j);
+
+			// generate the sending list (in this case the sendinf list is all the other processor)
+			// but in general can be some of them and totally random
+			prc_send.add((i + vcl.getProcessUnitID()) % vcl.getProcessingUnits());
+		}
+
+		// Send and receive from the other processor v2 container the received data
+		// Because in this case v2 is an openfpm::vector<size_t>, all the received
+		// vector are concatenated one over the other. For example if the processor receive 3 openfpm::vector<size_t>
+		// each having 3,4,5 elements. v2 will be a vector of 12 elements
+		vcl.SSendRecv(v1,v2,prc_send,prc_recv2,sz_recv2);
+
+		// Send and receive from the other processors v2 contain the received data
+		// Because in this case v2 is an openfpm::vector<openfpm::vector<size_t>>, all the vector from
+		// each processor will be collected. For example if the processor receive 3 openfpm::vector<size_t>
+		// each having 3,4,5 elements. v2 will be a vector of vector of 3 elements (openfpm::vector) and
+		// each element will be respectivly 3,4,5 elements
+		vcl.SSendRecv(v1,v3,prc_send,prc_recv3,sz_recv3);
+
+		//! [dsde with complex objects1]
 
 		size_t nc = vcl.getProcessingUnits() / SSCATTER_MAX;
 		size_t nr = vcl.getProcessingUnits() - nc * SSCATTER_MAX;
 		nr = ((nr-1) * nr) / 2;
 
 		size_t n_ele = nc * SSCATTER_MAX * (SSCATTER_MAX - 1) / 2 + nr;
-
-		for(size_t i = 0 ; i < v1.size() ; i++)
-		{
-			for (size_t j = 0 ; j < i % SSCATTER_MAX ; j++)
-				v1.get(i).add(j);
-
-			prc_send.add((i + vcl.getProcessUnitID()) % vcl.getProcessingUnits());
-		}
-
-		vcl.SSendRecv(v1,v2,prc_send,prc_recv2,sz_recv2);
-		vcl.SSendRecv(v1,v3,prc_send,prc_recv3,sz_recv3);
 
 		BOOST_REQUIRE_EQUAL(v2.size(),n_ele);
 		size_t nc_check = (vcl.getProcessingUnits()-1) / SSCATTER_MAX;
@@ -735,8 +760,8 @@ BOOST_AUTO_TEST_CASE (Vcluster_semantic_sendrecv)
 			prc_send.add((i + vcl.getProcessUnitID()) % vcl.getProcessingUnits());
 		}
 
-		vcl.SSendRecv(v1,v2,prc_send,prc_recv2,sz_recv2,RECEIVE_KNOWN);
-		vcl.SSendRecv(v1,v3,prc_send,prc_recv3,sz_recv3,RECEIVE_KNOWN);
+		vcl.SSendRecv(v1,v2,prc_send,prc_recv2,sz_recv2,RECEIVE_KNOWN | KNOWN_ELEMENT_OR_BYTE);
+		vcl.SSendRecv(v1,v3,prc_send,prc_recv3,sz_recv3);
 
 		BOOST_REQUIRE_EQUAL(v2.size(),n_ele);
 		size_t nc_check = (vcl.getProcessingUnits()-1) / SSCATTER_MAX;

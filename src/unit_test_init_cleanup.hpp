@@ -8,7 +8,7 @@
 #ifndef UNIT_TEST_INIT_CLEANUP_HPP_
 #define UNIT_TEST_INIT_CLEANUP_HPP_
 
-#include "VCluster.hpp"
+#include "VCluster/VCluster.hpp"
 
 struct ut_start {
     ut_start()   {
