@@ -897,6 +897,15 @@ public:
 		req.clear();
 		stat.clear();
 	}
+
+	/*! \brief Release the buffer used for communication
+	 *
+	 *
+	 */
+	void clear()
+	{
+		recv_buf.clear();
+	}
 };
 
 
