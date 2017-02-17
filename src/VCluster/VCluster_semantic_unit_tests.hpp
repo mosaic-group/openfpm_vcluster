@@ -39,6 +39,8 @@ BOOST_AUTO_TEST_CASE (Vcluster_semantic_gather)
 		if (vcl.getProcessingUnits() >= 32)
 			return;
 
+		//! [Gather the data on master]
+
 		openfpm::vector<size_t> v1;
 		v1.resize(vcl.getProcessUnitID());
 
@@ -48,6 +50,8 @@ BOOST_AUTO_TEST_CASE (Vcluster_semantic_gather)
 		openfpm::vector<size_t> v2;
 
 		vcl.SGather(v1,v2,(i%vcl.getProcessingUnits()));
+
+		//! [Gather the data on master]
 
 		if (vcl.getProcessUnitID() == (i%vcl.getProcessingUnits()))
 		{
@@ -72,6 +76,8 @@ BOOST_AUTO_TEST_CASE (Vcluster_semantic_gather_2)
 		if (vcl.getProcessingUnits() >= 32)
 			return;
 
+		//! [Gather the data on master complex]
+
 		openfpm::vector<size_t> v1;
 		v1.resize(vcl.getProcessUnitID());
 
@@ -81,6 +87,8 @@ BOOST_AUTO_TEST_CASE (Vcluster_semantic_gather_2)
 		openfpm::vector<openfpm::vector<size_t>> v2;
 
 		vcl.SGather(v1,v2,0);
+
+		//! [Gather the data on master complex]
 
 		if (vcl.getProcessUnitID() == 0)
 		{
@@ -550,6 +558,8 @@ BOOST_AUTO_TEST_CASE (Vcluster_semantic_scatter)
 		for(size_t i = 0 ; i < n_elements ; i++)
 			v1.get(i) = 5;
 
+		//! [Scatter the data from master]
+
 		openfpm::vector<size_t> v2;
 
 		openfpm::vector<size_t> prc;
@@ -563,6 +573,8 @@ BOOST_AUTO_TEST_CASE (Vcluster_semantic_scatter)
 		}
 
 		vcl.SScatter(v1,v2,prc,sz,(i%vcl.getProcessingUnits()));
+
+		//! [Scatter the data from master]
 
 		BOOST_REQUIRE_EQUAL(v2.size(),vcl.getProcessUnitID() % SSCATTER_MAX);
 

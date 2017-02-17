@@ -2,7 +2,7 @@
 LINKLIBS = $(DEFAULT_LIB) $(PTHREAD_LIBS) $(OPT_LIBS) $(HDF5_LDFLAGS) $(HDF5_LIBS) $(BOOST_LDFLAGS)
 
 noinst_PROGRAMS = vcluster_test
-vcluster_test_SOURCES = main.cpp VCluster/VCluster.cpp ../../openfpm_devices/src/memory/HeapMemory.cpp ../../openfpm_devices/src/memory/PtrMemory.cpp
+vcluster_test_SOURCES = main.cpp VCluster/VCluster.cpp ../../openfpm_devices/src/memory/HeapMemory.cpp ../../openfpm_devices/src/memory/PtrMemory.cpp ../../openfpm_devices/src/Memleak_check.cpp
 vcluster_test_CXXFLAGS = $(AM_CXXFLAGS) $(INCLUDES_PATH)  $(BOOST_CPPFLAGS)
 vcluster_test_CFLAGS = $(CUDA_CFLAGS)
 vcluster_test_LDADD = $(LINKLIBS)

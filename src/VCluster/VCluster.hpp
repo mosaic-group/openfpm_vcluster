@@ -8,9 +8,11 @@
 #ifndef VCLUSTER_HPP
 #define VCLUSTER_HPP
 
+#include <signal.h>
 #include "VCluster_base.hpp"
 #include "VCluster_meta_function.hpp"
 
+void bt_sighandler(int sig, siginfo_t * info, void * ctx);
 
 /*! \brief Implementation of VCluster class
  *
@@ -47,7 +49,7 @@ class Vcluster: public Vcluster_base
 		}
 	};
 
-	/*! \brief Prepare the send buffer and send the message to other processots
+	/*! \brief Prepare the send buffer and send the message to other processors
 	 *
 	 * \tparam op Operation to execute in merging the receiving data
 	 * \tparam T sending object
@@ -57,16 +59,20 @@ class Vcluster: public Vcluster_base
 	 * of the operation is defined by op
 	 *
 	 * \param send sending buffer
-	 * \param recv receiving buffer
+	 * \param recv receiving object
 	 * \param prc_send each object T in the vector send is sent to one processor specified in this list.
 	 *                 This mean that prc_send.size() == send.size()
-	 * \param recv Receiving object
 	 * \param prc_recv list of processor from where we receive (output), in case of RECEIVE_KNOWN muts be filled
-	 * \param recv_sz size of each receiving message (output), in case of RECEICE_KNOWN must be filled
+	 * \param sz_recv size of each receiving message (output), in case of RECEICE_KNOWN must be filled
 	 * \param opt Options using RECEIVE_KNOWN enable patters with less latencies, in case of RECEIVE_KNOWN
 	 *
 	 */
-	template<typename op, typename T, typename S> void prepare_send_buffer(openfpm::vector<T> & send, S & recv, openfpm::vector<size_t> & prc_send, openfpm::vector<size_t> & prc_recv, openfpm::vector<size_t> & sz_recv, size_t opt)
+	template<typename op, typename T, typename S> void prepare_send_buffer(openfpm::vector<T> & send,
+			                                                               S & recv,
+																		   openfpm::vector<size_t> & prc_send,
+																		   openfpm::vector<size_t> & prc_recv,
+																		   openfpm::vector<size_t> & sz_recv,
+																		   size_t opt)
 	{
 		openfpm::vector<size_t> sz_recv_byte(sz_recv.size());
 
@@ -248,14 +254,22 @@ class Vcluster: public Vcluster_base
 	
 	/*! \brief Process the receive buffer
 	 *
+	 * \tparam op operation to do in merging the received data
 	 * \tparam T type of sending object
 	 * \tparam S type of receiving object
 	 * \tparam prp properties to receive
 	 *
 	 * \param recv receive object
+	 * \param sz vector that store how many element has been added per processors on S
+	 * \param sz_byte byte received on a per processor base
+	 * \param op_param operation to do in merging the received information with recv
 	 *
 	 */
-	template<typename op, typename T, typename S, unsigned int ... prp > void process_receive_buffer_with_prp(S & recv, openfpm::vector<size_t> * sz, openfpm::vector<size_t> * sz_byte, op & op_param)
+	template<typename op, typename T, typename S, unsigned int ... prp >
+	void process_receive_buffer_with_prp(S & recv,
+			                             openfpm::vector<size_t> * sz,
+										 openfpm::vector<size_t> * sz_byte,
+										 op & op_param)
 	{
 		if (sz != NULL)
 			sz->resize(recv_buf.size());
@@ -296,8 +310,8 @@ class Vcluster: public Vcluster_base
 	 * \tparam T type of sending object
 	 * \tparam S type of receiving object
 	 *
-	 * \param Object to send
-	 * \param Object to receive
+	 * \param send Object to send
+	 * \param recv Object to receive
 	 * \param root witch node should collect the information
 	 *
 	 * \return true if the function completed succefully
@@ -311,6 +325,7 @@ class Vcluster: public Vcluster_base
 		return SGather(send,recv,prc,sz,root);
 	}
 
+	//! metafunction
 	template<size_t index, size_t N> struct MetaFuncOrd {
 	   enum { value = index };
 	};
@@ -335,8 +350,8 @@ class Vcluster: public Vcluster_base
 	 * \tparam T type of sending object
 	 * \tparam S type of receiving object
 	 *
-	 * \param Object to send
-	 * \param Object to receive
+	 * \param send Object to send
+	 * \param recv Object to receive
 	 * \param root witch node should collect the information
 	 * \param prc processors from witch we received the information
 	 * \param sz size of the received information for each processor
@@ -344,7 +359,11 @@ class Vcluster: public Vcluster_base
 	 * \return true if the function completed succefully
 	 *
 	 */
-	template<typename T, typename S> bool SGather(T & send, S & recv, openfpm::vector<size_t> & prc, openfpm::vector<size_t> & sz,size_t root)
+	template<typename T, typename S> bool SGather(T & send,
+			                                      S & recv,
+												  openfpm::vector<size_t> & prc,
+												  openfpm::vector<size_t> & sz,
+												  size_t root)
 	{
 		// Reset the receive buffer
 		reset_recv_buf();
@@ -438,8 +457,8 @@ class Vcluster: public Vcluster_base
 	 * \tparam T type of sending object
 	 * \tparam S type of receiving object
 	 *
-	 * \param Object to send
-	 * \param Object to receive
+	 * \param send Object to send
+	 * \param recv Object to receive
 	 * \param prc processor involved in the scatter
 	 * \param sz size of each chunks
 	 * \param root which processor should scatter the information
@@ -511,6 +530,7 @@ class Vcluster: public Vcluster_base
 	/*! \brief reorder the receiving buffer
 	 *
 	 * \param prc list of the receiving processors
+	 * \param sz_recv list of size of the receiving messages (in byte)
 	 *
 	 */
 	void reorder_buffer(openfpm::vector<size_t> & prc, openfpm::vector<size_t> & sz_recv)
@@ -586,21 +606,27 @@ class Vcluster: public Vcluster_base
 	 * In order to work S must implement the interface S.add(T).
 	 *
 	 * ### Example scatter a vector of structures, to other processors
-	 * \snippet VCluster_semantic_unit_tests.hpp Scatter the data from master
+	 * \snippet VCluster_semantic_unit_tests.hpp dsde with complex objects1
 	 *
 	 * \tparam T type of sending object
 	 * \tparam S type of receiving object
 	 *
-	 * \param Object to send
-	 * \param Object to receive
-	 * \param prc processor involved in the scatter
-	 * \param sz size of each chunks
-	 * \param root which processor should scatter the information
+	 * \param send Object to send
+	 * \param recv Object to receive
+	 * \param prc_send destination processors
+	 * \param prc_recv list of the receiving processors
+	 * \param sz_recv number of elements added
+	 * \param opt options
 	 *
 	 * \return true if the function completed succefully
 	 *
 	 */
-	template<typename T, typename S> bool SSendRecv(openfpm::vector<T> & send, S & recv, openfpm::vector<size_t> & prc_send, openfpm::vector<size_t> & prc_recv, openfpm::vector<size_t> & sz_recv, size_t opt = NONE)
+	template<typename T, typename S> bool SSendRecv(openfpm::vector<T> & send,
+			                                        S & recv,
+													openfpm::vector<size_t> & prc_send,
+													openfpm::vector<size_t> & prc_recv,
+													openfpm::vector<size_t> & sz_recv,
+													size_t opt = NONE)
 	{
 		prepare_send_buffer<op_ssend_recv_add<void>,T,S>(send,recv,prc_send,prc_recv,sz_recv,opt);
 
@@ -633,16 +659,22 @@ class Vcluster: public Vcluster_base
 	 * \tparam S type of receiving object
 	 * \tparam prp properties for merging
 	 *
-	 * \param Object to send
-	 * \param Object to receive
-	 * \param prc processor involved in the scatter
-	 * \param sz size of each chunks
-	 * \param root which processor should scatter the information
+	 * \param send Object to send
+	 * \param recv Object to receive
+	 * \param prc_send destination processors
+	 * \param prc_recv processors from which we received
+	 * \param sz_recv number of elements added per processor
+	 * \param sz_recv_byte message received from each processor in byte
 	 *
-	 * \return true if the function completed succefully
+	 * \return true if the function completed successful
 	 *
 	 */
-	template<typename T, typename S, int ... prp> bool SSendRecvP(openfpm::vector<T> & send, S & recv, openfpm::vector<size_t> & prc_send, openfpm::vector<size_t> & prc_recv, openfpm::vector<size_t> & sz_recv, openfpm::vector<size_t> & sz_recv_byte)
+	template<typename T, typename S, int ... prp> bool SSendRecvP(openfpm::vector<T> & send,
+			                                                      S & recv,
+																  openfpm::vector<size_t> & prc_send,
+																  openfpm::vector<size_t> & prc_recv,
+																  openfpm::vector<size_t> & sz_recv,
+																  openfpm::vector<size_t> & sz_recv_byte)
 	{
 		prepare_send_buffer<op_ssend_recv_add<void>,T,S>(send,recv,prc_send,prc_recv,sz_recv,NONE);
 
@@ -674,16 +706,20 @@ class Vcluster: public Vcluster_base
 	 * \tparam S type of receiving object
 	 * \tparam prp properties for merging
 	 *
-	 * \param Object to send
-	 * \param Object to receive
-	 * \param prc processor involved in the scatter
-	 * \param sz size of each chunks
-	 * \param root which processor should scatter the information
+	 * \param send Object to send
+	 * \param recv Object to receive
+	 * \param prc_send destination processors
+	 * \param prc_recv list of the processors from which we receive
+	 * \param sz_recv number of elements added per processors
 	 *
 	 * \return true if the function completed succefully
 	 *
 	 */
-	template<typename T, typename S, int ... prp> bool SSendRecvP(openfpm::vector<T> & send, S & recv, openfpm::vector<size_t> & prc_send, openfpm::vector<size_t> & prc_recv, openfpm::vector<size_t> & sz_recv)
+	template<typename T, typename S, int ... prp> bool SSendRecvP(openfpm::vector<T> & send,
+			                                                      S & recv,
+																  openfpm::vector<size_t> & prc_send,
+																  openfpm::vector<size_t> & prc_recv,
+																  openfpm::vector<size_t> & sz_recv)
 	{
 		prepare_send_buffer<op_ssend_recv_add<void>,T,S>(send,recv,prc_send,prc_recv,sz_recv,NONE);
 
@@ -715,11 +751,11 @@ class Vcluster: public Vcluster_base
 	 * \tparam S type of receiving object
 	 * \tparam prp properties for merging
 	 *
-	 * \param Object to send
-	 * \param Object to receive
-	 * \param prc processor involved in the send and receive
-	 * \param op_param operation object
-	 * \param sz_recv size of each receiving buffer. This parameters are output
+	 * \param send Object to send
+	 * \param recv Object to receive
+	 * \param prc_send destination processors
+	 * \param op_param operation object (operation to do im merging the information)
+	 * \param recv_sz size of each receiving buffer. This parameters are output
 	 *        with RECEIVE_KNOWN you must feed this parameter
 	 * \param prc_recv from which processor we receive messages
 	 *        with RECEIVE_KNOWN you must feed this parameter
@@ -729,10 +765,16 @@ class Vcluster: public Vcluster_base
 	 *        but must be input.
 	 *
 	 *
-	 * \return true if the function completed succeful
+	 * \return true if the function completed successful
 	 *
 	 */
-	template<typename op, typename T, typename S, int ... prp> bool SSendRecvP_op(openfpm::vector<T> & send, S & recv, openfpm::vector<size_t> & prc_send,op & op_param, openfpm::vector<size_t> & prc_recv, openfpm::vector<size_t> & recv_sz, size_t opt = NONE)
+	template<typename op, typename T, typename S, int ... prp> bool SSendRecvP_op(openfpm::vector<T> & send,
+			                                                                      S & recv,
+																				  openfpm::vector<size_t> & prc_send,
+																				  op & op_param,
+																				  openfpm::vector<size_t> & prc_recv,
+																				  openfpm::vector<size_t> & recv_sz,
+																				  size_t opt = NONE)
 	{
 		prepare_send_buffer<op,T,S>(send,recv,prc_send,prc_recv,recv_sz,opt);
 
@@ -807,19 +849,33 @@ static inline void openfpm_init(int *argc, char ***argv)
 	init_global_v_cluster_private(argc,argv);
 
 #ifdef SE_CLASS1
-
 	std::cout << "OpenFPM is compiled with debug mode LEVEL:1. Remember to remove SE_CLASS1 when you go in production" << std::endl;
-
 #endif
 
 #ifdef SE_CLASS2
-
 	std::cout << "OpenFPM is compiled with debug mode LEVEL:2. Remember to remove SE_CLASS2 when you go in production" << std::endl;
-
 #endif
+
+#ifdef SE_CLASS3
+	std::cout << "OpenFPM is compiled with debug mode LEVEL:3. Remember to remove SE_CLASS3 when you go in production" << std::endl;
+#endif
+
+	// install segmentation fault signal handler
+
+	struct sigaction sa;
+
+	sa.sa_sigaction = bt_sighandler;
+	sigemptyset(&sa.sa_mask);
+	sa.sa_flags = SA_RESTART;
+
+	sigaction(SIGSEGV, &sa, NULL);
+
+	if (*argc != 0)
+		program_name = std::string(*argv[0]);
 
 	ofp_initialized = true;
 }
+
 
 /*! \brief Finalize the library
  *
