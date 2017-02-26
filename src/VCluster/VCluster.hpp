@@ -12,7 +12,10 @@
 #include "VCluster_base.hpp"
 #include "VCluster_meta_function.hpp"
 
+
+#ifndef HAVE_CYGWIN
 void bt_sighandler(int sig, siginfo_t * info, void * ctx);
+#endif
 
 /*! \brief Implementation of VCluster class
  *
@@ -860,7 +863,8 @@ static inline void openfpm_init(int *argc, char ***argv)
 	std::cout << "OpenFPM is compiled with debug mode LEVEL:3. Remember to remove SE_CLASS3 when you go in production" << std::endl;
 #endif
 
-	// install segmentation fault signal handler
+	// install segmentation fault signal handler (CYGWIN does not support it)
+#ifndef HAVE_CYGWIN
 
 	struct sigaction sa;
 
@@ -869,6 +873,8 @@ static inline void openfpm_init(int *argc, char ***argv)
 	sa.sa_flags = SA_RESTART;
 
 	sigaction(SIGSEGV, &sa, NULL);
+
+#endif
 
 	if (*argc != 0)
 		program_name = std::string(*argv[0]);
