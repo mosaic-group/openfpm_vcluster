@@ -1,5 +1,9 @@
 #include "VCluster.hpp"
+
+// CYGWIN does not support execinfo
+#ifndef HAVE_CYGWIN
 #include <execinfo.h>
+#endif
 
 Vcluster * global_v_cluster_private = NULL;
 
@@ -11,6 +15,9 @@ size_t tot_sent = 0;
 size_t tot_recv = 0;
 
 std::string program_name;
+
+// CYGWIN does not support signal 
+#ifndef HAVE_CYGWIN
 
 // Segmentation fault signal handler
 void bt_sighandler(int sig, siginfo_t * info, void * ctx_p)
@@ -37,3 +44,6 @@ void bt_sighandler(int sig, siginfo_t * info, void * ctx_p)
 
 	exit(0);
 }
+
+#endif
+
