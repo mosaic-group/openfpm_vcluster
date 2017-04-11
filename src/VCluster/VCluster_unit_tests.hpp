@@ -152,9 +152,33 @@ BOOST_AUTO_TEST_CASE(VCluster_allgather)
 	test_single_all_gather_primitives<double>(vcl);
 }
 
+struct brt_test
+{
+	double a;
+	double b;
+};
+
+BOOST_AUTO_TEST_CASE(VCluster_bcast_test)
+{
+	Vcluster & vcl = create_vcluster();
+
+	std::cout << "Broadcast test" << std::endl;
+
+	test_single_all_broadcast_primitives<unsigned char>(vcl);
+	test_single_all_broadcast_primitives<char>(vcl);
+	test_single_all_broadcast_primitives<short>(vcl);
+	test_single_all_broadcast_primitives<unsigned short>(vcl);
+	test_single_all_broadcast_primitives<int>(vcl);
+	test_single_all_broadcast_primitives<unsigned int>(vcl);
+	test_single_all_broadcast_primitives<long int>(vcl);
+	test_single_all_broadcast_primitives<unsigned long int>(vcl);
+	test_single_all_broadcast_primitives<float>(vcl);
+	test_single_all_broadcast_primitives<double>(vcl);
+}
+
 BOOST_AUTO_TEST_CASE( VCluster_use_sendrecv)
 {
-	std::cout << "VCluster unit test start" << "\n";
+	std::cout << "VCluster unit test start sendrecv" << "\n";
 
 	totp_check = false;
 	test<NBX>();
@@ -162,16 +186,16 @@ BOOST_AUTO_TEST_CASE( VCluster_use_sendrecv)
 	totp_check = false;
 	test_no_send_some_peer<NBX>();
 
-	std::cout << "VCluster unit test stop" << "\n";
+	std::cout << "VCluster unit test stop sendrecv" << "\n";
 }
 
 BOOST_AUTO_TEST_CASE( VCluster_use_sendrecv_known)
 {
-	std::cout << "VCluster unit test start" << "\n";
+	std::cout << "VCluster unit test start known" << "\n";
 
 	test_known<NBX>();
 
-	std::cout << "VCluster unit test stop" << "\n";
+	std::cout << "VCluster unit test stop known" << "\n";
 }
 
 

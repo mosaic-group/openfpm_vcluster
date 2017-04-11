@@ -814,4 +814,35 @@ template<typename T>  void test_single_all_gather_primitives(Vcluster & vcl)
 
 }
 
+template<typename T>  void test_single_all_broadcast_primitives(Vcluster & vcl)
+{
+	//! [bcast numbers]
+
+	openfpm::vector<T> bdata;
+
+	if (vcl.getProcessUnitID() == 0)
+	{
+		bdata.add(0);
+		bdata.add(1);
+		bdata.add(2);
+		bdata.add(3);
+		bdata.add(4);
+		bdata.add(5);
+		bdata.add(6);
+	}
+	else
+	{
+		bdata.resize(7);
+	}
+
+	vcl.Bcast(bdata,0);
+	vcl.execute();
+
+	for (size_t i = 0 ; i < bdata.size() ; i++)
+		BOOST_REQUIRE_EQUAL(i,(size_t)bdata.get(i));
+
+	//! [bcast numbers]
+
+}
+
 #endif /* VCLUSTER_UNIT_TEST_UTIL_HPP_ */

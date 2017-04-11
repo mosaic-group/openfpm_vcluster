@@ -371,9 +371,6 @@ class Vcluster: public Vcluster_base
 		// If we are on master collect the information
 		if (getProcessUnitID() == root)
 		{
-	#ifdef DEBUG
-			std::cout << "Inside root " << root << std::endl;
-	#endif
 			// send buffer (master does not send anything) so send req and send_buf
 			// remain buffer with size 0
 			openfpm::vector<size_t> send_req;
@@ -398,9 +395,6 @@ class Vcluster: public Vcluster_base
 		}
 		else
 		{
-	#ifdef DEBUG
-			std::cout << "Inside slave " << getProcessUnitID() << std::endl;
-	#endif
 			// send buffer (master does not send anything) so send req and send_buf
 			// remain buffer with size 0
 			openfpm::vector<size_t> send_prc;

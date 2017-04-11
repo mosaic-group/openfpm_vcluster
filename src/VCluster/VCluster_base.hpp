@@ -9,6 +9,7 @@
 #include "MPI_wrapper/MPI_IrecvW.hpp"
 #include "MPI_wrapper/MPI_IsendW.hpp"
 #include "MPI_wrapper/MPI_IAllGather.hpp"
+#include "MPI_wrapper/MPI_IBcastW.hpp"
 #include <exception>
 #include "Vector/map_vector.hpp"
 #ifdef DEBUG
@@ -260,7 +261,7 @@ public:
 		bar_stat = MPI_Status();
 	}
 
-#ifdef DEBUG
+#ifdef SE_CLASS1
 
 	/*! \brief Check for wrong types
 	 *
@@ -343,7 +344,7 @@ public:
 
 	template<typename T> void sum(T & num)
 	{
-#ifdef DEBUG
+#ifdef SE_CLASS1
 		checkType<T>();
 #endif
 
@@ -363,7 +364,7 @@ public:
 	 */
 	template<typename T> void max(T & num)
 	{
-#ifdef DEBUG
+#ifdef SE_CLASS1
 		checkType<T>();
 #endif
 		// reduce over MPI
@@ -383,7 +384,7 @@ public:
 
 	template<typename T> void min(T & num)
 	{
-#ifdef DEBUG
+#ifdef SE_CLASS1
 		checkType<T>();
 #endif
 		// reduce over MPI
@@ -556,7 +557,7 @@ public:
 	 */
 	template<typename T> void sendrecvMultipleMessagesNBX(openfpm::vector< size_t > & prc, openfpm::vector< T > & data, void * (* msg_alloc)(size_t,size_t,size_t,size_t,size_t,void *), void * ptr_arg, long int opt=NONE)
 	{
-#ifdef DEBUG
+#ifdef SE_CLASS1
 		checkType<typename T::value_type>();
 #endif
 		// resize the pointer list
@@ -617,7 +618,7 @@ public:
 	void sendrecvMultipleMessagesNBX(size_t n_send , size_t sz[], size_t prc[] , void * ptr[], void * (* msg_alloc)(size_t,size_t,size_t,size_t,size_t,void *), void * ptr_arg, long int opt = NONE)
 	{
 		if (stat.size() != 0 || req.size() != 0)
-			std::cerr << "Error: " << __FILE__ << ":" << __LINE__ << " this function must be called when no other requests are in progress. Please remember that id you use function like max(),sum(),send(),recv() check that you did not miss to call the function execute() \n";
+			std::cerr << "Error: " << __FILE__ << ":" << __LINE__ << " this function must be called when no other requests are in progress. Please remember that if you use function like max(),sum(),send(),recv() check that you did not miss to call the function execute() \n";
 
 
 		stat.clear();
@@ -770,7 +771,7 @@ public:
 	 */
 	template<typename T, typename Mem, typename gr> bool send(size_t proc, size_t tag, openfpm::vector<T,Mem,gr> & v)
 	{
-#ifdef DEBUG
+#ifdef SE_CLASS1
 		checkType<T>();
 #endif
 
@@ -835,7 +836,7 @@ public:
      */
     template<typename T, typename Mem, typename gr> bool recv(size_t proc, size_t tag, openfpm::vector<T,Mem,gr> & v)
     {
-#ifdef DEBUG
+#ifdef SE_CLASS1
             checkType<T>();
 #endif
 
@@ -864,7 +865,7 @@ public:
 	 */
 	template<typename T, typename Mem, typename gr> bool allGather(T & send, openfpm::vector<T,Mem,gr> & v)
 	{
-#ifdef DEBUG
+#ifdef SE_CLASS1
 		checkType<T>();
 #endif
 
@@ -876,6 +877,37 @@ public:
 
 		// gather
 		MPI_IAllGatherW<T>::gather(&send,1,v.getPointer(),1,req.last());
+
+		return true;
+	}
+
+	/*! \brief Broadcast the data to all processors
+	 *
+	 * broadcast a vector of primitives.
+	 *
+	 * \warning operation is asynchronous execute must be called to ensure the operation is executed
+	 *
+	 * \warning the non-root processor must resize the vector to the exact receive size. This mean the
+	 *          each processor must known a priory the receiving size
+	 *
+	 * \param v vector to send in the case of the root processor and vector where to receive in the case of
+	 *          non-root
+	 * \param root processor (who broadcast)
+	 *
+	 * \return true if succeed false otherwise
+	 *
+	 */
+	template<typename T, typename Mem, typename gr> bool Bcast(openfpm::vector<T,Mem,gr> & v, size_t root)
+	{
+#ifdef SE_CLASS1
+		checkType<T>();
+#endif
+
+		// Create one request
+		req.add();
+
+		// gather
+		MPI_IBcastW<T>::bcast(root,v,req.last());
 
 		return true;
 	}
