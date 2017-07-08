@@ -143,9 +143,9 @@ class Vcluster_base
 	// Single objects
 
 	//! number of processes
-	int size;
+	int m_size;
 	//! actual rank
-	int rank;
+	int m_rank;
 
 	//! number of processing unit per process
 	int numPE = 1;
@@ -238,15 +238,15 @@ public:
 		// Get the total number of process
 		// and the rank of this process
 
-		MPI_Comm_size(MPI_COMM_WORLD, &size);
-		MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+		MPI_Comm_size(MPI_COMM_WORLD, &m_size);
+		MPI_Comm_rank(MPI_COMM_WORLD, &m_rank);
 
 #ifdef SE_CLASS2
 			process_v_cl = rank;
 #endif
 
 		// create and fill map scatter with one
-		map_scatter.resize(size);
+		map_scatter.resize(m_size);
 
 		for (size_t i = 0 ; i < map_scatter.size() ; i++)
 		{
@@ -254,7 +254,7 @@ public:
 		}
 
 		// open the log file
-		log.openLog(rank);
+		log.openLog(m_rank);
 
 		// Initialize bar_req
 		bar_req = MPI_Request();
@@ -324,17 +324,54 @@ public:
 		return MPI_COMM_WORLD;
 	}
 
-	//! Get the total number of processing units
+	/*! \brief Get the total number of processors
+	 *
+	 * \return the total number of processors
+	 *
+	 */
 	size_t getProcessingUnits()
 	{
-		return size*numPE;
+		return m_size*numPE;
 	}
 
-	//! Get the process unit id
+	/*! \brief Get the total number of processors
+	 *
+	 * It is the same as getProcessingUnits()
+	 *
+	 * \see getProcessingUnits()
+	 *
+	 * \return the total number of processors
+	 *
+	 */
+	size_t size()
+	{
+		return this->m_size*numPE;
+	}
+
+	/*! \brief Get the process unit id
+	 *
+	 * \return the process ID
+	 *
+	 */
 	size_t getProcessUnitID()
 	{
-		return rank;
+		return m_rank;
 	}
+
+	/*! \brief Get the process unit id
+	 *
+	 * It is the same as getProcessUnitID()
+	 *
+	 * \see getProcessUnitID()
+	 *
+	 * \return the process ID
+	 *
+	 */
+	size_t rank()
+	{
+		return m_rank;
+	}
+
 
 	/*! \brief Sum the numbers across all processors and get the result
 	 *
@@ -410,15 +447,16 @@ public:
 	 * * 1 message of size 48 byte to processor 7
 	 * * 1 message of size 70 byte to processor 8
 	 *
-	 * \param n_send number of send for this processor [4]
 	 *
 	 * \param prc list of processor with which it should communicate
 	 *        [1,1,6,7,8]
 	 *
-	 * \param sz the array contain the size of the message for each processor
-	 *        (zeros must not be presents) [100,100,50,48,70]
+	 * \param data data to send for each processors in contain a pointer to some type T
+	 *        this type T must have a method size() that return the size of the data-structure
 	 *
-	 * \param ptr array that contain the pointers to the message to send
+	 * \param prc_recv processor that receive data
+	 *
+	 * \param recv_sz for each processor indicate the size of the data received
 	 *
 	 * \param msg_alloc This is a call-back with the purpose of allocate space
 	 *        for the incoming message and give back a valid pointer, supposing that this call-back has been triggered by
@@ -438,7 +476,13 @@ public:
 	 * \param opt options, NONE (ignored in this moment)
 	 *
 	 */
-	template<typename T> void sendrecvMultipleMessagesNBX(openfpm::vector< size_t > & prc, openfpm::vector< T > & data, openfpm::vector< size_t > prc_recv, openfpm::vector< size_t > & recv_sz ,void * (* msg_alloc)(size_t,size_t,size_t,size_t,size_t,void *), void * ptr_arg, long int opt=NONE)
+	template<typename T> void sendrecvMultipleMessagesNBX(openfpm::vector< size_t > & prc,
+			                                              openfpm::vector< T > & data,
+														  openfpm::vector< size_t > prc_recv,
+														  openfpm::vector< size_t > & recv_sz ,
+														  void * (* msg_alloc)(size_t,size_t,size_t,size_t,size_t,void *),
+														  void * ptr_arg,
+														  long int opt=NONE)
 	{
 		// Allocate the buffers
 
