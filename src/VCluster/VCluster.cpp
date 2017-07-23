@@ -1,7 +1,9 @@
 #define PRINT_STACKTRACE
 
 #include "VCluster.hpp"
+#ifndef __CYGWIN__
 #include <execinfo.h>
+#endif
 
 #include "util/print_stack.hpp"
 

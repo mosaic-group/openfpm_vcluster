@@ -242,7 +242,7 @@ public:
 		MPI_Comm_rank(MPI_COMM_WORLD, &m_rank);
 
 #ifdef SE_CLASS2
-			process_v_cl = rank;
+			process_v_cl = m_rank;
 #endif
 
 		// create and fill map scatter with one
