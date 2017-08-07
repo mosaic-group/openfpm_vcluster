@@ -5,6 +5,7 @@
 echo "$PATH"
 echo "Directory: $1"
 echo "Machine: $2"
+echo "Branch: $3"
 
 mkdir /tmp/openfpm_vcluster
 mv * .[^.]* /tmp/openfpm_vcluster
@@ -16,6 +17,8 @@ git clone git@git.mpi-cbg.de:/openfpm/openfpm_devices.git openfpm_devices
 git clone git@git.mpi-cbg.de:/openfpm/openfpm_data.git openfpm_data
 
 cd "$1/openfpm_vcluster"
+
+source $HOME/openfpm_vars_$3
 
 if [ "$2" == "gin" ]; then
  echo "Compiling on gin\n"
