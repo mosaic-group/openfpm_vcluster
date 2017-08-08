@@ -14,10 +14,10 @@ parallel (
 
                     stage ('run_nyu')
                     {
-                      sh "cd openfpm_vcluster && ./run.sh $WORKSPACE $NODE_NAME 2"
-                      sh "cd openfpm_vcluster && ./run.sh $WORKSPACE $NODE_NAME 3"
-                      sh "cd openfpm_vcluster && ./run.sh $WORKSPACE $NODE_NAME 4"
-                      sh "cd openfpm_vcluster && ./run.sh $WORKSPACE $NODE_NAME 5"
+                      sh "cd openfpm_vcluster && ./run.sh $WORKSPACE $NODE_NAME 2 $BRANCH_NAME"
+                      sh "cd openfpm_vcluster && ./run.sh $WORKSPACE $NODE_NAME 3 $BRANCH_NAME"
+                      sh "cd openfpm_vcluster && ./run.sh $WORKSPACE $NODE_NAME 4 $BRANCH_NAME"
+                      sh "cd openfpm_vcluster && ./run.sh $WORKSPACE $NODE_NAME 5 $BRANCH_NAME"
                       sh "cd openfpm_vcluster && ./success.sh 2 nyu openfpm_vcluster"
                     }
                   }
@@ -38,12 +38,12 @@ parallel (
 
                     stage ('run_sb15')
                     {
-                      sh "cd openfpm_vcluster && ./run.sh $WORKSPACE $NODE_NAME 2"
-                      sh "cd openfpm_vcluster && ./run.sh $WORKSPACE $NODE_NAME 3"
-                      sh "cd openfpm_vcluster && ./run.sh $WORKSPACE $NODE_NAME 4"
-                      sh "cd openfpm_vcluster && ./run.sh $WORKSPACE $NODE_NAME 5"
-                      sh "cd openfpm_vcluster && ./run.sh $WORKSPACE $NODE_NAME 6"
-                      sh "cd openfpm_vcluster && ./run.sh $WORKSPACE $NODE_NAME 7"
+                      sh "cd openfpm_vcluster && ./run.sh $WORKSPACE $NODE_NAME 2 $BRANCH_NAME"
+                      sh "cd openfpm_vcluster && ./run.sh $WORKSPACE $NODE_NAME 3 $BRANCH_NAME"
+                      sh "cd openfpm_vcluster && ./run.sh $WORKSPACE $NODE_NAME 4 $BRANCH_NAME"
+                      sh "cd openfpm_vcluster && ./run.sh $WORKSPACE $NODE_NAME 5 $BRANCH_NAME"
+                      sh "cd openfpm_vcluster && ./run.sh $WORKSPACE $NODE_NAME 6 $BRANCH_NAME"
+                      sh "cd openfpm_vcluster && ./run.sh $WORKSPACE $NODE_NAME 7 $BRANCH_NAME"
                       sh "cd openfpm_vcluster && ./success.sh 2 sbalzarini-mac-15 openfpm_vcluster"
                     }
                   }
