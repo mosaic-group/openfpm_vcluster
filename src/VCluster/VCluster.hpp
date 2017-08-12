@@ -366,7 +366,7 @@ class Vcluster: public Vcluster_base
 												  size_t root)
 	{
 #ifdef SE_CLASS1
-		if (&send == &recv)
+		if (&send == (T *)&recv)
 		{std::cerr << "Error: " << __FILE__ << ":" << __LINE__ << " using SGather in general the sending object and the receiving object must be different" << std::endl;}
 #endif
 
