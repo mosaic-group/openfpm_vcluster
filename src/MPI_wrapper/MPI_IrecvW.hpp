@@ -9,20 +9,19 @@
  * The purpose of these classes is to correctly choose the right call based on the type we want to receive
  *
  */
-
-/*! \brief General recv for general buffer
- *
- * \param proc processor from which to receive
- * \param tag
- * \param buf buffer where to store the data
- * \param sz size to receive
- * \param req MPI request
- *
- */
-
 class MPI_IrecvWB
 {
 public:
+
+	/*! \brief General recv for general buffer
+	 *
+	 * \param proc processor from which to receive
+	 * \param tag
+	 * \param buf buffer where to store the data
+	 * \param sz size to receive
+	 * \param req MPI request
+	 *
+	 */
 	static inline void recv(size_t proc , size_t tag ,void * buf, size_t sz, MPI_Request & req)
 	{
 		MPI_SAFE_CALL(MPI_Irecv(buf,sz,MPI_BYTE, proc, tag , MPI_COMM_WORLD,&req));
@@ -137,7 +136,7 @@ template<> class MPI_IrecvW<long int>
 public:
 	static inline void recv(size_t proc , size_t tag ,openfpm::vector<long int> & v, MPI_Request & req)
 	{
-		MPI_Irecv(v.getPointer(), v.size(),MPI_LONG, proc, tag , MPI_COMM_WORLD,&req);
+		MPI_SAFE_CALL(MPI_Irecv(v.getPointer(), v.size(),MPI_LONG, proc, tag , MPI_COMM_WORLD,&req));
 	}
 };
 
