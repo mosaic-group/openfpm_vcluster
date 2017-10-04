@@ -9,8 +9,10 @@
 #define VCLUSTER_HPP
 
 #include <signal.h>
+
 #include "VCluster_base.hpp"
 #include "VCluster_meta_function.hpp"
+#include "util/math_util_complex.hpp"
 
 void bt_sighandler(int sig, siginfo_t * info, void * ctx);
 
@@ -871,6 +873,9 @@ static inline void openfpm_init(int *argc, char ***argv)
 
 	if (*argc != 0)
 		program_name = std::string(*argv[0]);
+
+	// Initialize math pre-computation tables
+	openfpm::math::init_getFactorization();
 
 	ofp_initialized = true;
 }
