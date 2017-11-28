@@ -43,9 +43,13 @@ class Vcluster: public Vcluster_base
 	struct index_gen<index_tuple<prp...>>
 	{
 		//! Process the receive buffer
-		template<typename op, typename T, typename S> inline static void process_recv(Vcluster & vcl, S & recv, openfpm::vector<size_t> * sz_recv, openfpm::vector<size_t> * sz_recv_byte, op & op_param)
+		template<typename op,
+		         typename T,
+				 typename S,
+				 template <typename> class layout_base = memory_traits_lin>
+		inline static void process_recv(Vcluster & vcl, S & recv, openfpm::vector<size_t> * sz_recv, openfpm::vector<size_t> * sz_recv_byte, op & op_param)
 		{
-			vcl.process_receive_buffer_with_prp<op,T,S,prp...>(recv,sz_recv,sz_recv_byte,op_param);
+			vcl.process_receive_buffer_with_prp<op,T,S,layout_base,prp...>(recv,sz_recv,sz_recv_byte,op_param);
 		}
 	};
 
@@ -67,7 +71,7 @@ class Vcluster: public Vcluster_base
 	 * \param opt Options using RECEIVE_KNOWN enable patters with less latencies, in case of RECEIVE_KNOWN
 	 *
 	 */
-	template<typename op, typename T, typename S> void prepare_send_buffer(openfpm::vector<T> & send,
+	template<typename op, typename T, typename S, template <typename> class layout_base> void prepare_send_buffer(openfpm::vector<T> & send,
 			                                                               S & recv,
 																		   openfpm::vector<size_t> & prc_send,
 																		   openfpm::vector<size_t> & prc_recv,
@@ -97,7 +101,7 @@ class Vcluster: public Vcluster_base
 			size_t req = 0;
 
 			//Pack requesting
-			pack_unpack_cond_with_prp<has_max_prop<T, has_value_type<T>::value>::value,op, T, S>::packingRequest(send.get(i), req, send_sz_byte);
+			pack_unpack_cond_with_prp<has_max_prop<T, has_value_type<T>::value>::value,op, T, S, layout_base>::packingRequest(send.get(i), req, send_sz_byte);
 			tot_size += req;
 		}
 
@@ -112,7 +116,7 @@ class Vcluster: public Vcluster_base
 
 			Pack_stat sts;
 
-			pack_unpack_cond_with_prp<has_max_prop<T, has_value_type<T>::value>::value, op, T, S>::packing(mem, send.get(i), sts, send_buf);
+			pack_unpack_cond_with_prp<has_max_prop<T, has_value_type<T>::value>::value, op, T, S, layout_base>::packing(mem, send.get(i), sts, send_buf);
 		}
 
 		// receive information
@@ -265,7 +269,7 @@ class Vcluster: public Vcluster_base
 	 * \param op_param operation to do in merging the received information with recv
 	 *
 	 */
-	template<typename op, typename T, typename S, unsigned int ... prp >
+	template<typename op, typename T, typename S, template <typename> class layout_base ,unsigned int ... prp >
 	void process_receive_buffer_with_prp(S & recv,
 			                             openfpm::vector<size_t> * sz,
 										 openfpm::vector<size_t> * sz_byte,
@@ -274,7 +278,7 @@ class Vcluster: public Vcluster_base
 		if (sz != NULL)
 			sz->resize(recv_buf.size());
 
-		pack_unpack_cond_with_prp<has_max_prop<T, has_value_type<T>::value>::value,op, T, S, prp... >::unpacking(recv, recv_buf, sz, sz_byte, op_param);
+		pack_unpack_cond_with_prp<has_max_prop<T, has_value_type<T>::value>::value,op, T, S, layout_base, prp... >::unpacking(recv, recv_buf, sz, sz_byte, op_param);
 	}
 
 	public:
@@ -359,11 +363,14 @@ class Vcluster: public Vcluster_base
 	 * \return true if the function completed succefully
 	 *
 	 */
-	template<typename T, typename S> bool SGather(T & send,
-			                                      S & recv,
-												  openfpm::vector<size_t> & prc,
-												  openfpm::vector<size_t> & sz,
-												  size_t root)
+	template<typename T,
+	         typename S,
+			 template <typename> class layout_base = memory_traits_lin>
+	bool SGather(T & send,
+			     S & recv,
+				 openfpm::vector<size_t> & prc,
+				 openfpm::vector<size_t> & sz,
+				 size_t root)
 	{
 #ifdef SE_CLASS1
 		if (&send == (T *)&recv)
@@ -392,7 +399,7 @@ class Vcluster: public Vcluster_base
 			// operation object
 			op_ssend_recv_add<void> opa;
 
-			index_gen<ind_prop_to_pack>::template process_recv<op_ssend_recv_add<void>,T,S>(*this,recv,&sz,NULL,opa);
+			index_gen<ind_prop_to_pack>::template process_recv<op_ssend_recv_add<void>,T,S,layout_base>(*this,recv,&sz,NULL,opa);
 
 			recv.add(send);
 			prc.add(root);
@@ -413,7 +420,7 @@ class Vcluster: public Vcluster_base
 
 			size_t tot_size = 0;
 
-			pack_unpack_cond_with_prp<has_max_prop<T, has_value_type<T>::value>::value,op_ssend_recv_add<void>, T, S>::packingRequest(send, tot_size, sz);
+			pack_unpack_cond_with_prp<has_max_prop<T, has_value_type<T>::value>::value,op_ssend_recv_add<void>, T, S, layout_base>::packingRequest(send, tot_size, sz);
 
 			HeapMemory pmem;
 
@@ -424,7 +431,7 @@ class Vcluster: public Vcluster_base
 
 			Pack_stat sts;
 			
-			pack_unpack_cond_with_prp<has_max_prop<T, has_value_type<T>::value>::value,op_ssend_recv_add<void>, T, S>::packing(mem, send, sts, send_buf);
+			pack_unpack_cond_with_prp<has_max_prop<T, has_value_type<T>::value>::value,op_ssend_recv_add<void>, T, S, layout_base>::packing(mem, send, sts, send_buf);
 
 			// receive information
 			base_info bi(NULL,prc,sz);
@@ -620,21 +627,24 @@ class Vcluster: public Vcluster_base
 	 * \return true if the function completed succefully
 	 *
 	 */
-	template<typename T, typename S> bool SSendRecv(openfpm::vector<T> & send,
-			                                        S & recv,
-													openfpm::vector<size_t> & prc_send,
-													openfpm::vector<size_t> & prc_recv,
-													openfpm::vector<size_t> & sz_recv,
-													size_t opt = NONE)
+	template<typename T,
+	         typename S,
+			 template <typename> class layout_base = memory_traits_lin>
+	bool SSendRecv(openfpm::vector<T> & send,
+			       S & recv,
+				   openfpm::vector<size_t> & prc_send,
+				   openfpm::vector<size_t> & prc_recv,
+				   openfpm::vector<size_t> & sz_recv,
+				   size_t opt = NONE)
 	{
-		prepare_send_buffer<op_ssend_recv_add<void>,T,S>(send,recv,prc_send,prc_recv,sz_recv,opt);
+		prepare_send_buffer<op_ssend_recv_add<void>,T,S,layout_base>(send,recv,prc_send,prc_recv,sz_recv,opt);
 
 		// we generate the list of the properties to pack
 		typedef typename ::generate_indexes<int, has_max_prop<T, has_value_type<T>::value>::number, MetaFuncOrd>::result ind_prop_to_pack;
 
 		op_ssend_recv_add<void> opa;
 
-		index_gen<ind_prop_to_pack>::template process_recv<op_ssend_recv_add<void>,T,S>(*this,recv,&sz_recv,NULL,opa);
+		index_gen<ind_prop_to_pack>::template process_recv<op_ssend_recv_add<void>,T,S,layout_base>(*this,recv,&sz_recv,NULL,opa);
 
 		return true;
 	}
@@ -668,20 +678,20 @@ class Vcluster: public Vcluster_base
 	 * \return true if the function completed successful
 	 *
 	 */
-	template<typename T, typename S, int ... prp> bool SSendRecvP(openfpm::vector<T> & send,
+	template<typename T, typename S, template <typename> class layout_base, int ... prp> bool SSendRecvP(openfpm::vector<T> & send,
 			                                                      S & recv,
 																  openfpm::vector<size_t> & prc_send,
 																  openfpm::vector<size_t> & prc_recv,
 																  openfpm::vector<size_t> & sz_recv,
 																  openfpm::vector<size_t> & sz_recv_byte)
 	{
-		prepare_send_buffer<op_ssend_recv_add<void>,T,S>(send,recv,prc_send,prc_recv,sz_recv,NONE);
+		prepare_send_buffer<op_ssend_recv_add<void>,T,S,layout_base>(send,recv,prc_send,prc_recv,sz_recv,NONE);
 
 		// operation object
 		op_ssend_recv_add<void> opa;
 
 		// process the received information
-		process_receive_buffer_with_prp<op_ssend_recv_add<void>,T,S,prp...>(recv,&sz_recv,&sz_recv_byte,opa);
+		process_receive_buffer_with_prp<op_ssend_recv_add<void>,T,S,layout_base,prp...>(recv,&sz_recv,&sz_recv_byte,opa);
 
 		return true;
 	}
@@ -714,19 +724,20 @@ class Vcluster: public Vcluster_base
 	 * \return true if the function completed succefully
 	 *
 	 */
-	template<typename T, typename S, int ... prp> bool SSendRecvP(openfpm::vector<T> & send,
-			                                                      S & recv,
-																  openfpm::vector<size_t> & prc_send,
-																  openfpm::vector<size_t> & prc_recv,
-																  openfpm::vector<size_t> & sz_recv)
+	template<typename T, typename S, template <typename> class layout_base, int ... prp>
+	bool SSendRecvP(openfpm::vector<T> & send,
+			        S & recv,
+					openfpm::vector<size_t> & prc_send,
+			    	openfpm::vector<size_t> & prc_recv,
+					openfpm::vector<size_t> & sz_recv)
 	{
-		prepare_send_buffer<op_ssend_recv_add<void>,T,S>(send,recv,prc_send,prc_recv,sz_recv,NONE);
+		prepare_send_buffer<op_ssend_recv_add<void>,T,S,layout_base>(send,recv,prc_send,prc_recv,sz_recv,NONE);
 
 		// operation object
 		op_ssend_recv_add<void> opa;
 
 		// process the received information
-		process_receive_buffer_with_prp<op_ssend_recv_add<void>,T,S,prp...>(recv,&sz_recv,NULL,opa);
+		process_receive_buffer_with_prp<op_ssend_recv_add<void>,T,S,layout_base,prp...>(recv,&sz_recv,NULL,opa);
 
 		return true;
 	}
@@ -767,18 +778,23 @@ class Vcluster: public Vcluster_base
 	 * \return true if the function completed successful
 	 *
 	 */
-	template<typename op, typename T, typename S, int ... prp> bool SSendRecvP_op(openfpm::vector<T> & send,
-			                                                                      S & recv,
-																				  openfpm::vector<size_t> & prc_send,
-																				  op & op_param,
-																				  openfpm::vector<size_t> & prc_recv,
-																				  openfpm::vector<size_t> & recv_sz,
-																				  size_t opt = NONE)
+	template<typename op,
+	         typename T,
+			 typename S,
+			 template <typename> class layout_base,
+			 int ... prp>
+	bool SSendRecvP_op(openfpm::vector<T> & send,
+			           S & recv,
+					   openfpm::vector<size_t> & prc_send,
+					   op & op_param,
+					   openfpm::vector<size_t> & prc_recv,
+					   openfpm::vector<size_t> & recv_sz,
+				 	   size_t opt = NONE)
 	{
-		prepare_send_buffer<op,T,S>(send,recv,prc_send,prc_recv,recv_sz,opt);
+		prepare_send_buffer<op,T,S,layout_base>(send,recv,prc_send,prc_recv,recv_sz,opt);
 
 		// process the received information
-		process_receive_buffer_with_prp<op,T,S,prp...>(recv,NULL,NULL,op_param);
+		process_receive_buffer_with_prp<op,T,S,layout_base,prp...>(recv,NULL,NULL,op_param);
 
 		return true;
 	}
