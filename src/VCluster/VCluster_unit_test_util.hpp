@@ -12,6 +12,9 @@
 #include "VCluster_base.hpp"
 #include "Vector/vector_test_util.hpp"
 
+#define RECEIVE_UNKNOWN 1
+#define RECEIVE_SIZE_UNKNOWN 2
+
 #define NBX 1
 
 #define N_TRY 2
@@ -321,7 +324,7 @@ template<unsigned int ip> void test_known()
 	}
 }
 
-template<unsigned int ip> void test()
+template<unsigned int ip> void test(unsigned int opt)
 {
 	Vcluster & vcl = create_vcluster();
 
@@ -388,10 +391,51 @@ template<unsigned int ip> void test()
 					recv_message.get(p_id).resize(j);
 			}
 
-			// Send and receive
-			vcl.sendrecvMultipleMessagesNBX(prc,message,msg_alloc,&recv_message);
-
+			if (opt == RECEIVE_UNKNOWN)
+			{
+				// Send and receive
+				vcl.sendrecvMultipleMessagesNBX(prc,message,msg_alloc,&recv_message);
+			}
 			//! [dsde]
+			else if (opt == RECEIVE_SIZE_UNKNOWN)
+			{
+				openfpm::vector<size_t> sz_send;
+				openfpm::vector<void *> ptr;
+
+				openfpm::vector<size_t> prc_recv;
+
+				sz_send.resize(prc.size());
+				ptr.resize(prc.size());
+
+				for (size_t i = 0 ; i < prc.size() ; i++)
+				{
+					sz_send.get(i) = message.get(i).size();
+					ptr.get(i) = &message.get(i).get(0);
+				}
+
+				// Calculate the receiving part
+
+				// Check the message
+				for (size_t i = 0 ; i < 8  && i < n_proc ; i++)
+				{
+					long int p_id = vcl.getProcessUnitID() - i - 1;
+					if (p_id < 0)
+					{p_id += n_proc;}
+					else
+					{p_id = p_id % n_proc;}
+
+					if (p_id != (long int)vcl.getProcessUnitID())
+					{
+						prc_recv.add(p_id);
+					}
+				}
+
+				//! [dsde]
+
+				// Send and receive
+				vcl.sendrecvMultipleMessagesNBX(prc.size(),&sz_send.get(0),&prc.get(0),
+												&ptr.get(0),prc_recv.size(),&prc_recv.get(0),msg_alloc,&recv_message);
+			}
 
 #ifdef VERBOSE_TEST
 			timer t;
@@ -436,6 +480,9 @@ template<unsigned int ip> void test()
 				}
 			}
 		}
+
+		if (opt == RECEIVE_SIZE_UNKNOWN)
+		{return;}
 
 		std::srand(create_vcluster().getProcessUnitID());
 		std::default_random_engine eg;

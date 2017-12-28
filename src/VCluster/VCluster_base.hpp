@@ -502,6 +502,64 @@ public:
 		NBX_cnt = (NBX_cnt + 1) % 1024;
 	}
 
+
+	/*! \brief Send and receive multiple messages
+	 *
+	 * It send multiple messages to a set of processors the and receive
+	 * multiple messages from another set of processors, all the processor must call this
+	 * function
+	 *
+	 * suppose the following situation the calling processor want to communicate
+	 * * 2 vector of 100 integers to processor 1
+	 * * 1 vector of 50 integers to processor 6
+	 * * 1 vector of 48 integers to processor 7
+	 * * 1 vector of 70 integers to processor 8
+	 *
+	 * \param prc list of processors you should communicate with [1,1,6,7,8]
+	 *
+	 * \param data vector containing the data to send [v=vector<vector<int>>, v.size()=4, T=vector<int>], T at the moment
+	 *          is only tested for vectors of 0 or more generic elements (without pointers)
+	 *
+	 * \param msg_alloc This is a call-back with the purpose to allocate space
+	 *        for the incoming messages and give back a valid pointer, supposing that this call-back has been triggered by
+	 *        the processor of id 5 that want to communicate with me a message of size 100 byte the call-back will have
+	 *        the following 6 parameters
+	 *        in the call-back in order:
+	 *        * message size required to receive the message (100)
+	 *        * total message size to receive from all the processors (NBX does not provide this information)
+	 *        * the total number of processor want to communicate with you (NBX does not provide this information)
+	 *        * processor id (5)
+	 *        * ri request id (it is an id that goes from 0 to total_p, and is incremented
+	 *           every time message_alloc is called)
+	 *        * void pointer, parameter for additional data to pass to the call-back
+	 *
+	 * \param ptr_arg data passed to the call-back function specified
+	 *
+	 * \param opt options, only NONE supported
+	 *
+	 */
+	template<typename T>
+	void sendrecvMultipleMessagesNBX(openfpm::vector< size_t > & prc,
+									 openfpm::vector< T > & data,
+									 void * (* msg_alloc)(size_t,size_t,size_t,size_t,size_t,void *),
+									 void * ptr_arg, long int opt=NONE)
+	{
+#ifdef SE_CLASS1
+		checkType<typename T::value_type>();
+#endif
+		// resize the pointer list
+		ptr_send.resize(prc.size());
+		sz_send.resize(prc.size());
+
+		for (size_t i = 0 ; i < prc.size() ; i++)
+		{
+			ptr_send.get(i) = data.get(i).getPointer();
+			sz_send.get(i) = data.get(i).size() * sizeof(typename T::value_type);
+		}
+
+		sendrecvMultipleMessagesNBX(prc.size(),(size_t *)sz_send.getPointer(),(size_t *)prc.getPointer(),(void **)ptr_send.getPointer(),msg_alloc,ptr_arg,opt);
+	}
+
 	/*! \brief Send and receive multiple messages
 	 *
 	 * It send multiple messages to a set of processors the and receive
@@ -544,7 +602,11 @@ public:
 	 * \param opt options, NONE (ignored in this moment)
 	 *
 	 */
-	void sendrecvMultipleMessagesNBX(size_t n_send , size_t sz[], size_t prc[] , void * ptr[], size_t n_recv, size_t prc_recv[] , size_t sz_recv[] ,void * (* msg_alloc)(size_t,size_t,size_t,size_t,size_t,void *), void * ptr_arg, long int opt=NONE)
+	void sendrecvMultipleMessagesNBX(size_t n_send , size_t sz[], size_t prc[] ,
+									 void * ptr[], size_t n_recv, size_t prc_recv[] ,
+									 size_t sz_recv[] ,
+									 void * (* msg_alloc)(size_t,size_t,size_t,size_t,size_t,void *),
+									 void * ptr_arg, long int opt=NONE)
 	{
 		// Allocate the buffers
 
@@ -564,60 +626,87 @@ public:
 		NBX_cnt = (NBX_cnt + 1) % 1024;
 	}
 
+	openfpm::vector<size_t> sz_recv_tmp;
+
 	/*! \brief Send and receive multiple messages
 	 *
 	 * It send multiple messages to a set of processors the and receive
 	 * multiple messages from another set of processors, all the processor must call this
-	 * function
+	 * function. In this particular case the receiver know from which processor is going
+	 * to receive, but does not know the size.
+	 *
 	 *
 	 * suppose the following situation the calling processor want to communicate
-	 * * 2 vector of 100 integers to processor 1
-	 * * 1 vector of 50 integers to processor 6
-	 * * 1 vector of 48 integers to processor 7
-	 * * 1 vector of 70 integers to processor 8
+	 * * 2 messages of size 100 byte to processor 1
+	 * * 1 message of size 50 byte to processor 6
+	 * * 1 message of size 48 byte to processor 7
+	 * * 1 message of size 70 byte to processor 8
 	 *
-	 * \param prc list of processors you should communicate with [1,1,6,7,8]
+	 * \param n_send number of send for this processor [4]
 	 *
-	 * \param data vector containing the data to send [v=vector<vector<int>>, v.size()=4, T=vector<int>], T at the moment
-	 *          is only tested for vectors of 0 or more generic elements (without pointers)
+	 * \param prc list of processor with which it should communicate
+	 *        [1,1,6,7,8]
 	 *
-	 * \param msg_alloc This is a call-back with the purpose to allocate space
-	 *        for the incoming messages and give back a valid pointer, supposing that this call-back has been triggered by
+	 * \param sz the array contain the size of the message for each processor
+	 *        (zeros must not be presents) [100,100,50,48,70]
+	 *
+	 * \param ptr array that contain the pointers to the message to send
+	 *
+	 * \param msg_alloc This is a call-back with the purpose of allocate space
+	 *        for the incoming message and give back a valid pointer, supposing that this call-back has been triggered by
 	 *        the processor of id 5 that want to communicate with me a message of size 100 byte the call-back will have
 	 *        the following 6 parameters
-	 *        in the call-back in order:
-	 *        * message size required to receive the message (100)
+	 *        in the call-back are in order:
+	 *        * message size required to receive the message [100]
 	 *        * total message size to receive from all the processors (NBX does not provide this information)
 	 *        * the total number of processor want to communicate with you (NBX does not provide this information)
-	 *        * processor id (5)
+	 *        * processor id [5]
 	 *        * ri request id (it is an id that goes from 0 to total_p, and is incremented
 	 *           every time message_alloc is called)
 	 *        * void pointer, parameter for additional data to pass to the call-back
 	 *
 	 * \param ptr_arg data passed to the call-back function specified
 	 *
-	 * \param opt options, only NONE supported
+	 * \param opt options, NONE (ignored in this moment)
 	 *
 	 */
-	template<typename T> void sendrecvMultipleMessagesNBX(openfpm::vector< size_t > & prc, openfpm::vector< T > & data, void * (* msg_alloc)(size_t,size_t,size_t,size_t,size_t,void *), void * ptr_arg, long int opt=NONE)
+	void sendrecvMultipleMessagesNBX(size_t n_send , size_t sz[], size_t prc[] ,
+									 void * ptr[], size_t n_recv, size_t prc_recv[] ,
+									 void * (* msg_alloc)(size_t,size_t,size_t,size_t,size_t,void *),
+									 void * ptr_arg, long int opt=NONE)
 	{
-#ifdef SE_CLASS1
-		checkType<typename T::value_type>();
-#endif
-		// resize the pointer list
-		ptr_send.resize(prc.size());
-		sz_send.resize(prc.size());
+		sz_recv_tmp.resize(n_recv);
 
-		for (size_t i = 0 ; i < prc.size() ; i++)
+		// First we understand the receive size for each processor
+
+		for (size_t i = 0 ; i < n_send ; i++)
+		{send(prc[i],SEND_SPARSE + NBX_cnt,&sz[i],sizeof(size_t));}
+
+		for (size_t i = 0 ; i < n_recv ; i++)
+		{recv(prc_recv[i],SEND_SPARSE + NBX_cnt,&sz_recv_tmp.get(i),sizeof(size_t));}
+
+		execute();
+
+		// Circular counter
+		NBX_cnt = (NBX_cnt + 1) % 1024;
+
+		// Allocate the buffers
+
+		for (size_t i = 0 ; i < n_send ; i++)
+		{send(prc[i],SEND_SPARSE + NBX_cnt,ptr[i],sz[i]);}
+
+		for (size_t i = 0 ; i < n_recv ; i++)
 		{
-			ptr_send.get(i) = data.get(i).getPointer();
-			sz_send.get(i) = data.get(i).size() * sizeof(typename T::value_type);
+			void * ptr_recv = msg_alloc(sz_recv_tmp.get(i),0,0,prc_recv[i],i,ptr_arg);
+
+			recv(prc_recv[i],SEND_SPARSE + NBX_cnt,ptr_recv,sz_recv_tmp.get(i));
 		}
 
-		sendrecvMultipleMessagesNBX(prc.size(),(size_t *)sz_send.getPointer(),(size_t *)prc.getPointer(),(void **)ptr_send.getPointer(),msg_alloc,ptr_arg,opt);
+		execute();
+
+		// Circular counter
+		NBX_cnt = (NBX_cnt + 1) % 1024;
 	}
-
-
 
 	/*! \brief Send and receive multiple messages
 	 *
@@ -659,7 +748,10 @@ public:
 	 * \param opt options, NONE (ignored in this moment)
 	 *
 	 */
-	void sendrecvMultipleMessagesNBX(size_t n_send , size_t sz[], size_t prc[] , void * ptr[], void * (* msg_alloc)(size_t,size_t,size_t,size_t,size_t,void *), void * ptr_arg, long int opt = NONE)
+	void sendrecvMultipleMessagesNBX(size_t n_send , size_t sz[], size_t prc[] ,
+									 void * ptr[],
+									 void * (* msg_alloc)(size_t,size_t,size_t,size_t,size_t,void *),
+									 void * ptr_arg, long int opt = NONE)
 	{
 		if (stat.size() != 0 || req.size() != 0)
 			std::cerr << "Error: " << __FILE__ << ":" << __LINE__ << " this function must be called when no other requests are in progress. Please remember that if you use function like max(),sum(),send(),recv() check that you did not miss to call the function execute() \n";

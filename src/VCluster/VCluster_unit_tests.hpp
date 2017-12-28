@@ -181,12 +181,25 @@ BOOST_AUTO_TEST_CASE( VCluster_use_sendrecv)
 	std::cout << "VCluster unit test start sendrecv" << "\n";
 
 	totp_check = false;
-	test<NBX>();
+	test<NBX>(RECEIVE_UNKNOWN);
 
 	totp_check = false;
 	test_no_send_some_peer<NBX>();
 
 	std::cout << "VCluster unit test stop sendrecv" << "\n";
+}
+
+BOOST_AUTO_TEST_CASE( VCluster_use_sendrecv_size_known)
+{
+	std::cout << "VCluster unit test start sendrecv known size" << "\n";
+
+	totp_check = false;
+	test<NBX>(RECEIVE_SIZE_UNKNOWN);
+
+	totp_check = false;
+	test_no_send_some_peer<NBX>();
+
+	std::cout << "VCluster unit test stop sendrecv known size" << "\n";
 }
 
 BOOST_AUTO_TEST_CASE( VCluster_use_sendrecv_known)

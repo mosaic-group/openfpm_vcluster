@@ -135,11 +135,16 @@ class Vcluster: public Vcluster_base
 						sz_recv_byte.get(i) = sz_recv.get(i) * sizeof(typename T::value_type);
 				}
 				else
-					std::cout << __FILE__ << ":" << __LINE__ << " Error " << demangle(typeid(T).name()) << " the type does not work with the option RECEIVE_KNOWN or NO_CHANGE_ELEMENTS" << std::endl;
-			}
+				{std::cout << __FILE__ << ":" << __LINE__ << " Error " << demangle(typeid(T).name()) << " the type does not work with the option or NO_CHANGE_ELEMENTS" << std::endl;}
 
-			Vcluster_base::sendrecvMultipleMessagesNBX(prc_send.size(),(size_t *)send_sz_byte.getPointer(),(size_t *)prc_send.getPointer(),(void **)send_buf.getPointer(),
-										prc_recv.size(),(size_t *)prc_recv.getPointer(),(size_t *)sz_recv_byte.getPointer(),msg_alloc_known,(void *)&bi);
+				Vcluster_base::sendrecvMultipleMessagesNBX(prc_send.size(),(size_t *)send_sz_byte.getPointer(),(size_t *)prc_send.getPointer(),(void **)send_buf.getPointer(),
+											prc_recv.size(),(size_t *)prc_recv.getPointer(),(size_t *)sz_recv_byte.getPointer(),msg_alloc_known,(void *)&bi);
+			}
+			else
+			{
+				Vcluster_base::sendrecvMultipleMessagesNBX(prc_send.size(),(size_t *)send_sz_byte.getPointer(),(size_t *)prc_send.getPointer(),(void **)send_buf.getPointer(),
+											prc_recv.size(),(size_t *)prc_recv.getPointer(),msg_alloc_known,(void *)&bi);
+			}
 		}
 		else
 		{
@@ -683,9 +688,10 @@ class Vcluster: public Vcluster_base
 																  openfpm::vector<size_t> & prc_send,
 																  openfpm::vector<size_t> & prc_recv,
 																  openfpm::vector<size_t> & sz_recv,
-																  openfpm::vector<size_t> & sz_recv_byte)
+																  openfpm::vector<size_t> & sz_recv_byte,
+																  size_t opt = NONE)
 	{
-		prepare_send_buffer<op_ssend_recv_add<void>,T,S,layout_base>(send,recv,prc_send,prc_recv,sz_recv,NONE);
+		prepare_send_buffer<op_ssend_recv_add<void>,T,S,layout_base>(send,recv,prc_send,prc_recv,sz_recv,opt);
 
 		// operation object
 		op_ssend_recv_add<void> opa;
@@ -729,9 +735,10 @@ class Vcluster: public Vcluster_base
 			        S & recv,
 					openfpm::vector<size_t> & prc_send,
 			    	openfpm::vector<size_t> & prc_recv,
-					openfpm::vector<size_t> & sz_recv)
+					openfpm::vector<size_t> & sz_recv,
+					size_t opt = NONE)
 	{
-		prepare_send_buffer<op_ssend_recv_add<void>,T,S,layout_base>(send,recv,prc_send,prc_recv,sz_recv,NONE);
+		prepare_send_buffer<op_ssend_recv_add<void>,T,S,layout_base>(send,recv,prc_send,prc_recv,sz_recv,opt);
 
 		// operation object
 		op_ssend_recv_add<void> opa;
