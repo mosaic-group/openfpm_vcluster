@@ -162,7 +162,7 @@ BOOST_AUTO_TEST_CASE(VCluster_bcast_test)
 {
 	Vcluster & vcl = create_vcluster();
 
-	std::cout << "Broadcast test" << std::endl;
+	std::cout << "Broadcast test " << std::endl;
 
 	test_single_all_broadcast_primitives<unsigned char>(vcl);
 	test_single_all_broadcast_primitives<char>(vcl);
