@@ -782,6 +782,11 @@ BOOST_AUTO_TEST_CASE (Vcluster_semantic_sendrecv_receive_size_known)
 			prc_send.add((i + vcl.getProcessUnitID()) % vcl.getProcessingUnits());
 		}
 
+		// We receive to fill prc_recv2 and sz_recv2
+		vcl.SSendRecv(v1,v2,prc_send,prc_recv2,sz_recv2);
+
+		// We reset v2 and we receive again saying that the processors are known and we know the elements
+		v2.clear();
 		vcl.SSendRecv(v1,v2,prc_send,prc_recv2,sz_recv2,RECEIVE_KNOWN | KNOWN_ELEMENT_OR_BYTE);
 		vcl.SSendRecv(v1,v3,prc_send,prc_recv3,sz_recv3);
 
@@ -857,6 +862,14 @@ BOOST_AUTO_TEST_CASE (Vcluster_semantic_sendrecv_receive_known)
 
 			prc_send.add((i + vcl.getProcessUnitID()) % vcl.getProcessingUnits());
 		}
+
+		// Receive to fill prc_recv2
+		vcl.SSendRecv(v1,v2,prc_send,prc_recv2,sz_recv2);
+
+		// Reset v2 and sz_recv2
+
+		v2.clear();
+		sz_recv2.clear();
 
 		vcl.SSendRecv(v1,v2,prc_send,prc_recv2,sz_recv2,RECEIVE_KNOWN);
 		vcl.SSendRecv(v1,v3,prc_send,prc_recv3,sz_recv3);

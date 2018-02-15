@@ -144,6 +144,7 @@ class Vcluster: public Vcluster_base
 			{
 				Vcluster_base::sendrecvMultipleMessagesNBX(prc_send.size(),(size_t *)send_sz_byte.getPointer(),(size_t *)prc_send.getPointer(),(void **)send_buf.getPointer(),
 											prc_recv.size(),(size_t *)prc_recv.getPointer(),msg_alloc_known,(void *)&bi);
+				sz_recv_byte = sz_recv_tmp;
 			}
 		}
 		else
