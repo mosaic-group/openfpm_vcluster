@@ -45,7 +45,7 @@ BOOST_AUTO_TEST_CASE (Vcluster_semantic_gather)
 		v1.resize(vcl.getProcessUnitID());
 
 		for(size_t i = 0 ; i < vcl.getProcessUnitID() ; i++)
-			v1.get(i) = 5;
+		{v1.get(i) = 5;}
 
 		openfpm::vector<size_t> v2;
 
@@ -82,7 +82,7 @@ BOOST_AUTO_TEST_CASE (Vcluster_semantic_gather_2)
 		v1.resize(vcl.getProcessUnitID());
 
 		for(size_t i = 0 ; i < vcl.getProcessUnitID() ; i++)
-			v1.get(i) = 5;
+		{v1.get(i) = 5;}
 
 		openfpm::vector<openfpm::vector<size_t>> v2;
 
@@ -133,7 +133,7 @@ BOOST_AUTO_TEST_CASE (Vcluster_semantic_gather_3)
 		Vcluster & vcl = create_vcluster();
 
 		if (vcl.getProcessingUnits() >= 32)
-			return;
+		{return;}
 
 		openfpm::vector<openfpm::vector<aggregate<float, openfpm::vector<size_t>, Point_test<float>>> > v1;
 
@@ -210,7 +210,7 @@ BOOST_AUTO_TEST_CASE (Vcluster_semantic_gather_4)
 		Vcluster & vcl = create_vcluster();
 
 		if (vcl.getProcessingUnits() >= 32)
-			return;
+		{return;}
 
 		size_t sz[] = {16,16};
 
@@ -273,7 +273,7 @@ BOOST_AUTO_TEST_CASE (Vcluster_semantic_gather_5)
 		Vcluster & vcl = create_vcluster();
 
 		if (vcl.getProcessingUnits() >= 32)
-			return;
+		{return;}
 
 		size_t sz[] = {16,16};
 		grid_cpu<2,Point_test<float>> g1(sz);
@@ -340,7 +340,7 @@ BOOST_AUTO_TEST_CASE (Vcluster_semantic_gather_6)
 		Vcluster & vcl = create_vcluster();
 
 		if (vcl.getProcessingUnits() >= 32)
-			return;
+		{return;}
 
 		openfpm::vector<openfpm::vector<openfpm::vector<size_t>>> v1;
 		openfpm::vector<openfpm::vector<size_t>> v1_int;
@@ -389,7 +389,7 @@ BOOST_AUTO_TEST_CASE (Vcluster_semantic_gather_7)
 		Vcluster & vcl = create_vcluster();
 
 		if (vcl.getProcessingUnits() >= 32)
-			return;
+		{return;}
 
 		openfpm::vector<Point_test<float>> v1;
 
@@ -399,7 +399,7 @@ BOOST_AUTO_TEST_CASE (Vcluster_semantic_gather_7)
 		v1.resize(vcl.getProcessUnitID());
 
 		for(size_t i = 0 ; i < vcl.getProcessUnitID() ; i++)
-			v1.get(i) = p1;
+		{v1.get(i) = p1;}
 
 		openfpm::vector<openfpm::vector<Point_test<float>>> v2;
 
@@ -453,7 +453,7 @@ BOOST_AUTO_TEST_CASE (Vcluster_semantic_gather_8)
 		Vcluster & vcl = create_vcluster();
 
 		if (vcl.getProcessingUnits() >= 32)
-			return;
+		{return;}
 
 		openfpm::vector<Box<3,size_t>> v1;
 
@@ -544,7 +544,7 @@ BOOST_AUTO_TEST_CASE (Vcluster_semantic_scatter)
 		Vcluster & vcl = create_vcluster();
 
 		if (vcl.getProcessingUnits() >= 32)
-			return;
+		{return;}
 
 		size_t nc = vcl.getProcessingUnits() / SSCATTER_MAX;
 		size_t nr = vcl.getProcessingUnits() - nc * SSCATTER_MAX;
@@ -556,7 +556,7 @@ BOOST_AUTO_TEST_CASE (Vcluster_semantic_scatter)
 		v1.resize(n_elements);
 
 		for(size_t i = 0 ; i < n_elements ; i++)
-			v1.get(i) = 5;
+		{v1.get(i) = 5;}
 
 		//! [Scatter the data from master]
 
@@ -594,7 +594,7 @@ BOOST_AUTO_TEST_CASE (Vcluster_semantic_struct_scatter)
 		Vcluster & vcl = create_vcluster();
 
 		if (vcl.getProcessingUnits() >= 32)
-			return;
+		{return;}
 
 		size_t nc = vcl.getProcessingUnits() / SSCATTER_MAX;
 		size_t nr = vcl.getProcessingUnits() - nc * SSCATTER_MAX;
@@ -654,7 +654,7 @@ BOOST_AUTO_TEST_CASE (Vcluster_semantic_sendrecv_all_unknown)
 
 
 		if (vcl.getProcessingUnits() >= 32)
-			return;
+		{return;}
 
 		prc_recv2.clear();
 		prc_recv3.clear();
@@ -754,11 +754,11 @@ BOOST_AUTO_TEST_CASE (Vcluster_semantic_sendrecv_receive_size_known)
 		Vcluster & vcl = create_vcluster();
 
 		if (vcl.getProcessUnitID() == 0 && i == 0)
-			std::cout << "Semantic sendrecv test start" << std::endl;
+		{std::cout << "Semantic sendrecv test start" << std::endl;}
 
 
 		if (vcl.getProcessingUnits() >= 32)
-			return;
+		{return;}
 
 		openfpm::vector<size_t> prc_send;
 
@@ -835,11 +835,11 @@ BOOST_AUTO_TEST_CASE (Vcluster_semantic_sendrecv_receive_known)
 		Vcluster & vcl = create_vcluster();
 
 		if (vcl.getProcessUnitID() == 0 && i == 0)
-			std::cout << "Semantic sendrecv test start" << std::endl;
+		{std::cout << "Semantic sendrecv test start" << std::endl;}
 
 
 		if (vcl.getProcessingUnits() >= 32)
-			return;
+		{return;}
 
 		openfpm::vector<size_t> prc_send;
 
@@ -911,7 +911,7 @@ BOOST_AUTO_TEST_CASE (Vcluster_semantic_struct_sendrecv)
 		Vcluster & vcl = create_vcluster();
 
 		if (vcl.getProcessingUnits() >= 32)
-			return;
+		{return;}
 
 		openfpm::vector<size_t> prc_recv2;
 		openfpm::vector<size_t> prc_recv3;
