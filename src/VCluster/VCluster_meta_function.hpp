@@ -55,7 +55,7 @@ struct unpack_selector_with_prp<true,T,S>
 	template<typename op, unsigned int ... prp> static void call_unpack(S & recv, openfpm::vector<BHeapMemory> & recv_buf, openfpm::vector<size_t> * sz, openfpm::vector<size_t> * sz_byte, op & op_param)
 	{
 		if (sz_byte != NULL)
-			sz_byte->resize(recv_buf.size());
+		{sz_byte->resize(recv_buf.size());}
 
 		for (size_t i = 0 ; i < recv_buf.size() ; i++)
 		{
