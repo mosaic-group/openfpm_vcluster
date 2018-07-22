@@ -6,8 +6,12 @@
 #endif
 
 #include "util/print_stack.hpp"
+#include "util/math_util_complex.hpp"
 
 Vcluster * global_v_cluster_private = NULL;
+
+//
+std::vector<int> sieve_spf;
 
 // number of vcluster instances
 size_t n_vcluster = 0;
