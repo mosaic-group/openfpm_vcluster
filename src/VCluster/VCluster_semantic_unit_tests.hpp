@@ -1480,6 +1480,37 @@ BOOST_AUTO_TEST_CASE (Vcluster_semantic_sendrecv_6)
 	}
 }
 
+BOOST_AUTO_TEST_CASE( Vcluster_semantic_ssend_recv_layout_switch )
+{
+	auto & v_cl = create_vcluster();
+
+	if (v_cl.size() > 10)	{return;}
+
+	openfpm::vector<openfpm::vector_gpu<aggregate<float,float[3]>>> vd;
+	openfpm::vector_gpu<aggregate<float,float[3]>> collect;
+	openfpm::vector<size_t> prc_send;
+    openfpm::vector<size_t> prc_recv;
+    openfpm::vector<size_t> sz_recv;
+
+	vd.resize(v_cl.size());
+
+	for (size_t i = 0 ; i < vd.size() ; i++)
+	{
+		vd.get(i).resize(100);
+
+		for (size_t j = 0 ; j < vd.get(i).size() ; j++)
+		{
+			vd.get(i).template get<0>(j) = 10000*i + v_cl.rank()*100 + j;
+
+			vd.get(i).template get<1>(j)[0] = 400000 + 10000*i + v_cl.rank()*100 + j;
+			vd.get(i).template get<1>(j)[1] = 400000 + 10000*i + v_cl.rank()*100 + j;
+			vd.get(i).template get<1>(j)[2] = 400000 + 10000*i + v_cl.rank()*100 + j;
+		}
+	}
+
+	v_cl.SSendRecv<openfpm::vector_gpu<aggregate<float,float[3]>>,decltype(collect),memory_traits_inte>(vd,collect,prc_send, prc_recv,sz_recv);
+}
+
 /*BOOST_AUTO_TEST_CASE (Vcluster_semantic_bench_all_all)
 {
                 Vcluster & vcl = create_vcluster();

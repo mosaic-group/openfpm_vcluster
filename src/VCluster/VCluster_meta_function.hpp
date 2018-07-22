@@ -11,7 +11,7 @@
 #include "memory/BHeapMemory.hpp"
 #include "Packer_Unpacker/has_max_prop.hpp"
 
-template<bool result, typename T, typename S>
+template<bool result, typename T, typename S, template<typename> class layout_base>
 struct unpack_selector_with_prp
 {
 	template<typename op, int ... prp> static void call_unpack(S & recv, openfpm::vector<BHeapMemory> & recv_buf, openfpm::vector<size_t> * sz, openfpm::vector<size_t> * sz_byte, op & op_param)
@@ -33,7 +33,7 @@ struct unpack_selector_with_prp
 			size_t recv_size_old = recv.size();
 			// Merge the information
 
-			op_param.template execute<true,T,decltype(recv),decltype(unp),prp...>(recv,unp,i);
+			op_param.template execute<true,T,decltype(recv),decltype(unp),layout_base,prp...>(recv,unp,i);
 
 			size_t recv_size_new = recv.size();
 
@@ -48,43 +48,174 @@ struct unpack_selector_with_prp
 	}
 };
 
-//
-template<typename T, typename S>
-struct unpack_selector_with_prp<true,T,S>
+template<typename op, typename Vt, typename S, template<typename> class layout_base, typename v_mpl>
+struct unpack_each_prop_buffer
 {
-	template<typename op, unsigned int ... prp> static void call_unpack(S & recv, openfpm::vector<BHeapMemory> & recv_buf, openfpm::vector<size_t> * sz, openfpm::vector<size_t> * sz_byte, op & op_param)
+	S & recv;
+
+	openfpm::vector<BHeapMemory> & recv_buf;
+
+	size_t i;
+
+	op & op_param;
+
+    openfpm::vector<size_t> * sz;
+
+    openfpm::vector<size_t> * sz_byte;
+
+	/*! \brief constructor
+	 *
+	 * \param v set of pointer buffers to set
+	 *
+	 */
+	inline unpack_each_prop_buffer(S & recv,
+			                       openfpm::vector<BHeapMemory> & recv_buf,
+			                       op & op_param,
+			                       size_t i,
+			                       openfpm::vector<size_t> * sz,
+			                       openfpm::vector<size_t> * sz_byte)
+	:recv(recv),recv_buf(recv_buf),op_param(op_param),i(i),sz(sz),sz_byte(sz_byte)
+	{};
+
+	//! It call the copy function for each property
+	template<typename T>
+	inline void operator()(T& t) const
+	{
+		// here we get the the type of the property at position T::value
+		typedef typename boost::mpl::at<typename T::value_type::type,boost::mpl::int_<T::value> >::type prp_type;
+
+		// here we get the the type of the property at position T::value
+		typedef typename boost::mpl::at<v_mpl,boost::mpl::int_<T::value>>::type prp_num;
+
+		// calculate the number of received elements
+		size_t n_ele = recv_buf.get(i).size() / sizeof(prp_type);
+
+		// add the received particles to the vector
+		PtrMemory * ptr1 = new PtrMemory(recv_buf.get(i).getPointer(),recv_buf.get(i).size());
+
+		// create vector representation to a piece of memory already allocated
+		openfpm::vector<typename Vt::value_type,PtrMemory,typename layout_base<typename Vt::value_type>::type,layout_base,openfpm::grow_policy_identity> v2;
+
+		v2.template setMemory<prp_num::value>(*ptr1);
+
+		// resize with the number of elements
+		v2.resize(n_ele);
+
+		// Merge the information
+
+		size_t recv_size_old = recv.size();
+
+		op_param.template execute<false,T,decltype(recv),decltype(v2),layout_base,prp_num::value>(recv,v2,i);
+
+		size_t recv_size_new = recv.size();
+
+		if (sz_byte != NULL)
+			sz_byte->get(i) = recv_buf.get(i).size();
+		if (sz != NULL)
+			sz->get(i) = recv_size_new - recv_size_old;
+	}
+};
+
+template<bool inte_or_lin,typename T, typename S, template<typename> class layout_base>
+struct unpack_selector_with_prp_lin
+{
+	template<typename op, unsigned int ... prp> static int call_unpack_impl(S & recv,
+                                                                             openfpm::vector<BHeapMemory> & recv_buf,
+                                                                             openfpm::vector<size_t> * sz,
+                                                                             openfpm::vector<size_t> * sz_byte,
+                                                                             op & op_param,
+                                                                             size_t i)
+	{
+		// calculate the number of received elements
+		size_t n_ele = recv_buf.get(i).size() / sizeof(typename T::value_type);
+
+		// add the received particles to the vector
+		PtrMemory * ptr1 = new PtrMemory(recv_buf.get(i).getPointer(),recv_buf.get(i).size());
+
+		// create vector representation to a piece of memory already allocated
+		openfpm::vector<typename T::value_type,PtrMemory,typename layout_base<typename T::value_type>::type,layout_base,openfpm::grow_policy_identity> v2;
+
+		v2.setMemory(*ptr1);
+
+		// resize with the number of elements
+		v2.resize(n_ele);
+
+		// Merge the information
+
+		size_t recv_size_old = recv.size();
+
+		op_param.template execute<false,T,decltype(recv),decltype(v2),layout_base,prp...>(recv,v2,i);
+
+		size_t recv_size_new = recv.size();
+
+		if (sz_byte != NULL)
+			sz_byte->get(i) = recv_buf.get(i).size();
+		if (sz != NULL)
+			sz->get(i) = recv_size_new - recv_size_old;
+
+		return sizeof...(prp);
+	}
+};
+
+template<typename T, typename S, template<typename> class layout_base>
+struct unpack_selector_with_prp_lin<true,T,S,layout_base>
+{
+	template<typename op, unsigned int ... prp> static int call_unpack_impl(S & recv,
+                                                                             openfpm::vector<BHeapMemory> & recv_buf,
+                                                                             openfpm::vector<size_t> * sz,
+                                                                             openfpm::vector<size_t> * sz_byte,
+                                                                             op & op_param,
+                                                                             size_t i)
+	{
+		// calculate the number of received elements
+		size_t n_ele = recv_buf.get(i).size() / sizeof(typename T::value_type);
+
+		// add the received particles to the vector
+		PtrMemory * ptr1 = new PtrMemory(recv_buf.get(i).getPointer(),recv_buf.get(i).size());
+
+		// create vector representation to a piece of memory already allocated
+		openfpm::vector<typename T::value_type,PtrMemory,typename layout_base<typename T::value_type>::type,layout_base,openfpm::grow_policy_identity> v2;
+
+		v2.setMemory(*ptr1);
+
+		// resize with the number of elements
+		v2.resize(n_ele);
+
+		// Merge the information
+
+		size_t recv_size_old = recv.size();
+
+		op_param.template execute<false,T,decltype(recv),decltype(v2),layout_base,prp...>(recv,v2,i);
+
+		size_t recv_size_new = recv.size();
+
+		if (sz_byte != NULL)
+			sz_byte->get(i) = recv_buf.get(i).size();
+		if (sz != NULL)
+			sz->get(i) = recv_size_new - recv_size_old;
+
+		return 1;
+	}
+};
+
+typedef aggregate<int,int> dummy_type;
+
+//
+template<typename T, typename S, template<typename> class layout_base>
+struct unpack_selector_with_prp<true,T,S,layout_base>
+{
+	template<typename op, unsigned int ... prp> static void call_unpack(S & recv,
+			                                                            openfpm::vector<BHeapMemory> & recv_buf,
+			                                                            openfpm::vector<size_t> * sz,
+			                                                            openfpm::vector<size_t> * sz_byte,
+			                                                            op & op_param)
 	{
 		if (sz_byte != NULL)
 			sz_byte->resize(recv_buf.size());
 
-		for (size_t i = 0 ; i < recv_buf.size() ; i++)
+		for (size_t i = 0 ; i < recv_buf.size() ; )
 		{
-			// calculate the number of received elements
-			size_t n_ele = recv_buf.get(i).size() / sizeof(typename T::value_type);
-
-			// add the received particles to the vector
-			PtrMemory * ptr1 = new PtrMemory(recv_buf.get(i).getPointer(),recv_buf.get(i).size());
-
-			// create vector representation to a piece of memory already allocated
-			openfpm::vector<typename T::value_type,PtrMemory,typename memory_traits_lin<typename T::value_type>::type, memory_traits_lin,openfpm::grow_policy_identity> v2;
-
-			v2.setMemory(*ptr1);
-
-			// resize with the number of elements
-			v2.resize(n_ele);
-
-			// Merge the information
-
-			size_t recv_size_old = recv.size();
-
-			op_param.template execute<false,T,decltype(recv),decltype(v2),prp...>(recv,v2,i);
-
-			size_t recv_size_new = recv.size();
-
-			if (sz_byte != NULL)
-				sz_byte->get(i) = recv_buf.get(i).size();
-			if (sz != NULL)
-				sz->get(i) = recv_size_new - recv_size_old;
+			i += unpack_selector_with_prp_lin<is_layout_mlin<layout_base<dummy_type>>::value,T,S,layout_base>::template call_unpack_impl<op,prp...>(recv,recv_buf,sz,sz_byte,op_param,i);
 		}
 	}
 };
@@ -106,16 +237,79 @@ struct call_serialize_variadic<index_tuple<prp...>>
 		Packer<T,HeapMemory>::template pack<prp...>(mem,send,sts);
 	}
 
-	template<typename op, typename T, typename S> inline static void call_unpack(S & recv, openfpm::vector<BHeapMemory> & recv_buf, openfpm::vector<size_t> * sz, openfpm::vector<size_t> * sz_byte, op & op_param)
+	template<typename op, typename T, typename S, template<typename> class layout_base>
+	inline static void call_unpack(S & recv,
+			                       openfpm::vector<BHeapMemory> & recv_buf,
+			                       openfpm::vector<size_t> * sz,
+			                       openfpm::vector<size_t> * sz_byte,
+			                       op & op_param)
 	{
 		const bool result = has_pack_gen<typename T::value_type>::value == false && is_vector<T>::value == true;
 
-		unpack_selector_with_prp<result, T, S>::template call_unpack<op,prp...>(recv, recv_buf, sz, sz_byte, op_param);
+		unpack_selector_with_prp<result, T, S,layout_base>::template call_unpack<op,prp...>(recv, recv_buf, sz, sz_byte, op_param);
+	}
+};
+
+
+/*! \brief this class is a functor for "for_each" algorithm
+ *
+ * This class is a functor for "for_each" algorithm. For each
+ * element of the boost::vector the operator() is called.
+ * Is mainly used to copy one encap into another encap object
+ *
+ * \tparam encap source
+ * \tparam encap dst
+ *
+ */
+
+template<typename sT>
+struct set_buf_pointer_for_each_prop
+{
+	//! set of pointers
+	sT & v;
+
+	openfpm::vector<const void *> & send_buf;
+
+	/*! \brief constructor
+	 *
+	 * \param v set of pointer buffers to set
+	 *
+	 */
+	inline set_buf_pointer_for_each_prop(sT & v, openfpm::vector<const void *> & send_buf)
+	:v(v),send_buf(send_buf)
+	{};
+
+	//! It call the copy function for each property
+	template<typename T>
+	inline void operator()(T& t) const
+	{
+		send_buf.add(v.template getPointer<T::value>());
+	}
+};
+
+template<typename T, bool impl = is_multiple_buffer_each_prp<T>::value >
+struct pack_unpack_cond_with_prp_inte_lin
+{
+	static void set_buffers(T & send, openfpm::vector<const void *> & send_buf)
+	{
+		send_buf.add(send.getPointer());
+	}
+};
+
+// memory_traits_inte
+template<typename T>
+struct pack_unpack_cond_with_prp_inte_lin<T,true>
+{
+	static void set_buffers(T & send, openfpm::vector<const void *> & send_buf)
+	{
+		set_buf_pointer_for_each_prop<T> sbp(send,send_buf);
+
+		boost::mpl::for_each_ref<boost::mpl::range_c<int,0,T::value_type::max_prop>>(sbp);
 	}
 };
 
 //! There is max_prop inside
-template<bool cond, typename op, typename T, typename S, unsigned int ... prp>
+template<bool cond, typename op, typename T, typename S, template <typename> class layout_base, unsigned int ... prp>
 struct pack_unpack_cond_with_prp
 {
 	static void packingRequest(T & send, size_t & tot_size, openfpm::vector<size_t> & sz)
@@ -138,10 +332,8 @@ struct pack_unpack_cond_with_prp
 	{
 		typedef typename ::generate_indexes<int, has_max_prop<T, has_value_type<T>::value>::number, MetaFuncOrd>::result ind_prop_to_pack;
 		if (has_pack_gen<typename T::value_type>::value == false && is_vector<T>::value == true)
-		//if (has_pack<typename T::value_type>::type::value == false && has_pack_agg<typename T::value_type>::result::value == false && is_vector<T>::value == true)
 		{
-			//std::cout << demangle(typeid(T).name()) << std::endl;
-			send_buf.add(send.getPointer());
+			pack_unpack_cond_with_prp_inte_lin<T>::set_buffers(send,send_buf);
 		}
 		else
 		{
@@ -150,10 +342,14 @@ struct pack_unpack_cond_with_prp
 		}
 	}
 
-	static void unpacking(S & recv, openfpm::vector<BHeapMemory> & recv_buf, openfpm::vector<size_t> * sz, openfpm::vector<size_t> * sz_byte, op & op_param)
+	static void unpacking(S & recv,
+			              openfpm::vector<BHeapMemory> & recv_buf,
+			              openfpm::vector<size_t> * sz,
+			              openfpm::vector<size_t> * sz_byte,
+			              op & op_param)
 	{
 		typedef index_tuple<prp...> ind_prop_to_pack;
-		call_serialize_variadic<ind_prop_to_pack>::template call_unpack<op,T,S>(recv, recv_buf, sz, sz_byte, op_param);
+		call_serialize_variadic<ind_prop_to_pack>::template call_unpack<op,T,S,layout_base>(recv, recv_buf, sz, sz_byte, op_param);
 	}
 };
 
@@ -165,7 +361,7 @@ template<bool sr>
 struct op_ssend_recv_add_sr
 {
 	//! Add data
-	template<typename T, typename D, typename S, int ... prp> static void execute(D & recv,S & v2, size_t i)
+	template<typename T, typename D, typename S, template<typename> class layout_base, int ... prp> static void execute(D & recv,S & v2, size_t i)
 	{
 		// Merge the information
 		recv.template add_prp<typename T::value_type,PtrMemory,openfpm::grow_policy_identity,openfpm::vect_isel<typename T::value_type>::value,prp...>(v2);
@@ -177,7 +373,7 @@ template<>
 struct op_ssend_recv_add_sr<true>
 {
 	//! Add data
-	template<typename T, typename D, typename S, int ... prp> static void execute(D & recv,S & v2, size_t i)
+	template<typename T, typename D, typename S, template<typename> class layout_base , int ... prp> static void execute(D & recv,S & v2, size_t i)
 	{
 		// Merge the information
 		recv.template add_prp<typename T::value_type,HeapMemory,openfpm::grow_policy_double,openfpm::vect_isel<typename T::value_type>::value, prp...>(v2);
@@ -189,10 +385,10 @@ template<typename op>
 struct op_ssend_recv_add
 {
 	//! Add data
-	template<bool sr, typename T, typename D, typename S, int ... prp> static void execute(D & recv,S & v2, size_t i)
+	template<bool sr, typename T, typename D, typename S, template<typename> class layout_base, int ... prp> static void execute(D & recv,S & v2, size_t i)
 	{
 		// Merge the information
-		op_ssend_recv_add_sr<sr>::template execute<T,D,S,prp...>(recv,v2,i);
+		op_ssend_recv_add_sr<sr>::template execute<T,D,S,layout_base,prp...>(recv,v2,i);
 	}
 };
 
@@ -233,7 +429,7 @@ struct op_ssend_recv_merge
 	{}
 
 	//! execute the merge
-	template<bool sr, typename T, typename D, typename S, int ... prp> void execute(D & recv,S & v2,size_t i)
+	template<bool sr, typename T, typename D, typename S, template<typename> class layout_base , int ... prp> void execute(D & recv,S & v2,size_t i)
 	{
 		op_ssend_recv_merge_impl<sr,op>::template execute<T,D,S,prp...>(recv,v2,i,opart);
 	}
@@ -244,7 +440,7 @@ template<bool sr>
 struct op_ssend_gg_recv_merge_impl
 {
 	//! Merge the
-	template<typename T, typename D, typename S, int ... prp> inline static void execute(D & recv,S & v2,size_t i,size_t & start)
+	template<typename T, typename D, typename S, template<typename> class layout_base , int ... prp> inline static void execute(D & recv,S & v2,size_t i,size_t & start)
 	{
 		// Merge the information
 		recv.template merge_prp_v<replace_,typename T::value_type, PtrMemory, openfpm::grow_policy_identity, prp...>(v2,start);
@@ -258,10 +454,10 @@ template<>
 struct op_ssend_gg_recv_merge_impl<true>
 {
 	//! merge the data
-	template<typename T, typename D, typename S, int ... prp> inline static void execute(D & recv,S & v2,size_t i,size_t & start)
+	template<typename T, typename D, typename S, template<typename> class layout_base , int ... prp> inline static void execute(D & recv,S & v2,size_t i,size_t & start)
 	{
 		// Merge the information
-		recv.template merge_prp_v<replace_,typename T::value_type, HeapMemory, openfpm::grow_policy_double, prp...>(v2,start);
+		recv.template merge_prp_v<replace_,typename T::value_type, HeapMemory , openfpm::grow_policy_double, prp...>(v2,start);
 
 		// from
 		start += v2.size();
@@ -280,9 +476,9 @@ struct op_ssend_gg_recv_merge
 	{}
 
 	//! execute the merge
-	template<bool sr, typename T, typename D, typename S, int ... prp> void execute(D & recv,S & v2,size_t i)
+	template<bool sr, typename T, typename D, typename S, template<typename> class layout_base, int ... prp> void execute(D & recv,S & v2,size_t i)
 	{
-		op_ssend_gg_recv_merge_impl<sr>::template execute<T,D,S,prp...>(recv,v2,i,start);
+		op_ssend_gg_recv_merge_impl<sr>::template execute<T,D,S,layout_base,prp...>(recv,v2,i,start);
 	}
 };
 
