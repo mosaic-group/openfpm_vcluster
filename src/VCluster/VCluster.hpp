@@ -91,6 +91,7 @@ class Vcluster: public Vcluster_base
 		// Prepare the sending buffer
 		openfpm::vector<const void *> send_buf;
 		openfpm::vector<size_t> send_sz_byte;
+		openfpm::vector<size_t> prc_send_;
 
 		size_t tot_size = 0;
 
@@ -102,6 +103,8 @@ class Vcluster: public Vcluster_base
 			pack_unpack_cond_with_prp<has_max_prop<T, has_value_type<T>::value>::value,op, T, S, layout_base>::packingRequest(send.get(i), req, send_sz_byte);
 			tot_size += req;
 		}
+
+		pack_unpack_cond_with_prp_inte_lin<T>::construct_prc(prc_send,prc_send_);
 
 		HeapMemory pmem;
 
@@ -117,8 +120,10 @@ class Vcluster: public Vcluster_base
 			pack_unpack_cond_with_prp<has_max_prop<T, has_value_type<T>::value>::value, op, T, S, layout_base>::packing(mem, send.get(i), sts, send_buf);
 		}
 
+		tags.clear();
+
 		// receive information
-		base_info bi(&recv_buf,prc_recv,sz_recv_byte);
+		base_info bi(&recv_buf,prc_recv,sz_recv_byte,tags);
 
 		// Send and recv multiple messages
 		if (opt & RECEIVE_KNOWN)
@@ -142,11 +147,11 @@ class Vcluster: public Vcluster_base
 		else
 		{
 			prc_recv.clear();
-			sendrecvMultipleMessagesNBX(prc_send.size(),(size_t *)send_sz_byte.getPointer(),(size_t *)prc_send.getPointer(),(void **)send_buf.getPointer(),msg_alloc,(void *)&bi);
+			sendrecvMultipleMessagesNBX(prc_send_.size(),(size_t *)send_sz_byte.getPointer(),(size_t *)prc_send_.getPointer(),(void **)send_buf.getPointer(),msg_alloc,(void *)&bi);
 		}
 
 		// Reorder the buffer
-		reorder_buffer(prc_recv,sz_recv_byte);
+		reorder_buffer(prc_recv,tags,sz_recv_byte);
 
 		mem.decRef();
 		delete &mem;
@@ -180,10 +185,12 @@ class Vcluster: public Vcluster_base
 		openfpm::vector<size_t> & prc;
 		//! size of each message
 		openfpm::vector<size_t> & sz;
+		//! tags
+		openfpm::vector<size_t> &tags;
 
 		//! constructor
-		base_info(openfpm::vector<BHeapMemory> * recv_buf, openfpm::vector<size_t> & prc, openfpm::vector<size_t> & sz)
-		:recv_buf(recv_buf),prc(prc),sz(sz)
+		base_info(openfpm::vector<BHeapMemory> * recv_buf, openfpm::vector<size_t> & prc, openfpm::vector<size_t> & sz, openfpm::vector<size_t> & tags)
+		:recv_buf(recv_buf),prc(prc),sz(sz),tags(tags)
 		{}
 	};
 
@@ -200,7 +207,7 @@ class Vcluster: public Vcluster_base
 	 * \return the pointer where to store the message for the processor i
 	 *
 	 */
-	static void * msg_alloc(size_t msg_i ,size_t total_msg, size_t total_p, size_t i, size_t ri, void * ptr)
+	static void * msg_alloc(size_t msg_i ,size_t total_msg, size_t total_p, size_t i, size_t ri, size_t tag, void * ptr)
 	{
 		base_info & rinfo = *(base_info *)ptr;
 
@@ -217,6 +224,7 @@ class Vcluster: public Vcluster_base
 		// Receive info
 		rinfo.prc.add(i);
 		rinfo.sz.add(msg_i);
+		rinfo.tags.add(tag);
 
 		// return the pointer
 		return rinfo.recv_buf->last().getPointer();
@@ -236,7 +244,7 @@ class Vcluster: public Vcluster_base
 	 * \return the pointer where to store the message for the processor i
 	 *
 	 */
-	static void * msg_alloc_known(size_t msg_i ,size_t total_msg, size_t total_p, size_t i, size_t ri, void * ptr)
+	static void * msg_alloc_known(size_t msg_i ,size_t total_msg, size_t total_p, size_t i, size_t ri, size_t tag, void * ptr)
 	{
 		base_info & rinfo = *(base_info *)ptr;
 
@@ -382,8 +390,10 @@ class Vcluster: public Vcluster_base
 			// remain buffer with size 0
 			openfpm::vector<size_t> send_req;
 
+			tags.clear();
+
 			// receive information
-			base_info bi(&recv_buf,prc,sz);
+			base_info bi(&recv_buf,prc,sz,tags);
 
 			// Send and recv multiple messages
 			sendrecvMultipleMessagesNBX(send_req.size(),NULL,NULL,NULL,msg_alloc,&bi);
@@ -428,8 +438,10 @@ class Vcluster: public Vcluster_base
 			
 			pack_unpack_cond_with_prp<has_max_prop<T, has_value_type<T>::value>::value,op_ssend_recv_add<void>, T, S, layout_base>::packing(mem, send, sts, send_buf);
 
+			tags.clear();
+
 			// receive information
-			base_info bi(NULL,prc,sz);
+			base_info bi(NULL,prc,sz,tags);
 
 			// Send and recv multiple messages
 			sendrecvMultipleMessagesNBX(send_prc.size(),(size_t *)sz.getPointer(),(size_t *)send_prc.getPointer(),(void **)send_buf.getPointer(),msg_alloc,(void *)&bi,NONE);
@@ -491,8 +503,10 @@ class Vcluster: public Vcluster_base
 				ptr += sz.get(i);
 			}
 
+			tags.clear();
+
 			// receive information
-			base_info bi(&recv_buf,prc,sz);
+			base_info bi(&recv_buf,prc,sz,tags);
 
 			// Send and recv multiple messages
 			sendrecvMultipleMessagesNBX(prc.size(),(size_t *)sz_byte.getPointer(),(size_t *)prc.getPointer(),(void **)send_buf.getPointer(),msg_alloc,(void *)&bi);
@@ -510,8 +524,10 @@ class Vcluster: public Vcluster_base
 			// The non-root receive
 			openfpm::vector<size_t> send_req;
 
+			tags.clear();
+
 			// receive information
-			base_info bi(&recv_buf,prc,sz);
+			base_info bi(&recv_buf,prc,sz,tags);
 
 			// Send and recv multiple messages
 			sendrecvMultipleMessagesNBX(send_req.size(),NULL,NULL,NULL,msg_alloc,&bi);
@@ -534,7 +550,7 @@ class Vcluster: public Vcluster_base
 	 * \param sz_recv list of size of the receiving messages (in byte)
 	 *
 	 */
-	void reorder_buffer(openfpm::vector<size_t> & prc, openfpm::vector<size_t> & sz_recv)
+	void reorder_buffer(openfpm::vector<size_t> & prc, openfpm::vector<size_t> tags, openfpm::vector<size_t> & sz_recv)
 	{
 
 		struct recv_buff_reorder
@@ -542,18 +558,23 @@ class Vcluster: public Vcluster_base
 			//! processor
 			size_t proc;
 
+			size_t tag;
+
 			//! position in the receive list
 			size_t pos;
 
 			//! default constructor
 			recv_buff_reorder()
-			:proc(0),pos(0)
+			:proc(0),tag(0),pos(0)
 			{};
 
 			//! needed to reorder
 			bool operator<(const recv_buff_reorder & rd) const
 			{
-				return proc < rd.proc;
+				if (proc == rd.proc)
+				{return tag < rd.tag;}
+
+				return (proc < rd.proc);
 			}
 		};
 
@@ -564,6 +585,7 @@ class Vcluster: public Vcluster_base
 		for (size_t i = 0 ; i < rcv.size() ; i++)
 		{
 			rcv.get(i).proc = prc.get(i);
+			rcv.get(i).tag = tags.get(i);
 			rcv.get(i).pos = i;
 		}
 

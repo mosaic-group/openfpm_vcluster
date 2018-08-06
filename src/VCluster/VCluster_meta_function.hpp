@@ -116,6 +116,60 @@ struct unpack_each_prop_buffer
 	}
 };
 
+/*! \brief this class is a functor for "for_each" algorithm
+ *
+ * This class is a functor for "for_each" algorithm. For each
+ * element of the boost::vector the operator() is called.
+ * Is mainly used to process the receive buffers in case of memory_traits_inte layout receive
+ *
+ * \tparam encap source
+ * \tparam encap dst
+ *
+ */
+
+template<typename sT, template<typename> class layout_base>
+struct process_receive_mem_traits_inte
+{
+	//! set of pointers
+	size_t i;
+
+	//! Receive buffer
+	openfpm::vector<BHeapMemory> & recv_buf;
+
+	//! Fake vector that map over received memory
+	openfpm::vector<typename sT::value_type,PtrMemory,typename layout_base<typename sT::value_type>::type,layout_base,openfpm::grow_policy_identity> & v2;
+
+	size_t n_ele = 0;
+
+	/*! \brief constructor
+	 *
+	 * \param v set of pointer buffers to set
+	 *
+	 */
+	inline process_receive_mem_traits_inte(openfpm::vector<typename sT::value_type,PtrMemory,typename layout_base<typename sT::value_type>::type,layout_base,openfpm::grow_policy_identity> & v2,
+			                               openfpm::vector<BHeapMemory> & recv_buf,
+			                               size_t i)
+	:i(i),recv_buf(recv_buf),v2(v2)
+	{};
+
+	//! It call the copy function for each property
+	template<typename T>
+	inline void operator()(T& t)
+	{
+		typedef typename boost::mpl::at<typename sT::value_type::type,T>::type type_prp;
+
+		// calculate the number of received elements
+		this->n_ele = recv_buf.get(i).size() / sizeof(type_prp);
+
+		// add the received particles to the vector
+		PtrMemory * ptr1 = new PtrMemory(recv_buf.get(i).getPointer(),recv_buf.get(i).size());
+
+		v2.template setMemory<T::value>(*ptr1);
+
+		++i;
+	}
+};
+
 template<bool inte_or_lin,typename T, typename S, template<typename> class layout_base>
 struct unpack_selector_with_prp_lin
 {
@@ -126,19 +180,14 @@ struct unpack_selector_with_prp_lin
                                                                              op & op_param,
                                                                              size_t i)
 	{
-		// calculate the number of received elements
-		size_t n_ele = recv_buf.get(i).size() / sizeof(typename T::value_type);
-
-		// add the received particles to the vector
-		PtrMemory * ptr1 = new PtrMemory(recv_buf.get(i).getPointer(),recv_buf.get(i).size());
-
 		// create vector representation to a piece of memory already allocated
 		openfpm::vector<typename T::value_type,PtrMemory,typename layout_base<typename T::value_type>::type,layout_base,openfpm::grow_policy_identity> v2;
 
-		v2.setMemory(*ptr1);
+		process_receive_mem_traits_inte<T,layout_base> prmti(v2,recv_buf,i);
 
-		// resize with the number of elements
-		v2.resize(n_ele);
+		boost::mpl::for_each_ref<boost::mpl::range_c<int,0,T::value_type::max_prop>>(prmti);
+
+		v2.resize(prmti.n_ele);
 
 		// Merge the information
 
@@ -287,12 +336,63 @@ struct set_buf_pointer_for_each_prop
 	}
 };
 
+/*! \brief this class is a functor for "for_each" algorithm
+ *
+ * This class is a functor for "for_each" algorithm. For each
+ * element of the boost::vector the operator() is called.
+ * Is mainly used to copy one encap into another encap object
+ *
+ * \tparam encap source
+ * \tparam encap dst
+ *
+ */
+
+template<typename sT>
+struct set_buf_size_for_each_prop
+{
+	//! set of pointers
+	sT & v;
+
+	openfpm::vector<size_t> & sz;
+
+	/*! \brief constructor
+	 *
+	 * \param v set of pointer buffers to set
+	 *
+	 */
+	inline set_buf_size_for_each_prop(sT & v, openfpm::vector<size_t> & sz)
+	:v(v),sz(sz)
+	{};
+
+	//! It call the copy function for each property
+	template<typename T>
+	inline void operator()(T& t) const
+	{
+		typedef typename boost::mpl::at<typename sT::value_type::type,T>::type type_prp;
+
+		sz.add(sizeof(type_prp)*v.size());
+	}
+};
+
 template<typename T, bool impl = is_multiple_buffer_each_prp<T>::value >
 struct pack_unpack_cond_with_prp_inte_lin
 {
 	static void set_buffers(T & send, openfpm::vector<const void *> & send_buf)
 	{
 		send_buf.add(send.getPointer());
+	}
+
+	static void set_size_buffers(T & send, openfpm::vector<size_t> & sz)
+	{
+		sz.add(send.size()*sizeof(typename T::value_type));
+	}
+
+	static void construct_prc(openfpm::vector<size_t> & prc_send, openfpm::vector<size_t> & prc_send_)
+	{
+		for (size_t i = 0 ; i < prc_send.size() ; i++)
+		{
+			prc_send_.add(prc_send.get(i));
+		}
 	}
 };
 
@@ -306,6 +406,22 @@ struct pack_unpack_cond_with_prp_inte_lin<T,true>
 
 		boost::mpl::for_each_ref<boost::mpl::range_c<int,0,T::value_type::max_prop>>(sbp);
 	}
+
+	static void set_size_buffers(T & send, openfpm::vector<size_t> & sz)
+	{
+		set_buf_size_for_each_prop<T> sbp(send,sz);
+
+		boost::mpl::for_each_ref<boost::mpl::range_c<int,0,T::value_type::max_prop>>(sbp);
+	}
+
+	static void construct_prc(openfpm::vector<size_t> & prc_send, openfpm::vector<size_t> & prc_send_)
+	{
+		for (size_t i = 0 ; i < prc_send.size() ; i++)
+		{
+			for (size_t j = 0 ; j < T::value_type::max_prop ; j++)
+			{prc_send_.add(prc_send.get(i));}
+		}
+	}
 };
 
 //! There is max_prop inside
@@ -316,9 +432,8 @@ struct pack_unpack_cond_with_prp
 	{
 		typedef typename ::generate_indexes<int, has_max_prop<T, has_value_type<T>::value>::number, MetaFuncOrd>::result ind_prop_to_pack;
 		if (has_pack_gen<typename T::value_type>::value == false && is_vector<T>::value == true)
-		//if (has_pack<typename T::value_type>::type::value == false && has_pack_agg<typename T::value_type>::result::value == false && is_vector<T>::value == true)
 		{
-			sz.add(send.size()*sizeof(typename T::value_type));
+			pack_unpack_cond_with_prp_inte_lin<T>::set_size_buffers(send,sz);
 		}
 		else
 		{
@@ -361,10 +476,15 @@ template<bool sr>
 struct op_ssend_recv_add_sr
 {
 	//! Add data
-	template<typename T, typename D, typename S, template<typename> class layout_base, int ... prp> static void execute(D & recv,S & v2, size_t i)
+	template<typename T, typename D, typename S, template<typename> class layout_base, int ... prp>
+	static void execute(D & recv,S & v2, size_t i)
 	{
 		// Merge the information
-		recv.template add_prp<typename T::value_type,PtrMemory,openfpm::grow_policy_identity,openfpm::vect_isel<typename T::value_type>::value,prp...>(v2);
+		recv.template add_prp<typename T::value_type,
+							  PtrMemory,
+							  openfpm::grow_policy_identity,
+							  openfpm::vect_isel<typename T::value_type>::value,
+							  prp...>(v2);
 	}
 };
 
@@ -376,7 +496,7 @@ struct op_ssend_recv_add_sr<true>
 	template<typename T, typename D, typename S, template<typename> class layout_base , int ... prp> static void execute(D & recv,S & v2, size_t i)
 	{
 		// Merge the information
-		recv.template add_prp<typename T::value_type,HeapMemory,openfpm::grow_policy_double,openfpm::vect_isel<typename T::value_type>::value, prp...>(v2);
+		recv.template add_prp<typename T::value_type,HeapMemory,typename T::grow_policy,openfpm::vect_isel<typename T::value_type>::value, prp...>(v2);
 	}
 };
 

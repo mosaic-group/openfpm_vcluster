@@ -184,6 +184,9 @@ protected:
 	//! Receive buffers
 	openfpm::vector<BHeapMemory> recv_buf;
 
+	//! tags receiving
+	openfpm::vector<size_t> tags;
+
 public:
 
 	// Finalize the MPI program
@@ -480,18 +483,18 @@ public:
 			                                              openfpm::vector< T > & data,
 														  openfpm::vector< size_t > prc_recv,
 														  openfpm::vector< size_t > & recv_sz ,
-														  void * (* msg_alloc)(size_t,size_t,size_t,size_t,size_t,void *),
+														  void * (* msg_alloc)(size_t,size_t,size_t,size_t,size_t,size_t,void *),
 														  void * ptr_arg,
 														  long int opt=NONE)
 	{
 		// Allocate the buffers
 
 		for (size_t i = 0 ; i < prc.size() ; i++)
-			send(prc.get(i),SEND_SPARSE + NBX_cnt,data.get(i).getPointer(),data.get(i).size());
+		{send(prc.get(i),SEND_SPARSE + NBX_cnt,data.get(i).getPointer(),data.get(i).size());}
 
 		for (size_t i = 0 ; i < prc_recv.size() ; i++)
 		{
-			void * ptr_recv = msg_alloc(recv_sz.get(i),0,0,prc_recv.get(i),i,ptr_arg);
+			void * ptr_recv = msg_alloc(recv_sz.get(i),0,0,prc_recv.get(i),i,SEND_SPARSE + NBX_cnt,ptr_arg);
 
 			recv(prc_recv.get(i),SEND_SPARSE + NBX_cnt,ptr_recv,recv_sz.get(i));
 		}
@@ -544,7 +547,11 @@ public:
 	 * \param opt options, NONE (ignored in this moment)
 	 *
 	 */
-	void sendrecvMultipleMessagesNBX(size_t n_send , size_t sz[], size_t prc[] , void * ptr[], size_t n_recv, size_t prc_recv[] , size_t sz_recv[] ,void * (* msg_alloc)(size_t,size_t,size_t,size_t,size_t,void *), void * ptr_arg, long int opt=NONE)
+	void sendrecvMultipleMessagesNBX(size_t n_send , size_t sz[],
+			                         size_t prc[] , void * ptr[],
+			                         size_t n_recv, size_t prc_recv[] ,
+			                         size_t sz_recv[] ,void * (* msg_alloc)(size_t,size_t,size_t,size_t,size_t, size_t,void *),
+			                         void * ptr_arg, long int opt=NONE)
 	{
 		// Allocate the buffers
 
@@ -553,7 +560,7 @@ public:
 
 		for (size_t i = 0 ; i < n_recv ; i++)
 		{
-			void * ptr_recv = msg_alloc(sz_recv[i],0,0,prc_recv[i],i,ptr_arg);
+			void * ptr_recv = msg_alloc(sz_recv[i],0,0,prc_recv[i],i,SEND_SPARSE + NBX_cnt,ptr_arg);
 
 			recv(prc_recv[i],SEND_SPARSE + NBX_cnt,ptr_recv,sz_recv[i]);
 		}
@@ -599,7 +606,10 @@ public:
 	 * \param opt options, only NONE supported
 	 *
 	 */
-	template<typename T> void sendrecvMultipleMessagesNBX(openfpm::vector< size_t > & prc, openfpm::vector< T > & data, void * (* msg_alloc)(size_t,size_t,size_t,size_t,size_t,void *), void * ptr_arg, long int opt=NONE)
+	template<typename T>
+	void sendrecvMultipleMessagesNBX(openfpm::vector< size_t > & prc, openfpm::vector< T > & data,
+			                         void * (* msg_alloc)(size_t,size_t,size_t,size_t,size_t,size_t,void *),
+			                         void * ptr_arg, long int opt=NONE)
 	{
 #ifdef SE_CLASS1
 		checkType<typename T::value_type>();
@@ -659,7 +669,10 @@ public:
 	 * \param opt options, NONE (ignored in this moment)
 	 *
 	 */
-	void sendrecvMultipleMessagesNBX(size_t n_send , size_t sz[], size_t prc[] , void * ptr[], void * (* msg_alloc)(size_t,size_t,size_t,size_t,size_t,void *), void * ptr_arg, long int opt = NONE)
+	void sendrecvMultipleMessagesNBX(size_t n_send , size_t sz[],
+			                         size_t prc[] , void * ptr[],
+			                         void * (* msg_alloc)(size_t,size_t,size_t,size_t,size_t,size_t,void *),
+			                         void * ptr_arg, long int opt = NONE)
 	{
 		if (stat.size() != 0 || req.size() != 0)
 			std::cerr << "Error: " << __FILE__ << ":" << __LINE__ << " this function must be called when no other requests are in progress. Please remember that if you use function like max(),sum(),send(),recv() check that you did not miss to call the function execute() \n";
@@ -680,7 +693,7 @@ public:
 #endif
 
 				tot_sent += sz[i];
-				MPI_SAFE_CALL(MPI_Issend(ptr[i], sz[i], MPI_BYTE, prc[i], SEND_SPARSE + NBX_cnt, MPI_COMM_WORLD,&req.last()));
+				MPI_SAFE_CALL(MPI_Issend(ptr[i], sz[i], MPI_BYTE, prc[i], SEND_SPARSE + NBX_cnt*131072 + i, MPI_COMM_WORLD,&req.last()));
 				log.logSend(prc[i]);
 			}
 		}
@@ -701,33 +714,38 @@ public:
 
 			MPI_Status stat_t;
 			int stat = false;
-			MPI_SAFE_CALL(MPI_Iprobe(MPI_ANY_SOURCE,SEND_SPARSE + NBX_cnt,MPI_COMM_WORLD,&stat,&stat_t));
+			MPI_SAFE_CALL(MPI_Iprobe(MPI_ANY_SOURCE,MPI_ANY_TAG/*SEND_SPARSE + NBX_cnt*/,MPI_COMM_WORLD,&stat,&stat_t));
 
 			// If I have an incoming message and is related to this NBX communication
 			if (stat == true)
 			{
-				// Get the message size
 				int msize;
+
+				// Get the message tag and size
 				MPI_SAFE_CALL(MPI_Get_count(&stat_t,MPI_BYTE,&msize));
 
-				// Get the pointer to receive the message
-				void * ptr = msg_alloc(msize,0,0,stat_t.MPI_SOURCE,rid,ptr_arg);
+				// Ok we check if the TAG come from one of our send TAG
+				if (stat_t.MPI_TAG >= (int)(SEND_SPARSE + NBX_cnt*131072) && stat_t.MPI_TAG < (int)(SEND_SPARSE + (NBX_cnt + 1)*131072))
+				{
+					// Get the pointer to receive the message
+					void * ptr = msg_alloc(msize,0,0,stat_t.MPI_SOURCE,rid,stat_t.MPI_TAG,ptr_arg);
 
-				// Log the receiving request
-				log.logRecv(stat_t);
+					// Log the receiving request
+					log.logRecv(stat_t);
 
-				rid++;
+					rid++;
 
-				// Check the pointer
+					// Check the pointer
 #ifdef SE_CLASS2
-				check_valid(ptr,msize);
+					check_valid(ptr,msize);
 #endif
-				tot_recv += msize;
-				MPI_SAFE_CALL(MPI_Recv(ptr,msize,MPI_BYTE,stat_t.MPI_SOURCE,SEND_SPARSE+NBX_cnt,MPI_COMM_WORLD,&stat_t));
+					tot_recv += msize;
+					MPI_SAFE_CALL(MPI_Recv(ptr,msize,MPI_BYTE,stat_t.MPI_SOURCE,stat_t.MPI_TAG,MPI_COMM_WORLD,&stat_t));
 
 #ifdef SE_CLASS2
-				check_valid(ptr,msize);
+					check_valid(ptr,msize);
 #endif
+				}
 			}
 
 			// Check the status of all the MPI_issend and call the barrier if finished

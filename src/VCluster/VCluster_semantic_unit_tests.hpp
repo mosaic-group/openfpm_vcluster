@@ -1486,8 +1486,9 @@ BOOST_AUTO_TEST_CASE( Vcluster_semantic_ssend_recv_layout_switch )
 
 	if (v_cl.size() > 10)	{return;}
 
-	openfpm::vector<openfpm::vector_gpu<aggregate<float,float[3]>>> vd;
+	openfpm::vector<openfpm::vector_gpu_single<aggregate<float,float[3]>>> vd;
 	openfpm::vector_gpu<aggregate<float,float[3]>> collect;
+	openfpm::vector_gpu<aggregate<float,float[3]>> collect2;
 	openfpm::vector<size_t> prc_send;
     openfpm::vector<size_t> prc_recv;
     openfpm::vector<size_t> sz_recv;
@@ -1506,52 +1507,46 @@ BOOST_AUTO_TEST_CASE( Vcluster_semantic_ssend_recv_layout_switch )
 			vd.get(i).template get<1>(j)[1] = 400000 + 10000*i + v_cl.rank()*100 + j;
 			vd.get(i).template get<1>(j)[2] = 400000 + 10000*i + v_cl.rank()*100 + j;
 		}
+
+		prc_send.add(i);
 	}
 
-	v_cl.SSendRecv<openfpm::vector_gpu<aggregate<float,float[3]>>,decltype(collect),memory_traits_inte>(vd,collect,prc_send, prc_recv,sz_recv);
+	v_cl.SSendRecv<openfpm::vector_gpu_single<aggregate<float,float[3]>>,decltype(collect),memory_traits_inte>(vd,collect,prc_send, prc_recv,sz_recv);
+	v_cl.SSendRecvP<openfpm::vector_gpu_single<aggregate<float,float[3]>>,decltype(collect),memory_traits_inte,0,1>(vd,collect2,prc_send, prc_recv,sz_recv);
+
+	// now we check what we received
+
+	// collect must have 100 * v_cl.size()
+
+	BOOST_REQUIRE_EQUAL(collect.size(),100*v_cl.size());
+	BOOST_REQUIRE_EQUAL(collect2.size(),100*v_cl.size());
+
+
+	// check what we received
+
+	bool match = true;
+	for (size_t i = 0 ; i < v_cl.size() ; i++)
+	{
+		for (size_t j = 0 ; j < 100 ; j++)
+		{
+			match &= collect.template get<0>(i*100 +j) == v_cl.rank()*10000 + i*100 + j;
+
+			match &= collect.template get<1>(i*100 +j)[0] == 400000 + v_cl.rank()*10000 + i*100 + j;
+			match &= collect.template get<1>(i*100 +j)[1] == 400000 + v_cl.rank()*10000 + i*100 + j;
+			match &= collect.template get<1>(i*100 +j)[2] == 400000 + v_cl.rank()*10000 + i*100 + j;
+
+			match &= collect2.template get<0>(i*100 +j) == v_cl.rank()*10000 + i*100 + j;
+
+			match &= collect2.template get<1>(i*100 +j)[0] == 400000 + v_cl.rank()*10000 + i*100 + j;
+			match &= collect2.template get<1>(i*100 +j)[1] == 400000 + v_cl.rank()*10000 + i*100 + j;
+			match &= collect2.template get<1>(i*100 +j)[2] == 400000 + v_cl.rank()*10000 + i*100 + j;
+		}
+
+		if (match == false){break;}
+	}
+
+	BOOST_REQUIRE_EQUAL(match,true);
 }
-
-/*BOOST_AUTO_TEST_CASE (Vcluster_semantic_bench_all_all)
-{
-                Vcluster & vcl = create_vcluster();
-
-                if (vcl.getProcessingUnits() >= 32)
-                        return;
-
-                openfpm::vector<size_t> prc_recv2;
-                openfpm::vector<size_t> prc_recv3;
-                openfpm::vector<size_t> prc_send;
-                openfpm::vector<size_t> sz_recv2;
-                openfpm::vector<size_t> sz_recv3;
-                openfpm::vector<openfpm::vector<Box<3,size_t>>> v1;
-                openfpm::vector<Box<3,size_t>> v2;
-                openfpm::vector<openfpm::vector<Box<3,size_t>>> v3;
-
-                v1.resize(vcl.getProcessingUnits());
-
-                for(size_t i = 0 ; i < v1.size() ; i++)
-                {
-                        for (size_t j = 0 ; j < 1000000 ; j++)
-                        {
-                                Box<3,size_t> b({j,j,j},{j,j,j});
-                                v1.get(i).add(b);
-                        }
-
-                        prc_send.add(i);
-                }
-
-                timer comm_time;
-                comm_time.start();
-
-                vcl.SSendRecv(v1,v2,prc_send,prc_recv2,sz_recv2);
-
-                comm_time.stop();
-                std::cout << "Communication time " << comm_time.getwct() << std::endl;
-
-                std::cout << "Total sent: " << tot_sent << "    Tot recv: "  << tot_recv << std::endl;
-
-                std::cout << "END" << std::endl;
-}*/
 
 
 BOOST_AUTO_TEST_SUITE_END()
