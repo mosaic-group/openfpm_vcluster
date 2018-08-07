@@ -48,8 +48,7 @@ fi
 prefix="$prefix/openfpm_vcluster"
 echo "Installation dir is: $prefix"
 
-AC_PROG_RANLIB
-AM_PROG_AR
+LT_INIT
 
 # Checks for programs.
 AC_PROG_CXX

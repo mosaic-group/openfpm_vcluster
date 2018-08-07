@@ -45,9 +45,13 @@ class Vcluster: public Vcluster_base
 	struct index_gen<index_tuple<prp...>>
 	{
 		//! Process the receive buffer
-		template<typename op, typename T, typename S,template <typename> class layout_base> inline static void process_recv(Vcluster & vcl, S & recv, openfpm::vector<size_t> * sz_recv, openfpm::vector<size_t> * sz_recv_byte, op & op_param)
+		template<typename op,
+		         typename T,
+				 typename S,
+				 template <typename> class layout_base = memory_traits_lin>
+		inline static void process_recv(Vcluster & vcl, S & recv, openfpm::vector<size_t> * sz_recv, openfpm::vector<size_t> * sz_recv_byte, op & op_param)
 		{
-			vcl.process_receive_buffer_with_prp<op,T,S,layout_base, prp...>(recv,sz_recv,sz_recv_byte,op_param);
+			vcl.process_receive_buffer_with_prp<op,T,S,layout_base,prp...>(recv,sz_recv,sz_recv_byte,op_param);
 		}
 	};
 
@@ -138,11 +142,17 @@ class Vcluster: public Vcluster_base
 						sz_recv_byte.get(i) = sz_recv.get(i) * sizeof(typename T::value_type);
 				}
 				else
-					std::cout << __FILE__ << ":" << __LINE__ << " Error " << demangle(typeid(T).name()) << " the type does not work with the option RECEIVE_KNOWN or NO_CHANGE_ELEMENTS" << std::endl;
-			}
+				{std::cout << __FILE__ << ":" << __LINE__ << " Error " << demangle(typeid(T).name()) << " the type does not work with the option or NO_CHANGE_ELEMENTS" << std::endl;}
 
-			Vcluster_base::sendrecvMultipleMessagesNBX(prc_send.size(),(size_t *)send_sz_byte.getPointer(),(size_t *)prc_send.getPointer(),(void **)send_buf.getPointer(),
-										prc_recv.size(),(size_t *)prc_recv.getPointer(),(size_t *)sz_recv_byte.getPointer(),msg_alloc_known,(void *)&bi);
+				Vcluster_base::sendrecvMultipleMessagesNBX(prc_send.size(),(size_t *)send_sz_byte.getPointer(),(size_t *)prc_send.getPointer(),(void **)send_buf.getPointer(),
+											prc_recv.size(),(size_t *)prc_recv.getPointer(),(size_t *)sz_recv_byte.getPointer(),msg_alloc_known,(void *)&bi);
+			}
+			else
+			{
+				Vcluster_base::sendrecvMultipleMessagesNBX(prc_send.size(),(size_t *)send_sz_byte.getPointer(),(size_t *)prc_send.getPointer(),(void **)send_buf.getPointer(),
+											prc_recv.size(),(size_t *)prc_recv.getPointer(),msg_alloc_known,(void *)&bi);
+				sz_recv_byte = sz_recv_tmp;
+			}
 		}
 		else
 		{
@@ -275,7 +285,7 @@ class Vcluster: public Vcluster_base
 	 * \param op_param operation to do in merging the received information with recv
 	 *
 	 */
-	template<typename op, typename T, typename S, template<typename> class layout_base, unsigned int ... prp >
+	template<typename op, typename T, typename S, template <typename> class layout_base ,unsigned int ... prp >
 	void process_receive_buffer_with_prp(S & recv,
 			                             openfpm::vector<size_t> * sz,
 										 openfpm::vector<size_t> * sz_byte,
@@ -369,11 +379,14 @@ class Vcluster: public Vcluster_base
 	 * \return true if the function completed succefully
 	 *
 	 */
-	template<typename T, typename S, template <typename> class layout_base=memory_traits_lin> bool SGather(T & send,
-			                                      S & recv,
-												  openfpm::vector<size_t> & prc,
-												  openfpm::vector<size_t> & sz,
-												  size_t root)
+	template<typename T,
+	         typename S,
+			 template <typename> class layout_base = memory_traits_lin>
+	bool SGather(T & send,
+			     S & recv,
+				 openfpm::vector<size_t> & prc,
+				 openfpm::vector<size_t> & sz,
+				 size_t root)
 	{
 #ifdef SE_CLASS1
 		if (&send == (T *)&recv)
@@ -644,13 +657,15 @@ class Vcluster: public Vcluster_base
 	 * \return true if the function completed succefully
 	 *
 	 */
-	template<typename T, typename S, template<typename> class layout_base = memory_traits_lin >
+	template<typename T,
+	         typename S,
+			 template <typename> class layout_base = memory_traits_lin>
 	bool SSendRecv(openfpm::vector<T> & send,
 			       S & recv,
-			       openfpm::vector<size_t> & prc_send,
-			       openfpm::vector<size_t> & prc_recv,
-			       openfpm::vector<size_t> & sz_recv,
-			       size_t opt = NONE)
+				   openfpm::vector<size_t> & prc_send,
+				   openfpm::vector<size_t> & prc_recv,
+				   openfpm::vector<size_t> & sz_recv,
+				   size_t opt = NONE)
 	{
 		prepare_send_buffer<op_ssend_recv_add<void>,T,S,layout_base>(send,recv,prc_send,prc_recv,sz_recv,opt);
 
@@ -693,14 +708,15 @@ class Vcluster: public Vcluster_base
 	 * \return true if the function completed successful
 	 *
 	 */
-	template<typename T, typename S, template<typename> class layout_base, int ... prp> bool SSendRecvP(openfpm::vector<T> & send,
+	template<typename T, typename S, template <typename> class layout_base, int ... prp> bool SSendRecvP(openfpm::vector<T> & send,
 			                                                      S & recv,
 																  openfpm::vector<size_t> & prc_send,
 																  openfpm::vector<size_t> & prc_recv,
 																  openfpm::vector<size_t> & sz_recv,
-																  openfpm::vector<size_t> & sz_recv_byte)
+																  openfpm::vector<size_t> & sz_recv_byte,
+																  size_t opt = NONE)
 	{
-		prepare_send_buffer<op_ssend_recv_add<void>,T,S,layout_base>(send,recv,prc_send,prc_recv,sz_recv,NONE);
+		prepare_send_buffer<op_ssend_recv_add<void>,T,S,layout_base>(send,recv,prc_send,prc_recv,sz_recv,opt);
 
 		// operation object
 		op_ssend_recv_add<void> opa;
@@ -739,13 +755,15 @@ class Vcluster: public Vcluster_base
 	 * \return true if the function completed succefully
 	 *
 	 */
-	template<typename T, typename S, template<typename> class layout_base, int ... prp> bool SSendRecvP(openfpm::vector<T> & send,
-			                                                      S & recv,
-																  openfpm::vector<size_t> & prc_send,
-																  openfpm::vector<size_t> & prc_recv,
-																  openfpm::vector<size_t> & sz_recv)
+	template<typename T, typename S, template <typename> class layout_base, int ... prp>
+	bool SSendRecvP(openfpm::vector<T> & send,
+			        S & recv,
+					openfpm::vector<size_t> & prc_send,
+			    	openfpm::vector<size_t> & prc_recv,
+					openfpm::vector<size_t> & sz_recv,
+					size_t opt = NONE)
 	{
-		prepare_send_buffer<op_ssend_recv_add<void>,T,S,layout_base>(send,recv,prc_send,prc_recv,sz_recv,NONE);
+		prepare_send_buffer<op_ssend_recv_add<void>,T,S,layout_base>(send,recv,prc_send,prc_recv,sz_recv,opt);
 
 		// operation object
 		op_ssend_recv_add<void> opa;
@@ -792,13 +810,18 @@ class Vcluster: public Vcluster_base
 	 * \return true if the function completed successful
 	 *
 	 */
-	template<typename op, typename T, typename S, template<typename>class layout_base , int ... prp > bool SSendRecvP_op(openfpm::vector<T> & send,
-			                                                                      S & recv,
-																				  openfpm::vector<size_t> & prc_send,
-																				  op & op_param,
-																				  openfpm::vector<size_t> & prc_recv,
-																				  openfpm::vector<size_t> & recv_sz,
-																				  size_t opt = NONE)
+	template<typename op,
+	         typename T,
+			 typename S,
+			 template <typename> class layout_base,
+			 int ... prp>
+	bool SSendRecvP_op(openfpm::vector<T> & send,
+			           S & recv,
+					   openfpm::vector<size_t> & prc_send,
+					   op & op_param,
+					   openfpm::vector<size_t> & prc_recv,
+					   openfpm::vector<size_t> & recv_sz,
+				 	   size_t opt = NONE)
 	{
 		prepare_send_buffer<op,T,S,layout_base>(send,recv,prc_send,prc_recv,recv_sz,opt);
 

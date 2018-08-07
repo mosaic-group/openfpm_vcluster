@@ -14,7 +14,14 @@
 template<bool result, typename T, typename S, template<typename> class layout_base>
 struct unpack_selector_with_prp
 {
-	template<typename op, int ... prp> static void call_unpack(S & recv, openfpm::vector<BHeapMemory> & recv_buf, openfpm::vector<size_t> * sz, openfpm::vector<size_t> * sz_byte, op & op_param)
+	template<typename op,
+	         template <typename> class layout_base,
+			 int ... prp>
+	static void call_unpack(S & recv,
+			                openfpm::vector<BHeapMemory> & recv_buf,
+							openfpm::vector<size_t> * sz,
+							openfpm::vector<size_t> * sz_byte,
+							op & op_param)
 	{
 		if (sz_byte != NULL)
 			sz_byte->resize(recv_buf.size());
@@ -421,11 +428,15 @@ struct pack_unpack_cond_with_prp_inte_lin<T,true>
 			for (size_t j = 0 ; j < T::value_type::max_prop ; j++)
 			{prc_send_.add(prc_send.get(i));}
 		}
-	}
 };
 
 //! There is max_prop inside
-template<bool cond, typename op, typename T, typename S, template <typename> class layout_base, unsigned int ... prp>
+template<bool cond,
+         typename op,
+		 typename T,
+		 typename S,
+		 template <typename> class layout_base,
+		 unsigned int ... prp>
 struct pack_unpack_cond_with_prp
 {
 	static void packingRequest(T & send, size_t & tot_size, openfpm::vector<size_t> & sz)
@@ -459,9 +470,9 @@ struct pack_unpack_cond_with_prp
 
 	static void unpacking(S & recv,
 			              openfpm::vector<BHeapMemory> & recv_buf,
-			              openfpm::vector<size_t> * sz,
-			              openfpm::vector<size_t> * sz_byte,
-			              op & op_param)
+						  openfpm::vector<size_t> * sz,
+						  openfpm::vector<size_t> * sz_byte,
+						  op & op_param)
 	{
 		typedef index_tuple<prp...> ind_prop_to_pack;
 		call_serialize_variadic<ind_prop_to_pack>::template call_unpack<op,T,S,layout_base>(recv, recv_buf, sz, sz_byte, op_param);
@@ -476,14 +487,18 @@ template<bool sr>
 struct op_ssend_recv_add_sr
 {
 	//! Add data
-	template<typename T, typename D, typename S, template<typename> class layout_base, int ... prp>
-	static void execute(D & recv,S & v2, size_t i)
+	template<typename T,
+	         typename D,
+			 typename S,
+			 template <typename> class layout_base,
+			 int ... prp> static void execute(D & recv,S & v2, size_t i)
 	{
 		// Merge the information
 		recv.template add_prp<typename T::value_type,
-							  PtrMemory,
+		                      PtrMemory,
 							  openfpm::grow_policy_identity,
 							  openfpm::vect_isel<typename T::value_type>::value,
+							  layout_base,
 							  prp...>(v2);
 	}
 };
@@ -493,10 +508,20 @@ template<>
 struct op_ssend_recv_add_sr<true>
 {
 	//! Add data
-	template<typename T, typename D, typename S, template<typename> class layout_base , int ... prp> static void execute(D & recv,S & v2, size_t i)
+	template<typename T,
+	         typename D,
+			 typename S,
+			 template <typename> class layout_base,
+			 int ... prp>
+	static void execute(D & recv,S & v2, size_t i)
 	{
 		// Merge the information
-		recv.template add_prp<typename T::value_type,HeapMemory,typename T::grow_policy,openfpm::vect_isel<typename T::value_type>::value, prp...>(v2);
+		recv.template add_prp<typename T::value_type,
+		                      HeapMemory,
+							  openfpm::grow_policy_double,
+							  openfpm::vect_isel<typename T::value_type>::value,
+							  layout_base,
+							  prp...>(v2);
 	}
 };
 
@@ -505,7 +530,13 @@ template<typename op>
 struct op_ssend_recv_add
 {
 	//! Add data
-	template<bool sr, typename T, typename D, typename S, template<typename> class layout_base, int ... prp> static void execute(D & recv,S & v2, size_t i)
+	template<bool sr,
+	         typename T,
+			 typename D,
+			 typename S,
+			 template <typename> class layout_base,
+			 int ... prp>
+	static void execute(D & recv,S & v2, size_t i)
 	{
 		// Merge the information
 		op_ssend_recv_add_sr<sr>::template execute<T,D,S,layout_base,prp...>(recv,v2,i);
@@ -517,10 +548,20 @@ template<bool sr,template<typename,typename> class op>
 struct op_ssend_recv_merge_impl
 {
 	//! Merge the
-	template<typename T, typename D, typename S, int ... prp> inline static void execute(D & recv,S & v2,size_t i,openfpm::vector<openfpm::vector<aggregate<size_t,size_t>>> & opart)
+	template<typename T,
+	         typename D,
+			 typename S,
+			 template <typename> class layout_base,
+			 int ... prp>
+	inline static void execute(D & recv,S & v2,size_t i,openfpm::vector<openfpm::vector<aggregate<size_t,size_t>>> & opart)
 	{
 		// Merge the information
-		recv.template merge_prp_v<op,typename T::value_type, PtrMemory, openfpm::grow_policy_identity, prp...>(v2,opart.get(i));
+		recv.template merge_prp_v<op,
+		                          typename T::value_type,
+								  PtrMemory,
+								  openfpm::grow_policy_identity,
+								  layout_base,
+								  prp...>(v2,opart.get(i));
 	}
 };
 
@@ -529,10 +570,20 @@ template<template<typename,typename> class op>
 struct op_ssend_recv_merge_impl<true,op>
 {
 	//! merge the data
-	template<typename T, typename D, typename S, int ... prp> inline static void execute(D & recv,S & v2,size_t i,openfpm::vector<openfpm::vector<aggregate<size_t,size_t>>> & opart)
+	template<typename T,
+	         typename D,
+			 typename S,
+			 template <typename> class layout_base,
+			 int ... prp>
+	inline static void execute(D & recv,S & v2,size_t i,openfpm::vector<openfpm::vector<aggregate<size_t,size_t>>> & opart)
 	{
 		// Merge the information
-		recv.template merge_prp_v<op,typename T::value_type, HeapMemory, openfpm::grow_policy_double, prp...>(v2,opart.get(i));
+		recv.template merge_prp_v<op,
+		                          typename T::value_type,
+								  HeapMemory,
+								  openfpm::grow_policy_double,
+								  layout_base,
+								  prp...>(v2,opart.get(i));
 	}
 };
 
@@ -549,9 +600,15 @@ struct op_ssend_recv_merge
 	{}
 
 	//! execute the merge
-	template<bool sr, typename T, typename D, typename S, template<typename> class layout_base , int ... prp> void execute(D & recv,S & v2,size_t i)
+	template<bool sr,
+	         typename T,
+			 typename D,
+			 typename S,
+			 template <typename> class layout_base,
+			 int ... prp>
+	void execute(D & recv,S & v2,size_t i)
 	{
-		op_ssend_recv_merge_impl<sr,op>::template execute<T,D,S,prp...>(recv,v2,i,opart);
+		op_ssend_recv_merge_impl<sr,op>::template execute<T,D,S,layout_base,prp...>(recv,v2,i,opart);
 	}
 };
 
@@ -560,10 +617,20 @@ template<bool sr>
 struct op_ssend_gg_recv_merge_impl
 {
 	//! Merge the
-	template<typename T, typename D, typename S, template<typename> class layout_base , int ... prp> inline static void execute(D & recv,S & v2,size_t i,size_t & start)
+	template<typename T,
+	         typename D,
+			 typename S,
+			 template <typename> class layout_base,
+			 int ... prp>
+	inline static void execute(D & recv,S & v2,size_t i,size_t & start)
 	{
 		// Merge the information
-		recv.template merge_prp_v<replace_,typename T::value_type, PtrMemory, openfpm::grow_policy_identity, prp...>(v2,start);
+		recv.template merge_prp_v<replace_,
+		                          typename T::value_type,
+								  PtrMemory,
+								  openfpm::grow_policy_identity,
+								  layout_base,
+								  prp...>(v2,start);
 
 		start += v2.size();
 	}
@@ -574,10 +641,19 @@ template<>
 struct op_ssend_gg_recv_merge_impl<true>
 {
 	//! merge the data
-	template<typename T, typename D, typename S, template<typename> class layout_base , int ... prp> inline static void execute(D & recv,S & v2,size_t i,size_t & start)
+	template<typename T,
+	         typename D,
+			 typename S,
+			 template <typename> class layout_base,
+			 int ... prp> inline static void execute(D & recv,S & v2,size_t i,size_t & start)
 	{
 		// Merge the information
-		recv.template merge_prp_v<replace_,typename T::value_type, HeapMemory , openfpm::grow_policy_double, prp...>(v2,start);
+		recv.template merge_prp_v<replace_,
+		                          typename T::value_type,
+								  HeapMemory,
+								  openfpm::grow_policy_double,
+								  layout_base,
+								  prp...>(v2,start);
 
 		// from
 		start += v2.size();
