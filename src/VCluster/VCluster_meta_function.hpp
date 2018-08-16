@@ -15,7 +15,6 @@ template<bool result, typename T, typename S, template<typename> class layout_ba
 struct unpack_selector_with_prp
 {
 	template<typename op,
-	         template <typename> class layout_base,
 			 int ... prp>
 	static void call_unpack(S & recv,
 			                openfpm::vector<BHeapMemory> & recv_buf,
@@ -306,7 +305,6 @@ struct call_serialize_variadic<index_tuple<prp...>>
 	}
 };
 
-
 /*! \brief this class is a functor for "for_each" algorithm
  *
  * This class is a functor for "for_each" algorithm. For each
@@ -317,7 +315,6 @@ struct call_serialize_variadic<index_tuple<prp...>>
  * \tparam encap dst
  *
  */
-
 template<typename sT>
 struct set_buf_pointer_for_each_prop
 {
@@ -326,20 +323,35 @@ struct set_buf_pointer_for_each_prop
 
 	openfpm::vector<const void *> & send_buf;
 
+	size_t opt;
+
 	/*! \brief constructor
 	 *
 	 * \param v set of pointer buffers to set
 	 *
 	 */
-	inline set_buf_pointer_for_each_prop(sT & v, openfpm::vector<const void *> & send_buf)
-	:v(v),send_buf(send_buf)
+	inline set_buf_pointer_for_each_prop(sT & v, openfpm::vector<const void *> & send_buf, size_t opt)
+	:v(v),send_buf(send_buf),opt(opt)
 	{};
 
 	//! It call the copy function for each property
 	template<typename T>
 	inline void operator()(T& t) const
 	{
-		send_buf.add(v.template getPointer<T::value>());
+		// If we have GPU direct activated use directly the cuda buffer
+		if (opt & MPI_GPU_DIRECT)
+		{
+#if defined(MPIX_CUDA_AWARE_SUPPORT) && MPIX_CUDA_AWARE_SUPPORT
+			send_buf.add(v.template getDevicePointer<T::value>());
+#else
+			v.template deviceToHost<T::value>();
+			send_buf.add(v.template getPointer<T::value>());
+#endif
+		}
+		else
+		{
+			send_buf.add(v.template getPointer<T::value>());
+		}
 	}
 };
 
@@ -384,7 +396,7 @@ struct set_buf_size_for_each_prop
 template<typename T, bool impl = is_multiple_buffer_each_prp<T>::value >
 struct pack_unpack_cond_with_prp_inte_lin
 {
-	static void set_buffers(T & send, openfpm::vector<const void *> & send_buf)
+	static void set_buffers(T & send, openfpm::vector<const void *> & send_buf, size_t opt)
 	{
 		send_buf.add(send.getPointer());
 	}
@@ -407,9 +419,9 @@ struct pack_unpack_cond_with_prp_inte_lin
 template<typename T>
 struct pack_unpack_cond_with_prp_inte_lin<T,true>
 {
-	static void set_buffers(T & send, openfpm::vector<const void *> & send_buf)
+	static void set_buffers(T & send, openfpm::vector<const void *> & send_buf, size_t opt)
 	{
-		set_buf_pointer_for_each_prop<T> sbp(send,send_buf);
+		set_buf_pointer_for_each_prop<T> sbp(send,send_buf,opt);
 
 		boost::mpl::for_each_ref<boost::mpl::range_c<int,0,T::value_type::max_prop>>(sbp);
 	}
@@ -428,6 +440,7 @@ struct pack_unpack_cond_with_prp_inte_lin<T,true>
 			for (size_t j = 0 ; j < T::value_type::max_prop ; j++)
 			{prc_send_.add(prc_send.get(i));}
 		}
+	}
 };
 
 //! There is max_prop inside
@@ -454,12 +467,12 @@ struct pack_unpack_cond_with_prp
 		}
 	}
 
-	static void packing(ExtPreAlloc<HeapMemory> & mem, T & send, Pack_stat & sts, openfpm::vector<const void *> & send_buf)
+	static void packing(ExtPreAlloc<HeapMemory> & mem, T & send, Pack_stat & sts, openfpm::vector<const void *> & send_buf, size_t opt = 0)
 	{
 		typedef typename ::generate_indexes<int, has_max_prop<T, has_value_type<T>::value>::number, MetaFuncOrd>::result ind_prop_to_pack;
 		if (has_pack_gen<typename T::value_type>::value == false && is_vector<T>::value == true)
 		{
-			pack_unpack_cond_with_prp_inte_lin<T>::set_buffers(send,send_buf);
+			pack_unpack_cond_with_prp_inte_lin<T>::set_buffers(send,send_buf,opt);
 		}
 		else
 		{
@@ -518,7 +531,7 @@ struct op_ssend_recv_add_sr<true>
 		// Merge the information
 		recv.template add_prp<typename T::value_type,
 		                      HeapMemory,
-							  openfpm::grow_policy_double,
+		                      typename T::grow_policy,
 							  openfpm::vect_isel<typename T::value_type>::value,
 							  layout_base,
 							  prp...>(v2);

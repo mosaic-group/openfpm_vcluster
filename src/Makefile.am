@@ -9,13 +9,13 @@ endif
 
 noinst_PROGRAMS = vcluster_test
 vcluster_test_SOURCES = main.cpp VCluster/VCluster.cpp  ../../openfpm_devices/src/memory/HeapMemory.cpp ../../openfpm_devices/src/memory/PtrMemory.cpp ../../openfpm_devices/src/Memleak_check.cpp $(CUDA_SOURCES)
-vcluster_test_CXXFLAGS = $(AM_CXXFLAGS) $(INCLUDES_PATH)  $(BOOST_CPPFLAGS) $(CUDA_CFLAGS)
+vcluster_test_CXXFLAGS = -Wunknown-pragmas $(AM_CXXFLAGS) $(INCLUDES_PATH)  $(BOOST_CPPFLAGS) $(CUDA_CFLAGS)
 vcluster_test_CFLAGS = $(CUDA_CFLAGS)
 vcluster_test_LDADD = $(LINKLIBS)
 
 lib_LIBRARIES = libvcluster.a
 libvcluster_a_SOURCES = VCluster/VCluster.cpp
-libvcluster_a_CXXFLAGS = $(AM_CXXFLAGS) $(INCLUDES_PATH) $(BOOST_CPPFLAGS) $(CUDA_CFLAGS)
+libvcluster_a_CXXFLAGS = -Wunknown-pragmas $(AM_CXXFLAGS) $(INCLUDES_PATH) $(BOOST_CPPFLAGS) $(CUDA_CFLAGS)
 libvcluster_a_CFLAGS =
 
 nobase_include_HEADERS = MPI_wrapper/MPI_IallreduceW.hpp MPI_wrapper/MPI_IrecvW.hpp MPI_wrapper/MPI_IBcastW.hpp  MPI_wrapper/MPI_IsendW.hpp MPI_wrapper/MPI_util.hpp MPI_wrapper/MPI_IAllGather.hpp  \

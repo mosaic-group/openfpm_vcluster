@@ -164,16 +164,28 @@ BOOST_AUTO_TEST_CASE(VCluster_bcast_test)
 
 	std::cout << "Broadcast test " << std::endl;
 
-	test_single_all_broadcast_primitives<unsigned char>(vcl);
-	test_single_all_broadcast_primitives<char>(vcl);
-	test_single_all_broadcast_primitives<short>(vcl);
-	test_single_all_broadcast_primitives<unsigned short>(vcl);
-	test_single_all_broadcast_primitives<int>(vcl);
-	test_single_all_broadcast_primitives<unsigned int>(vcl);
-	test_single_all_broadcast_primitives<long int>(vcl);
-	test_single_all_broadcast_primitives<unsigned long int>(vcl);
-	test_single_all_broadcast_primitives<float>(vcl);
-	test_single_all_broadcast_primitives<double>(vcl);
+	test_single_all_broadcast_primitives<unsigned char,HeapMemory,memory_traits_lin>(vcl);
+	test_single_all_broadcast_primitives<char,HeapMemory,memory_traits_lin>(vcl);
+	test_single_all_broadcast_primitives<short,HeapMemory,memory_traits_lin>(vcl);
+	test_single_all_broadcast_primitives<unsigned short,HeapMemory,memory_traits_lin>(vcl);
+	test_single_all_broadcast_primitives<int,HeapMemory,memory_traits_lin>(vcl);
+	test_single_all_broadcast_primitives<unsigned int,HeapMemory,memory_traits_lin>(vcl);
+	test_single_all_broadcast_primitives<long int,HeapMemory,memory_traits_lin>(vcl);
+	test_single_all_broadcast_primitives<unsigned long int,HeapMemory,memory_traits_lin>(vcl);
+	test_single_all_broadcast_primitives<float,HeapMemory,memory_traits_lin>(vcl);
+	test_single_all_broadcast_primitives<double,HeapMemory,memory_traits_lin>(vcl);
+}
+
+BOOST_AUTO_TEST_CASE(VCluster_bcast_complex_test)
+{
+	Vcluster & vcl = create_vcluster();
+
+	std::cout << "Broadcast complex test " << std::endl;
+
+	test_single_all_broadcast_complex<aggregate<int,int>,HeapMemory,memory_traits_lin>(vcl);
+	test_single_all_broadcast_complex<aggregate<int,int>,HeapMemory,memory_traits_inte>(vcl);
+	test_single_all_broadcast_complex<aggregate<int,int>,CudaMemory,memory_traits_lin>(vcl);
+	test_single_all_broadcast_complex<aggregate<int,int>,CudaMemory,memory_traits_inte>(vcl);
 }
 
 BOOST_AUTO_TEST_CASE( VCluster_use_sendrecv)
@@ -202,7 +214,7 @@ BOOST_AUTO_TEST_CASE( VCluster_use_sendrecv_size_known)
 	std::cout << "VCluster unit test stop sendrecv known size" << "\n";
 }
 
-BOOST_AUTO_TEST_CASE( VCluster_use_sendrecv_known)
+BOOST_AUTO_TEST_CASE( VCluster_use_sendrecv_known )
 {
 	std::cout << "VCluster unit test start known" << "\n";
 

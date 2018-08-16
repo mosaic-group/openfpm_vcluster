@@ -20,6 +20,9 @@
 #include "memory/BHeapMemory.hpp"
 #include "Packer_Unpacker/has_max_prop.hpp"
 #include "data_type/aggregate.hpp"
+#if defined(CUDA_GPU) && defined(__NVCC__)
+#include "util/cuda/moderngpu/launch_box.hxx"
+#endif
 
 #ifdef HAVE_PETSC
 #include <petscvec.h>
@@ -37,6 +40,7 @@
 
 #define RECEIVE_KNOWN 4
 #define KNOWN_ELEMENT_OR_BYTE 8
+#define MPI_GPU_DIRECT 16
 
 // number of vcluster instances
 extern size_t n_vcluster;
@@ -137,6 +141,17 @@ class Vcluster_base
 	//! vector of functions to execute after all the request has been performed
 	std::vector<int> post_exe;
 
+#if defined(CUDA_GPU) && defined(__NVCC__)
+
+	//! standard context for mgpu
+	mgpu::standard_context_t * context;
+
+#else
+
+	void * context = NULL;
+
+#endif
+
 	// Object array
 
 
@@ -211,6 +226,12 @@ public:
 				}
 			}
 		}
+
+#if defined(CUDA_GPU) && defined(__NVCC__)
+
+		delete context;
+
+#endif
 	}
 
 	/*! \brief Virtual cluster constructor
@@ -262,6 +283,12 @@ public:
 		// Initialize bar_req
 		bar_req = MPI_Request();
 		bar_stat = MPI_Status();
+
+#if defined(CUDA_GPU) && defined(__NVCC__)
+
+		context = new mgpu::standard_context_t();
+
+#endif
 	}
 
 #ifdef SE_CLASS1
@@ -313,6 +340,19 @@ public:
 
 			}
 		}
+	}
+
+#endif
+
+#if defined(CUDA_GPU) && defined(__NVCC__)
+
+	/*! \brief If nvidia cuda is activated return a mgpu context
+	 *
+	 *
+	 */
+	mgpu::standard_context_t & getmgpuContext()
+	{
+		return *context;
 	}
 
 #endif
@@ -544,7 +584,7 @@ public:
 	template<typename T>
 	void sendrecvMultipleMessagesNBX(openfpm::vector< size_t > & prc,
 									 openfpm::vector< T > & data,
-									 void * (* msg_alloc)(size_t,size_t,size_t,size_t,size_t,void *),
+									 void * (* msg_alloc)(size_t,size_t,size_t,size_t,size_t,size_t,void *),
 									 void * ptr_arg, long int opt=NONE)
 	{
 #ifdef SE_CLASS1
@@ -673,10 +713,10 @@ public:
 	 * \param opt options, NONE (ignored in this moment)
 	 *
 	 */
-	template<typename T>
-	void sendrecvMultipleMessagesNBX(openfpm::vector< size_t > & prc, openfpm::vector< T > & data,
-			                         void * (* msg_alloc)(size_t,size_t,size_t,size_t,size_t,size_t,void *),
-			                         void * ptr_arg, long int opt=NONE)
+	void sendrecvMultipleMessagesNBX(size_t n_send , size_t sz[], size_t prc[] ,
+									 void * ptr[], size_t n_recv, size_t prc_recv[] ,
+									 void * (* msg_alloc)(size_t,size_t,size_t,size_t,size_t,size_t,void *),
+									 void * ptr_arg, long int opt=NONE)
 	{
 		sz_recv_tmp.resize(n_recv);
 
@@ -700,7 +740,7 @@ public:
 
 		for (size_t i = 0 ; i < n_recv ; i++)
 		{
-			void * ptr_recv = msg_alloc(sz_recv_tmp.get(i),0,0,prc_recv[i],i,ptr_arg);
+			void * ptr_recv = msg_alloc(sz_recv_tmp.get(i),0,0,prc_recv[i],i,0,ptr_arg);
 
 			recv(prc_recv[i],SEND_SPARSE + NBX_cnt,ptr_recv,sz_recv_tmp.get(i));
 		}
@@ -1041,17 +1081,14 @@ public:
 	 * \return true if succeed false otherwise
 	 *
 	 */
-	template<typename T, typename Mem, typename gr> bool Bcast(openfpm::vector<T,Mem,gr> & v, size_t root)
+	template<typename T, typename Mem, typename lt_type, template<typename> class layout_base >
+	bool Bcast(openfpm::vector<T,Mem,lt_type,layout_base> & v, size_t root)
 	{
 #ifdef SE_CLASS1
 		checkType<T>();
 #endif
 
-		// Create one request
-		req.add();
-
-		// gather
-		MPI_IBcastW<T>::bcast(root,v,req.last());
+		b_cast_helper<openfpm::vect_isel<T>::value == STD_VECTOR || is_layout_mlin<layout_base<T>>::value >::bcast_(req,v,root);
 
 		return true;
 	}
