@@ -8,7 +8,7 @@
 #include "util/print_stack.hpp"
 #include "util/math_util_complex.hpp"
 
-Vcluster * global_v_cluster_private = NULL;
+Vcluster<> * global_v_cluster_private = NULL;
 
 //
 std::vector<int> sieve_spf;

@@ -104,7 +104,7 @@ union red
  * \snippet VCluster_unit_test_util.hpp allGather numbers
  *
  */
-
+template<typename InternalMemory>
 class Vcluster_base
 {
 	//! log file
@@ -198,7 +198,7 @@ class Vcluster_base
 protected:
 
 	//! Receive buffers
-	openfpm::vector<BHeapMemory> recv_buf;
+	openfpm::vector<BMemory<InternalMemory>> recv_buf;
 
 	//! tags receiving
 	openfpm::vector<size_t> tags;

@@ -32,7 +32,7 @@ BOOST_AUTO_TEST_CASE (Vcluster_semantic_gather)
 {
 	for (size_t i = 0 ; i < 100 ; i++)
 	{
-		Vcluster & vcl = create_vcluster();
+		Vcluster<> & vcl = create_vcluster();
 
 		if (vcl.getProcessUnitID() == 0 && i == 0)
 			std::cout << "Semantic gather test start" << std::endl;
@@ -72,7 +72,7 @@ BOOST_AUTO_TEST_CASE (Vcluster_semantic_gather_2)
 {
 	for (size_t i = 0 ; i < 100 ; i++)
 	{
-		Vcluster & vcl = create_vcluster();
+		Vcluster<> & vcl = create_vcluster();
 
 		if (vcl.getProcessingUnits() >= 32)
 			return;
@@ -131,7 +131,7 @@ BOOST_AUTO_TEST_CASE (Vcluster_semantic_gather_3)
 {
 	for (size_t i = 0 ; i < 100 ; i++)
 	{
-		Vcluster & vcl = create_vcluster();
+		Vcluster<> & vcl = create_vcluster();
 
 		if (vcl.getProcessingUnits() >= 32)
 		{return;}
@@ -208,7 +208,7 @@ BOOST_AUTO_TEST_CASE (Vcluster_semantic_gather_4)
 {
 	for (size_t i = 0 ; i < 100 ; i++)
 	{
-		Vcluster & vcl = create_vcluster();
+		Vcluster<> & vcl = create_vcluster();
 
 		if (vcl.getProcessingUnits() >= 32)
 		{return;}
@@ -271,7 +271,7 @@ BOOST_AUTO_TEST_CASE (Vcluster_semantic_gather_5)
 {
 	for (size_t i = 0 ; i < 100 ; i++)
 	{
-		Vcluster & vcl = create_vcluster();
+		Vcluster<> & vcl = create_vcluster();
 
 		if (vcl.getProcessingUnits() >= 32)
 		{return;}
@@ -338,7 +338,7 @@ BOOST_AUTO_TEST_CASE (Vcluster_semantic_gather_6)
 {
 	for (size_t i = 0 ; i < 100 ; i++)
 	{
-		Vcluster & vcl = create_vcluster();
+		Vcluster<> & vcl = create_vcluster();
 
 		if (vcl.getProcessingUnits() >= 32)
 		{return;}
@@ -387,7 +387,7 @@ BOOST_AUTO_TEST_CASE (Vcluster_semantic_gather_7)
 {
 	for (size_t i = 0 ; i < 100 ; i++)
 	{
-		Vcluster & vcl = create_vcluster();
+		Vcluster<> & vcl = create_vcluster();
 
 		if (vcl.getProcessingUnits() >= 32)
 		{return;}
@@ -451,7 +451,7 @@ BOOST_AUTO_TEST_CASE (Vcluster_semantic_gather_8)
 {
 	for (size_t i = 0 ; i < 100 ; i++)
 	{
-		Vcluster & vcl = create_vcluster();
+		Vcluster<> & vcl = create_vcluster();
 
 		if (vcl.getProcessingUnits() >= 32)
 		{return;}
@@ -497,7 +497,7 @@ BOOST_AUTO_TEST_CASE (Vcluster_semantic_struct_gather)
 {
 	for (size_t i = 0 ; i < 100 ; i++)
 	{
-		Vcluster & vcl = create_vcluster();
+		Vcluster<> & vcl = create_vcluster();
 
 		if (vcl.getProcessingUnits() >= 32)
 			return;
@@ -541,7 +541,7 @@ void test_different_layouts()
 {
 	for (size_t i = 0 ; i < 100 ; i++)
 	{
-		Vcluster & vcl = create_vcluster();
+		Vcluster<> & vcl = create_vcluster();
 
 		if (vcl.getProcessingUnits() >= 32)
 			return;
@@ -595,7 +595,7 @@ BOOST_AUTO_TEST_CASE (Vcluster_semantic_scatter)
 {
 	for (size_t i = 0 ; i < 100 ; i++)
 	{
-		Vcluster & vcl = create_vcluster();
+		Vcluster<> & vcl = create_vcluster();
 
 		if (vcl.getProcessingUnits() >= 32)
 		{return;}
@@ -645,7 +645,7 @@ BOOST_AUTO_TEST_CASE (Vcluster_semantic_struct_scatter)
 {
 	for (size_t i = 0 ; i < 100 ; i++)
 	{
-		Vcluster & vcl = create_vcluster();
+		Vcluster<> & vcl = create_vcluster();
 
 		if (vcl.getProcessingUnits() >= 32)
 		{return;}
@@ -701,7 +701,7 @@ BOOST_AUTO_TEST_CASE (Vcluster_semantic_sendrecv_all_unknown)
 
 	for (size_t i = 0 ; i < 100 ; i++)
 	{
-		Vcluster & vcl = create_vcluster();
+		Vcluster<> & vcl = create_vcluster();
 
 		if (vcl.getProcessUnitID() == 0 && i == 0)
 			std::cout << "Semantic sendrecv test start" << std::endl;
@@ -805,7 +805,7 @@ BOOST_AUTO_TEST_CASE (Vcluster_semantic_sendrecv_receive_size_known)
 
 	for (size_t i = 0 ; i < 100 ; i++)
 	{
-		Vcluster & vcl = create_vcluster();
+		Vcluster<> & vcl = create_vcluster();
 
 		if (vcl.getProcessUnitID() == 0 && i == 0)
 		{std::cout << "Semantic sendrecv test start" << std::endl;}
@@ -886,7 +886,7 @@ BOOST_AUTO_TEST_CASE (Vcluster_semantic_sendrecv_receive_known)
 
 	for (size_t i = 0 ; i < 100 ; i++)
 	{
-		Vcluster & vcl = create_vcluster();
+		Vcluster<> & vcl = create_vcluster();
 
 		if (vcl.getProcessUnitID() == 0 && i == 0)
 		{std::cout << "Semantic sendrecv test start" << std::endl;}
@@ -962,7 +962,7 @@ BOOST_AUTO_TEST_CASE (Vcluster_semantic_struct_sendrecv)
 {
 	for (size_t i = 0 ; i < 100 ; i++)
 	{
-		Vcluster & vcl = create_vcluster();
+		Vcluster<> & vcl = create_vcluster();
 
 		if (vcl.getProcessingUnits() >= 32)
 		{return;}
@@ -1034,7 +1034,7 @@ BOOST_AUTO_TEST_CASE (Vcluster_semantic_struct_sendrecv)
 	// Send and receive 0 and check
 
 	{
-		Vcluster & vcl = create_vcluster();
+		Vcluster<> & vcl = create_vcluster();
 
 		openfpm::vector<size_t> prc_recv2;
 		openfpm::vector<size_t> prc_send;
@@ -1062,7 +1062,7 @@ BOOST_AUTO_TEST_CASE (Vcluster_semantic_sendrecv_2)
 {
 	for (size_t i = 0 ; i < 100 ; i++)
 	{
-		Vcluster & vcl = create_vcluster();
+		Vcluster<> & vcl = create_vcluster();
 
 		if (vcl.getProcessingUnits() >= 32)
 			return;
@@ -1152,7 +1152,7 @@ BOOST_AUTO_TEST_CASE (Vcluster_semantic_sendrecv_3)
 {
 	for (size_t i = 0 ; i < 100 ; i++)
 	{
-		Vcluster & vcl = create_vcluster();
+		Vcluster<> & vcl = create_vcluster();
 
 		if (vcl.getProcessingUnits() >= 32)
 			return;
@@ -1293,7 +1293,7 @@ BOOST_AUTO_TEST_CASE (Vcluster_semantic_sendrecv_4)
 {
 	for (size_t i = 0 ; i < 100 ; i++)
 	{
-		Vcluster & vcl = create_vcluster();
+		Vcluster<> & vcl = create_vcluster();
 
 		if (vcl.getProcessingUnits() >= 32)
 			return;
@@ -1418,7 +1418,7 @@ BOOST_AUTO_TEST_CASE (Vcluster_semantic_sendrecv_5)
 {
 	for (size_t i = 0 ; i < 100 ; i++)
 	{
-		Vcluster & vcl = create_vcluster();
+		Vcluster<> & vcl = create_vcluster();
 
 		if (vcl.getProcessingUnits() >= 32)
 			return;
@@ -1554,7 +1554,7 @@ BOOST_AUTO_TEST_CASE (Vcluster_semantic_sendrecv_6)
 {
 	for (size_t i = 0 ; i < 100 ; i++)
 	{
-		Vcluster & vcl = create_vcluster();
+		Vcluster<> & vcl = create_vcluster();
 
 		if (vcl.getProcessingUnits() >= 32)
 			return;

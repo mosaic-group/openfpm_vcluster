@@ -35,8 +35,11 @@ void bt_sighandler(int sig, siginfo_t * info, void * ctx);
  * \snippet VCluster_unit_test_util.hpp message alloc
  *
  */
-class Vcluster: public Vcluster_base
+template<typename InternalMemory = HeapMemory>
+class Vcluster: public Vcluster_base<InternalMemory>
 {
+	typedef Vcluster_base<InternalMemory> self_base;
+
 	template<typename T>
 	struct index_gen {};
 
@@ -125,10 +128,10 @@ class Vcluster: public Vcluster_base
 			pack_unpack_cond_with_prp<has_max_prop<T, has_value_type<T>::value>::value, op, T, S, layout_base>::packing(mem, send.get(i), sts, send_buf,opt);
 		}
 
-		tags.clear();
+		self_base::tags.clear();
 
 		// receive information
-		base_info bi(&recv_buf,prc_recv,sz_recv_byte,tags,opt);
+		base_info bi(&this->recv_buf,prc_recv,sz_recv_byte,this->tags,opt);
 
 		// Send and recv multiple messages
 		if (opt & RECEIVE_KNOWN)
@@ -145,24 +148,24 @@ class Vcluster: public Vcluster_base
 				else
 				{std::cout << __FILE__ << ":" << __LINE__ << " Error " << demangle(typeid(T).name()) << " the type does not work with the option or NO_CHANGE_ELEMENTS" << std::endl;}
 
-				Vcluster_base::sendrecvMultipleMessagesNBX(prc_send.size(),(size_t *)send_sz_byte.getPointer(),(size_t *)prc_send.getPointer(),(void **)send_buf.getPointer(),
+				self_base::sendrecvMultipleMessagesNBX(prc_send.size(),(size_t *)send_sz_byte.getPointer(),(size_t *)prc_send.getPointer(),(void **)send_buf.getPointer(),
 											prc_recv.size(),(size_t *)prc_recv.getPointer(),(size_t *)sz_recv_byte.getPointer(),msg_alloc_known,(void *)&bi);
 			}
 			else
 			{
-				Vcluster_base::sendrecvMultipleMessagesNBX(prc_send.size(),(size_t *)send_sz_byte.getPointer(),(size_t *)prc_send.getPointer(),(void **)send_buf.getPointer(),
+				self_base::sendrecvMultipleMessagesNBX(prc_send.size(),(size_t *)send_sz_byte.getPointer(),(size_t *)prc_send.getPointer(),(void **)send_buf.getPointer(),
 											prc_recv.size(),(size_t *)prc_recv.getPointer(),msg_alloc_known,(void *)&bi);
-				sz_recv_byte = sz_recv_tmp;
+				sz_recv_byte = self_base::sz_recv_tmp;
 			}
 		}
 		else
 		{
 			prc_recv.clear();
-			sendrecvMultipleMessagesNBX(prc_send_.size(),(size_t *)send_sz_byte.getPointer(),(size_t *)prc_send_.getPointer(),(void **)send_buf.getPointer(),msg_alloc,(void *)&bi);
+			self_base::sendrecvMultipleMessagesNBX(prc_send_.size(),(size_t *)send_sz_byte.getPointer(),(size_t *)prc_send_.getPointer(),(void **)send_buf.getPointer(),msg_alloc,(void *)&bi);
 		}
 
 		// Reorder the buffer
-		reorder_buffer(prc_recv,tags,sz_recv_byte);
+		reorder_buffer(prc_recv,self_base::tags,sz_recv_byte);
 
 		mem.decRef();
 		delete &mem;
@@ -175,10 +178,10 @@ class Vcluster: public Vcluster_base
 	 */
 	void reset_recv_buf()
 	{
-		for (size_t i = 0 ; i < recv_buf.size() ; i++)
-			recv_buf.get(i).resize(0);
+		for (size_t i = 0 ; i < self_base::recv_buf.size() ; i++)
+		{self_base::recv_buf.get(i).resize(0);}
 
-		recv_buf.resize(0);
+		self_base::recv_buf.resize(0);
 	}
 
 	/*! \brief Base info
@@ -191,7 +194,7 @@ class Vcluster: public Vcluster_base
 	struct base_info
 	{
 		//! Receive buffer
-		openfpm::vector<BHeapMemory> * recv_buf;
+		openfpm::vector<BMemory<HeapMemory>> * recv_buf;
 		//! receiving processor list
 		openfpm::vector<size_t> & prc;
 		//! size of each message
@@ -203,7 +206,7 @@ class Vcluster: public Vcluster_base
 		size_t opt;
 
 		//! constructor
-		base_info(openfpm::vector<BHeapMemory> * recv_buf, openfpm::vector<size_t> & prc, openfpm::vector<size_t> & sz, openfpm::vector<size_t> & tags,size_t opt)
+		base_info(openfpm::vector<BMemory<HeapMemory>> * recv_buf, openfpm::vector<size_t> & prc, openfpm::vector<size_t> & sz, openfpm::vector<size_t> & tags,size_t opt)
 		:recv_buf(recv_buf),prc(prc),sz(sz),tags(tags),opt(opt)
 		{}
 	};
@@ -308,9 +311,9 @@ class Vcluster: public Vcluster_base
 										 size_t opt)
 	{
 		if (sz != NULL)
-			sz->resize(recv_buf.size());
+		{sz->resize(self_base::recv_buf.size());}
 
-		pack_unpack_cond_with_prp<has_max_prop<T, has_value_type<T>::value>::value,op, T, S, layout_base, prp... >::unpacking(recv, recv_buf, sz, sz_byte, op_param,opt);
+		pack_unpack_cond_with_prp<has_max_prop<T, has_value_type<T>::value>::value,op, T, S, layout_base, prp... >::unpacking(recv, self_base::recv_buf, sz, sz_byte, op_param,opt);
 	}
 
 	public:
@@ -322,7 +325,7 @@ class Vcluster: public Vcluster_base
 	 *
 	 */
 	Vcluster(int *argc, char ***argv)
-	:Vcluster_base(argc,argv)
+	:Vcluster_base<InternalMemory>(argc,argv)
 	{
 	}
 
@@ -413,19 +416,19 @@ class Vcluster: public Vcluster_base
 		reset_recv_buf();
 
 		// If we are on master collect the information
-		if (getProcessUnitID() == root)
+		if (self_base::getProcessUnitID() == root)
 		{
 			// send buffer (master does not send anything) so send req and send_buf
 			// remain buffer with size 0
 			openfpm::vector<size_t> send_req;
 
-			tags.clear();
+			self_base::tags.clear();
 
 			// receive information
-			base_info bi(&recv_buf,prc,sz,tags,0);
+			base_info bi(&this->recv_buf,prc,sz,this->tags,0);
 
 			// Send and recv multiple messages
-			sendrecvMultipleMessagesNBX(send_req.size(),NULL,NULL,NULL,msg_alloc,&bi);
+			self_base::sendrecvMultipleMessagesNBX(send_req.size(),NULL,NULL,NULL,msg_alloc,&bi);
 
 			// we generate the list of the properties to unpack
 			typedef typename ::generate_indexes<int, has_max_prop<T, has_value_type<T>::value>::number, MetaFuncOrd>::result ind_prop_to_pack;
@@ -434,7 +437,7 @@ class Vcluster: public Vcluster_base
 			op_ssend_recv_add<void> opa;
 
 			// Reorder the buffer
-			reorder_buffer(prc,tags,sz);
+			reorder_buffer(prc,self_base::tags,sz);
 
 			index_gen<ind_prop_to_pack>::template process_recv<op_ssend_recv_add<void>,T,S,layout_base>(*this,recv,&sz,NULL,opa,0);
 
@@ -473,13 +476,13 @@ class Vcluster: public Vcluster_base
 
 			pack_unpack_cond_with_prp_inte_lin<T>::construct_prc(send_prc,send_prc_);
 
-			tags.clear();
+			self_base::tags.clear();
 
 			// receive information
-			base_info bi(NULL,prc,sz,tags,0);
+			base_info bi(NULL,prc,sz,self_base::tags,0);
 
 			// Send and recv multiple messages
-			sendrecvMultipleMessagesNBX(send_prc_.size(),(size_t *)sz.getPointer(),(size_t *)send_prc_.getPointer(),(void **)send_buf.getPointer(),msg_alloc,(void *)&bi,NONE);
+			self_base::sendrecvMultipleMessagesNBX(send_prc_.size(),(size_t *)sz.getPointer(),(size_t *)send_prc_.getPointer(),(void **)send_buf.getPointer(),msg_alloc,(void *)&bi,NONE);
 
 			mem.decRef();
 			delete &mem;
@@ -520,7 +523,7 @@ class Vcluster: public Vcluster_base
 		reset_recv_buf();
 
 		// If we are on master scatter the information
-		if (getProcessUnitID() == root)
+		if (self_base::getProcessUnitID() == root)
 		{
 			// Prepare the sending buffer
 			openfpm::vector<const void *> send_buf;
@@ -538,13 +541,13 @@ class Vcluster: public Vcluster_base
 				ptr += sz.get(i);
 			}
 
-			tags.clear();
+			self_base::tags.clear();
 
 			// receive information
-			base_info bi(&recv_buf,prc,sz,tags,0);
+			base_info bi(&this->recv_buf,prc,sz,this->tags,0);
 
 			// Send and recv multiple messages
-			sendrecvMultipleMessagesNBX(prc.size(),(size_t *)sz_byte.getPointer(),(size_t *)prc.getPointer(),(void **)send_buf.getPointer(),msg_alloc,(void *)&bi);
+			self_base::sendrecvMultipleMessagesNBX(prc.size(),(size_t *)sz_byte.getPointer(),(size_t *)prc.getPointer(),(void **)send_buf.getPointer(),msg_alloc,(void *)&bi);
 
 			// we generate the list of the properties to pack
 			typedef typename ::generate_indexes<int, has_max_prop<T, has_value_type<T>::value>::number, MetaFuncOrd>::result ind_prop_to_pack;
@@ -559,13 +562,13 @@ class Vcluster: public Vcluster_base
 			// The non-root receive
 			openfpm::vector<size_t> send_req;
 
-			tags.clear();
+			self_base::tags.clear();
 
 			// receive information
-			base_info bi(&recv_buf,prc,sz,tags,0);
+			base_info bi(&this->recv_buf,prc,sz,this->tags,0);
 
 			// Send and recv multiple messages
-			sendrecvMultipleMessagesNBX(send_req.size(),NULL,NULL,NULL,msg_alloc,&bi);
+			self_base::sendrecvMultipleMessagesNBX(send_req.size(),NULL,NULL,NULL,msg_alloc,&bi);
 
 			// we generate the list of the properties to pack
 			typedef typename ::generate_indexes<int, has_max_prop<T, has_value_type<T>::value>::number, MetaFuncOrd>::result ind_prop_to_pack;
@@ -615,7 +618,7 @@ class Vcluster: public Vcluster_base
 
 		openfpm::vector<recv_buff_reorder> rcv;
 
-		rcv.resize(recv_buf.size());
+		rcv.resize(self_base::recv_buf.size());
 
 		for (size_t i = 0 ; i < rcv.size() ; i++)
 		{
@@ -627,7 +630,7 @@ class Vcluster: public Vcluster_base
 		// we sort based on processor
 		rcv.sort();
 
-		openfpm::vector<BHeapMemory> recv_ord;
+		openfpm::vector<BMemory<HeapMemory>> recv_ord;
 		recv_ord.resize(rcv.size());
 
 		openfpm::vector<size_t> prc_ord;
@@ -639,13 +642,13 @@ class Vcluster: public Vcluster_base
 		// Now we reorder rcv
 		for (size_t i = 0 ; i < rcv.size() ; i++)
 		{
-			recv_ord.get(i).swap(recv_buf.get(rcv.get(i).pos));
+			recv_ord.get(i).swap(self_base::recv_buf.get(rcv.get(i).pos));
 			prc_ord.get(i) = rcv.get(i).proc;
 			sz_recv_ord.get(i) = sz_recv.get(rcv.get(i).pos);
 		}
 
 		// move rcv into recv
-		recv_buf.swap(recv_ord);
+		self_base::recv_buf.swap(recv_ord);
 		prc.swap(prc_ord);
 		sz_recv.swap(sz_recv_ord);
 
@@ -859,7 +862,7 @@ class Vcluster: public Vcluster_base
 
 // Function to initialize the global VCluster //
 
-extern Vcluster * global_v_cluster_private;
+extern Vcluster<> * global_v_cluster_private;
 
 /*! \brief Initialize a global instance of Runtime Virtual Cluster Machine
  *
@@ -870,7 +873,7 @@ extern Vcluster * global_v_cluster_private;
 static inline void init_global_v_cluster_private(int *argc, char ***argv)
 {
 	if (global_v_cluster_private == NULL)
-		global_v_cluster_private = new Vcluster(argc,argv);
+	{global_v_cluster_private = new Vcluster<>(argc,argv);}
 }
 
 static inline void delete_global_v_cluster_private()
@@ -878,7 +881,7 @@ static inline void delete_global_v_cluster_private()
 	delete global_v_cluster_private;
 }
 
-static inline Vcluster & create_vcluster()
+static inline Vcluster<> & create_vcluster()
 {
 #ifdef SE_CLASS1
 
