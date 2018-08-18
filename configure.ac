@@ -101,6 +101,12 @@ else
 	NVCCFLAGS+="$NVCCFLAGS -O3 "
 fi
 
+#########
+
+## Check for MPI
+
+ACX_MPI()
+
 ###### Check for se-class1
 
 AC_MSG_CHECKING(whether to build with security enhancement class1)

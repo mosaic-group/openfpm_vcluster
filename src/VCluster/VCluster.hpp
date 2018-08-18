@@ -49,9 +49,10 @@ class Vcluster: public Vcluster_base
 		         typename T,
 				 typename S,
 				 template <typename> class layout_base = memory_traits_lin>
-		inline static void process_recv(Vcluster & vcl, S & recv, openfpm::vector<size_t> * sz_recv, openfpm::vector<size_t> * sz_recv_byte, op & op_param)
+		inline static void process_recv(Vcluster & vcl, S & recv, openfpm::vector<size_t> * sz_recv,
+				                        openfpm::vector<size_t> * sz_recv_byte, op & op_param,size_t opt)
 		{
-			vcl.process_receive_buffer_with_prp<op,T,S,layout_base,prp...>(recv,sz_recv,sz_recv_byte,op_param);
+			vcl.process_receive_buffer_with_prp<op,T,S,layout_base,prp...>(recv,sz_recv,sz_recv_byte,op_param,opt);
 		}
 	};
 
@@ -303,12 +304,13 @@ class Vcluster: public Vcluster_base
 	void process_receive_buffer_with_prp(S & recv,
 			                             openfpm::vector<size_t> * sz,
 										 openfpm::vector<size_t> * sz_byte,
-										 op & op_param)
+										 op & op_param,
+										 size_t opt)
 	{
 		if (sz != NULL)
 			sz->resize(recv_buf.size());
 
-		pack_unpack_cond_with_prp<has_max_prop<T, has_value_type<T>::value>::value,op, T, S, layout_base, prp... >::unpacking(recv, recv_buf, sz, sz_byte, op_param);
+		pack_unpack_cond_with_prp<has_max_prop<T, has_value_type<T>::value>::value,op, T, S, layout_base, prp... >::unpacking(recv, recv_buf, sz, sz_byte, op_param,opt);
 	}
 
 	public:
@@ -434,7 +436,7 @@ class Vcluster: public Vcluster_base
 			// Reorder the buffer
 			reorder_buffer(prc,tags,sz);
 
-			index_gen<ind_prop_to_pack>::template process_recv<op_ssend_recv_add<void>,T,S,layout_base>(*this,recv,&sz,NULL,opa);
+			index_gen<ind_prop_to_pack>::template process_recv<op_ssend_recv_add<void>,T,S,layout_base>(*this,recv,&sz,NULL,opa,0);
 
 			recv.add(send);
 			prc.add(root);
@@ -550,7 +552,7 @@ class Vcluster: public Vcluster_base
 			// operation object
 			op_ssend_recv_add<void> opa;
 
-			index_gen<ind_prop_to_pack>::template process_recv<op_ssend_recv_add<void>,T,S,layout_base>(*this,recv,NULL,NULL,opa);
+			index_gen<ind_prop_to_pack>::template process_recv<op_ssend_recv_add<void>,T,S,layout_base>(*this,recv,NULL,NULL,opa,0);
 		}
 		else
 		{
@@ -571,7 +573,7 @@ class Vcluster: public Vcluster_base
 			// operation object
 			op_ssend_recv_add<void> opa;
 
-			index_gen<ind_prop_to_pack>::template process_recv<op_ssend_recv_add<void>,T,S,layout_base>(*this,recv,NULL,NULL,opa);
+			index_gen<ind_prop_to_pack>::template process_recv<op_ssend_recv_add<void>,T,S,layout_base>(*this,recv,NULL,NULL,opa,0);
 		}
 
 		return true;
@@ -694,7 +696,7 @@ class Vcluster: public Vcluster_base
 
 		op_ssend_recv_add<void> opa;
 
-		index_gen<ind_prop_to_pack>::template process_recv<op_ssend_recv_add<void>,T,S,layout_base>(*this,recv,&sz_recv,NULL,opa);
+		index_gen<ind_prop_to_pack>::template process_recv<op_ssend_recv_add<void>,T,S,layout_base>(*this,recv,&sz_recv,NULL,opa,opt);
 
 		return true;
 	}
@@ -789,7 +791,7 @@ class Vcluster: public Vcluster_base
 		op_ssend_recv_add<void> opa;
 
 		// process the received information
-		process_receive_buffer_with_prp<op_ssend_recv_add<void>,T,S,layout_base,prp...>(recv,&sz_recv,NULL,opa);
+		process_receive_buffer_with_prp<op_ssend_recv_add<void>,T,S,layout_base,prp...>(recv,&sz_recv,NULL,opa,opt);
 
 		return true;
 	}

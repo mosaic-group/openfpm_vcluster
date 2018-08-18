@@ -20,7 +20,8 @@ struct unpack_selector_with_prp
 			                openfpm::vector<BHeapMemory> & recv_buf,
 							openfpm::vector<size_t> * sz,
 							openfpm::vector<size_t> * sz_byte,
-							op & op_param)
+							op & op_param,
+							size_t opt)
 	{
 		if (sz_byte != NULL)
 			sz_byte->resize(recv_buf.size());
@@ -39,7 +40,7 @@ struct unpack_selector_with_prp
 			size_t recv_size_old = recv.size();
 			// Merge the information
 
-			op_param.template execute<true,T,decltype(recv),decltype(unp),layout_base,prp...>(recv,unp,i);
+			op_param.template execute<true,T,decltype(recv),decltype(unp),layout_base,prp...>(recv,unp,i,opt);
 
 			size_t recv_size_new = recv.size();
 
@@ -184,7 +185,8 @@ struct unpack_selector_with_prp_lin
                                                                              openfpm::vector<size_t> * sz,
                                                                              openfpm::vector<size_t> * sz_byte,
                                                                              op & op_param,
-                                                                             size_t i)
+                                                                             size_t i,
+                                                                             size_t opt)
 	{
 		// create vector representation to a piece of memory already allocated
 		openfpm::vector<typename T::value_type,PtrMemory,typename layout_base<typename T::value_type>::type,layout_base,openfpm::grow_policy_identity> v2;
@@ -199,7 +201,7 @@ struct unpack_selector_with_prp_lin
 
 		size_t recv_size_old = recv.size();
 
-		op_param.template execute<false,T,decltype(recv),decltype(v2),layout_base,prp...>(recv,v2,i);
+		op_param.template execute<false,T,decltype(recv),decltype(v2),layout_base,prp...>(recv,v2,i,opt);
 
 		size_t recv_size_new = recv.size();
 
@@ -220,7 +222,8 @@ struct unpack_selector_with_prp_lin<true,T,S,layout_base>
                                                                              openfpm::vector<size_t> * sz,
                                                                              openfpm::vector<size_t> * sz_byte,
                                                                              op & op_param,
-                                                                             size_t i)
+                                                                             size_t i,
+                                                                             size_t opt)
 	{
 		// calculate the number of received elements
 		size_t n_ele = recv_buf.get(i).size() / sizeof(typename T::value_type);
@@ -240,7 +243,7 @@ struct unpack_selector_with_prp_lin<true,T,S,layout_base>
 
 		size_t recv_size_old = recv.size();
 
-		op_param.template execute<false,T,decltype(recv),decltype(v2),layout_base,prp...>(recv,v2,i);
+		op_param.template execute<false,T,decltype(recv),decltype(v2),layout_base,prp...>(recv,v2,i,opt);
 
 		size_t recv_size_new = recv.size();
 
@@ -263,14 +266,15 @@ struct unpack_selector_with_prp<true,T,S,layout_base>
 			                                                            openfpm::vector<BHeapMemory> & recv_buf,
 			                                                            openfpm::vector<size_t> * sz,
 			                                                            openfpm::vector<size_t> * sz_byte,
-			                                                            op & op_param)
+			                                                            op & op_param,
+			                                                            size_t opt)
 	{
 		if (sz_byte != NULL)
 			sz_byte->resize(recv_buf.size());
 
 		for (size_t i = 0 ; i < recv_buf.size() ; )
 		{
-			i += unpack_selector_with_prp_lin<is_layout_mlin<layout_base<dummy_type>>::value,T,S,layout_base>::template call_unpack_impl<op,prp...>(recv,recv_buf,sz,sz_byte,op_param,i);
+			i += unpack_selector_with_prp_lin<is_layout_mlin<layout_base<dummy_type>>::value,T,S,layout_base>::template call_unpack_impl<op,prp...>(recv,recv_buf,sz,sz_byte,op_param,i,opt);
 		}
 	}
 };
@@ -297,11 +301,12 @@ struct call_serialize_variadic<index_tuple<prp...>>
 			                       openfpm::vector<BHeapMemory> & recv_buf,
 			                       openfpm::vector<size_t> * sz,
 			                       openfpm::vector<size_t> * sz_byte,
-			                       op & op_param)
+			                       op & op_param,
+			                       size_t opt)
 	{
 		const bool result = has_pack_gen<typename T::value_type>::value == false && is_vector<T>::value == true;
 
-		unpack_selector_with_prp<result, T, S,layout_base>::template call_unpack<op,prp...>(recv, recv_buf, sz, sz_byte, op_param);
+		unpack_selector_with_prp<result, T, S,layout_base>::template call_unpack<op,prp...>(recv, recv_buf, sz, sz_byte, op_param,opt);
 	}
 };
 
@@ -342,7 +347,7 @@ struct set_buf_pointer_for_each_prop
 		if (opt & MPI_GPU_DIRECT)
 		{
 #if defined(MPIX_CUDA_AWARE_SUPPORT) && MPIX_CUDA_AWARE_SUPPORT
-			send_buf.add(v.template getDevicePointer<T::value>());
+			send_buf.add(v.template getDeviceBuffer<T::value>());
 #else
 			v.template deviceToHost<T::value>();
 			send_buf.add(v.template getPointer<T::value>());
@@ -485,10 +490,11 @@ struct pack_unpack_cond_with_prp
 			              openfpm::vector<BHeapMemory> & recv_buf,
 						  openfpm::vector<size_t> * sz,
 						  openfpm::vector<size_t> * sz_byte,
-						  op & op_param)
+						  op & op_param,
+						  size_t opt)
 	{
 		typedef index_tuple<prp...> ind_prop_to_pack;
-		call_serialize_variadic<ind_prop_to_pack>::template call_unpack<op,T,S,layout_base>(recv, recv_buf, sz, sz_byte, op_param);
+		call_serialize_variadic<ind_prop_to_pack>::template call_unpack<op,T,S,layout_base>(recv, recv_buf, sz, sz_byte, op_param,opt);
 	}
 };
 
@@ -504,15 +510,44 @@ struct op_ssend_recv_add_sr
 	         typename D,
 			 typename S,
 			 template <typename> class layout_base,
-			 int ... prp> static void execute(D & recv,S & v2, size_t i)
+			 int ... prp> static void execute(D & recv,S & v2, size_t i, size_t opt)
 	{
-		// Merge the information
-		recv.template add_prp<typename T::value_type,
+		if (opt & MPI_GPU_DIRECT)
+		{
+#if defined(MPIX_CUDA_AWARE_SUPPORT) && MPIX_CUDA_AWARE_SUPPORT
+
+			// Merge the information
+			recv.template add_prp_device<typename T::value_type,
 		                      PtrMemory,
 							  openfpm::grow_policy_identity,
 							  openfpm::vect_isel<typename T::value_type>::value,
 							  layout_base,
 							  prp...>(v2);
+#else
+
+			// Merge the information
+			recv.template add_prp<typename T::value_type,
+		                      PtrMemory,
+							  openfpm::grow_policy_identity,
+							  openfpm::vect_isel<typename T::value_type>::value,
+							  layout_base,
+							  prp...>(v2);
+
+			recv.template hostToDevice<prp...>();
+
+#endif
+
+		}
+		else
+		{
+			// Merge the information
+			recv.template add_prp<typename T::value_type,
+		                      PtrMemory,
+							  openfpm::grow_policy_identity,
+							  openfpm::vect_isel<typename T::value_type>::value,
+							  layout_base,
+							  prp...>(v2);
+		}
 	}
 };
 
@@ -526,7 +561,7 @@ struct op_ssend_recv_add_sr<true>
 			 typename S,
 			 template <typename> class layout_base,
 			 int ... prp>
-	static void execute(D & recv,S & v2, size_t i)
+	static void execute(D & recv,S & v2, size_t i,size_t opt)
 	{
 		// Merge the information
 		recv.template add_prp<typename T::value_type,
@@ -549,10 +584,10 @@ struct op_ssend_recv_add
 			 typename S,
 			 template <typename> class layout_base,
 			 int ... prp>
-	static void execute(D & recv,S & v2, size_t i)
+	static void execute(D & recv,S & v2, size_t i, size_t opt)
 	{
 		// Merge the information
-		op_ssend_recv_add_sr<sr>::template execute<T,D,S,layout_base,prp...>(recv,v2,i);
+		op_ssend_recv_add_sr<sr>::template execute<T,D,S,layout_base,prp...>(recv,v2,i,opt);
 	}
 };
 
