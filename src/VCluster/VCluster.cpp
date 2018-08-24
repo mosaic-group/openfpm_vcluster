@@ -8,7 +8,8 @@
 #include "util/print_stack.hpp"
 #include "util/math_util_complex.hpp"
 
-Vcluster<> * global_v_cluster_private = NULL;
+Vcluster<> * global_v_cluster_private_heap = NULL;
+Vcluster<CudaMemory> * global_v_cluster_private_cuda = NULL;
 
 //
 std::vector<int> sieve_spf;

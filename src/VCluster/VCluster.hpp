@@ -55,6 +55,14 @@ class Vcluster: public Vcluster_base<InternalMemory>
 		inline static void process_recv(Vcluster & vcl, S & recv, openfpm::vector<size_t> * sz_recv,
 				                        openfpm::vector<size_t> * sz_recv_byte, op & op_param,size_t opt)
 		{
+			if (opt == MPI_GPU_DIRECT && !std::is_same<InternalMemory,CudaMemory>::value)
+			{
+				// In order to have this option activated InternalMemory must be  CudaMemory
+
+				std::cout << __FILE__ << ":" << __LINE__ << " error: in order to have MPI_GPU_DIRECT VCluster must use CudaMemory internally, the most probable" <<
+						                                    " cause of this problem is that you are using MPI_GPU_DIRECT option with a non-GPU data-structure" << std::endl;
+			}
+
 			vcl.process_receive_buffer_with_prp<op,T,S,layout_base,prp...>(recv,sz_recv,sz_recv_byte,op_param,opt);
 		}
 	};
@@ -131,7 +139,7 @@ class Vcluster: public Vcluster_base<InternalMemory>
 		self_base::tags.clear();
 
 		// receive information
-		base_info bi(&this->recv_buf,prc_recv,sz_recv_byte,this->tags,opt);
+		base_info<InternalMemory> bi(&this->recv_buf,prc_recv,sz_recv_byte,this->tags,opt);
 
 		// Send and recv multiple messages
 		if (opt & RECEIVE_KNOWN)
@@ -191,10 +199,11 @@ class Vcluster: public Vcluster_base<InternalMemory>
 	 * \param size of the received data
 	 *
 	 */
+	template<typename Memory>
 	struct base_info
 	{
 		//! Receive buffer
-		openfpm::vector<BMemory<HeapMemory>> * recv_buf;
+		openfpm::vector<BMemory<Memory>> * recv_buf;
 		//! receiving processor list
 		openfpm::vector<size_t> & prc;
 		//! size of each message
@@ -206,7 +215,7 @@ class Vcluster: public Vcluster_base<InternalMemory>
 		size_t opt;
 
 		//! constructor
-		base_info(openfpm::vector<BMemory<HeapMemory>> * recv_buf, openfpm::vector<size_t> & prc, openfpm::vector<size_t> & sz, openfpm::vector<size_t> & tags,size_t opt)
+		base_info(openfpm::vector<BMemory<Memory>> * recv_buf, openfpm::vector<size_t> & prc, openfpm::vector<size_t> & sz, openfpm::vector<size_t> & tags,size_t opt)
 		:recv_buf(recv_buf),prc(prc),sz(sz),tags(tags),opt(opt)
 		{}
 	};
@@ -226,7 +235,7 @@ class Vcluster: public Vcluster_base<InternalMemory>
 	 */
 	static void * msg_alloc(size_t msg_i ,size_t total_msg, size_t total_p, size_t i, size_t ri, size_t tag, void * ptr)
 	{
-		base_info & rinfo = *(base_info *)ptr;
+		base_info<InternalMemory> & rinfo = *(base_info<InternalMemory> *)ptr;
 
 		if (rinfo.recv_buf == NULL)
 		{
@@ -249,7 +258,7 @@ class Vcluster: public Vcluster_base<InternalMemory>
 		if (rinfo.opt & MPI_GPU_DIRECT)
 		{
 #if defined(MPIX_CUDA_AWARE_SUPPORT) && MPIX_CUDA_AWARE_SUPPORT
-			return rinfo.recv_buf->last().getDevicePointer();
+			return rinfo.recv_buf->last().getDevicePointerNoCopy();
 #else
 			return rinfo.recv_buf->last().getPointer();
 #endif
@@ -274,7 +283,7 @@ class Vcluster: public Vcluster_base<InternalMemory>
 	 */
 	static void * msg_alloc_known(size_t msg_i ,size_t total_msg, size_t total_p, size_t i, size_t ri, size_t tag, void * ptr)
 	{
-		base_info & rinfo = *(base_info *)ptr;
+		base_info<InternalMemory> & rinfo = *(base_info<InternalMemory> *)ptr;
 
 		if (rinfo.recv_buf == NULL)
 		{
@@ -425,7 +434,7 @@ class Vcluster: public Vcluster_base<InternalMemory>
 			self_base::tags.clear();
 
 			// receive information
-			base_info bi(&this->recv_buf,prc,sz,this->tags,0);
+			base_info<InternalMemory> bi(&this->recv_buf,prc,sz,this->tags,0);
 
 			// Send and recv multiple messages
 			self_base::sendrecvMultipleMessagesNBX(send_req.size(),NULL,NULL,NULL,msg_alloc,&bi);
@@ -479,7 +488,7 @@ class Vcluster: public Vcluster_base<InternalMemory>
 			self_base::tags.clear();
 
 			// receive information
-			base_info bi(NULL,prc,sz,self_base::tags,0);
+			base_info<InternalMemory> bi(NULL,prc,sz,self_base::tags,0);
 
 			// Send and recv multiple messages
 			self_base::sendrecvMultipleMessagesNBX(send_prc_.size(),(size_t *)sz.getPointer(),(size_t *)send_prc_.getPointer(),(void **)send_buf.getPointer(),msg_alloc,(void *)&bi,NONE);
@@ -544,7 +553,7 @@ class Vcluster: public Vcluster_base<InternalMemory>
 			self_base::tags.clear();
 
 			// receive information
-			base_info bi(&this->recv_buf,prc,sz,this->tags,0);
+			base_info<InternalMemory> bi(&this->recv_buf,prc,sz,this->tags,0);
 
 			// Send and recv multiple messages
 			self_base::sendrecvMultipleMessagesNBX(prc.size(),(size_t *)sz_byte.getPointer(),(size_t *)prc.getPointer(),(void **)send_buf.getPointer(),msg_alloc,(void *)&bi);
@@ -565,7 +574,7 @@ class Vcluster: public Vcluster_base<InternalMemory>
 			self_base::tags.clear();
 
 			// receive information
-			base_info bi(&this->recv_buf,prc,sz,this->tags,0);
+			base_info<InternalMemory> bi(&this->recv_buf,prc,sz,this->tags,0);
 
 			// Send and recv multiple messages
 			self_base::sendrecvMultipleMessagesNBX(send_req.size(),NULL,NULL,NULL,msg_alloc,&bi);
@@ -630,7 +639,7 @@ class Vcluster: public Vcluster_base<InternalMemory>
 		// we sort based on processor
 		rcv.sort();
 
-		openfpm::vector<BMemory<HeapMemory>> recv_ord;
+		openfpm::vector<BMemory<InternalMemory>> recv_ord;
 		recv_ord.resize(rcv.size());
 
 		openfpm::vector<size_t> prc_ord;
@@ -747,7 +756,7 @@ class Vcluster: public Vcluster_base<InternalMemory>
 		op_ssend_recv_add<void> opa;
 
 		// process the received information
-		process_receive_buffer_with_prp<op_ssend_recv_add<void>,T,S,layout_base,prp...>(recv,&sz_recv,&sz_recv_byte,opa);
+		process_receive_buffer_with_prp<op_ssend_recv_add<void>,T,S,layout_base,prp...>(recv,&sz_recv,&sz_recv_byte,opa,opt);
 
 		return true;
 	}
@@ -851,7 +860,7 @@ class Vcluster: public Vcluster_base<InternalMemory>
 		prepare_send_buffer<op,T,S,layout_base>(send,recv,prc_send,prc_recv,recv_sz,opt);
 
 		// process the received information
-		process_receive_buffer_with_prp<op,T,S,layout_base,prp...>(recv,NULL,NULL,op_param);
+		process_receive_buffer_with_prp<op,T,S,layout_base,prp...>(recv,NULL,NULL,op_param,opt);
 
 		return true;
 	}
@@ -862,7 +871,8 @@ class Vcluster: public Vcluster_base<InternalMemory>
 
 // Function to initialize the global VCluster //
 
-extern Vcluster<> * global_v_cluster_private;
+extern Vcluster<> * global_v_cluster_private_heap;
+extern Vcluster<CudaMemory> * global_v_cluster_private_cuda;
 
 /*! \brief Initialize a global instance of Runtime Virtual Cluster Machine
  *
@@ -872,25 +882,44 @@ extern Vcluster<> * global_v_cluster_private;
 
 static inline void init_global_v_cluster_private(int *argc, char ***argv)
 {
-	if (global_v_cluster_private == NULL)
-	{global_v_cluster_private = new Vcluster<>(argc,argv);}
+	if (global_v_cluster_private_heap == NULL)
+	{global_v_cluster_private_heap = new Vcluster<>(argc,argv);}
+
+	if (global_v_cluster_private_cuda == NULL)
+	{global_v_cluster_private_cuda = new Vcluster<CudaMemory>(argc,argv);}
 }
 
 static inline void delete_global_v_cluster_private()
 {
-	delete global_v_cluster_private;
+	delete global_v_cluster_private_heap;
+	delete global_v_cluster_private_cuda;
 }
 
-static inline Vcluster<> & create_vcluster()
+template<typename Memory>
+struct get_vcl
 {
-#ifdef SE_CLASS1
+	static Vcluster<Memory> & get()
+	{
+		return *global_v_cluster_private_heap;
+	}
+};
 
-	if (global_v_cluster_private == NULL)
-		std::cerr << __FILE__ << ":" << __LINE__ << " Error you must call openfpm_init before using any distributed data structures";
+template<>
+struct get_vcl<CudaMemory>
+{
+	static Vcluster<CudaMemory> & get()
+	{
+		return *global_v_cluster_private_cuda;
+	}
+};
 
-#endif
+template<typename Memory = HeapMemory>
+static inline Vcluster<Memory> & create_vcluster()
+{
+	if (global_v_cluster_private_heap == NULL)
+	{std::cerr << __FILE__ << ":" << __LINE__ << " Error you must call openfpm_init before using any distributed data structures";}
 
-	return *global_v_cluster_private;
+	return get_vcl<Memory>::get();
 }
 
 

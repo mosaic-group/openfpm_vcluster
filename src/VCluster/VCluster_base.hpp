@@ -353,6 +353,12 @@ public:
 	 */
 	mgpu::standard_context_t & getmgpuContext()
 	{
+		if (context == NULL)
+		{
+			std::cout << __FILE__ << ":" << __LINE__ << " error: it seem that modern gpu context is not initialized."
+					                                    "Either a compatible working cuda device has not been found, either openfpm_init has been called in a file that not compiled with NVCC" << std::endl;
+		}
+
 		return *context;
 	}
 

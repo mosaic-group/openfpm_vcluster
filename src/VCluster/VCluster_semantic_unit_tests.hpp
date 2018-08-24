@@ -1633,12 +1633,6 @@ BOOST_AUTO_TEST_CASE (Vcluster_semantic_sendrecv_6)
 }
 
 
-BOOST_AUTO_TEST_CASE( Vcluster_semantic_ssend_recv_layout_switch )
-{
-	test_ssend_recv_layout_switch(0);
-}
-
-
 BOOST_AUTO_TEST_SUITE_END()
 
 #endif /* OPENFPM_VCLUSTER_SRC_VCLUSTER_SEMANTIC_UNIT_TESTS_HPP_ */
