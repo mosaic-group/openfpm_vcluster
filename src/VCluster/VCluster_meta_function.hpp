@@ -17,7 +17,7 @@ struct unpack_selector_with_prp
 	template<typename op,
 			 int ... prp>
 	static void call_unpack(S & recv,
-			                openfpm::vector<BMemory<Memory>> & recv_buf,
+			                openfpm::vector_fr<BMemory<Memory>> & recv_buf,
 							openfpm::vector<size_t> * sz,
 							openfpm::vector<size_t> * sz_byte,
 							op & op_param,
@@ -76,7 +76,7 @@ struct unpack_each_prop_buffer
 	 *
 	 */
 	inline unpack_each_prop_buffer(S & recv,
-			                       openfpm::vector<BMemory<HeapMemory>> & recv_buf,
+			                       openfpm::vector_fr<BMemory<HeapMemory>> & recv_buf,
 			                       op & op_param,
 			                       size_t i,
 			                       openfpm::vector<size_t> * sz,
@@ -141,7 +141,7 @@ struct process_receive_mem_traits_inte
 	size_t i;
 
 	//! Receive buffer
-	openfpm::vector<BMemory<Memory>> & recv_buf;
+	openfpm::vector_fr<BMemory<Memory>> & recv_buf;
 
 	//! Fake vector that map over received memory
 	openfpm::vector<typename sT::value_type,PtrMemory,typename layout_base<typename sT::value_type>::type,layout_base,openfpm::grow_policy_identity> & v2;
@@ -157,7 +157,7 @@ struct process_receive_mem_traits_inte
 	 *
 	 */
 	inline process_receive_mem_traits_inte(openfpm::vector<typename sT::value_type,PtrMemory,typename layout_base<typename sT::value_type>::type,layout_base,openfpm::grow_policy_identity> & v2,
-			                               openfpm::vector<BMemory<Memory>> & recv_buf,
+			                               openfpm::vector_fr<BMemory<Memory>> & recv_buf,
 			                               size_t i,
 			                               size_t opt)
 	:i(i),recv_buf(recv_buf),v2(v2),opt(opt)
@@ -174,11 +174,11 @@ struct process_receive_mem_traits_inte
 
 		PtrMemory * ptr1;
 
-		if (opt == MPI_GPU_DIRECT)
+		if (opt & MPI_GPU_DIRECT)
 		{
 #if defined(MPIX_CUDA_AWARE_SUPPORT) && MPIX_CUDA_AWARE_SUPPORT
 			// add the received particles to the vector
-			ptr1 = new PtrMemory(recv_buf.get(i).getDevicePointerNoCopy(),recv_buf.get(i).size());
+			ptr1 = new PtrMemory(recv_buf.get(i).getDevicePointer(),recv_buf.get(i).size());
 #else
 			// add the received particles to the vector
 			ptr1 = new PtrMemory(recv_buf.get(i).getPointer(),recv_buf.get(i).size());
@@ -200,7 +200,7 @@ template<bool inte_or_lin,typename T, typename S, template<typename> class layou
 struct unpack_selector_with_prp_lin
 {
 	template<typename op, unsigned int ... prp> static int call_unpack_impl(S & recv,
-                                                                             openfpm::vector<BMemory<Memory>> & recv_buf,
+                                                                             openfpm::vector_fr<BMemory<Memory>> & recv_buf,
                                                                              openfpm::vector<size_t> * sz,
                                                                              openfpm::vector<size_t> * sz_byte,
                                                                              op & op_param,
@@ -237,7 +237,7 @@ template<typename T, typename S, template<typename> class layout_base, typename 
 struct unpack_selector_with_prp_lin<true,T,S,layout_base,Memory>
 {
 	template<typename op, unsigned int ... prp> static int call_unpack_impl(S & recv,
-                                                                             openfpm::vector<BMemory<Memory>> & recv_buf,
+                                                                             openfpm::vector_fr<BMemory<Memory>> & recv_buf,
                                                                              openfpm::vector<size_t> * sz,
                                                                              openfpm::vector<size_t> * sz_byte,
                                                                              op & op_param,
@@ -282,7 +282,7 @@ template<typename T, typename S, template<typename> class layout_base, typename 
 struct unpack_selector_with_prp<true,T,S,layout_base,Memory>
 {
 	template<typename op, unsigned int ... prp> static void call_unpack(S & recv,
-			                                                            openfpm::vector<BMemory<Memory>> & recv_buf,
+			                                                            openfpm::vector_fr<BMemory<Memory>> & recv_buf,
 			                                                            openfpm::vector<size_t> * sz,
 			                                                            openfpm::vector<size_t> * sz_byte,
 			                                                            op & op_param,
@@ -317,7 +317,7 @@ struct call_serialize_variadic<index_tuple<prp...>>
 
 	template<typename op, typename T, typename S, template<typename> class layout_base, typename Memory>
 	inline static void call_unpack(S & recv,
-			                       openfpm::vector<BMemory<Memory>> & recv_buf,
+			                       openfpm::vector_fr<BMemory<Memory>> & recv_buf,
 			                       openfpm::vector<size_t> * sz,
 			                       openfpm::vector<size_t> * sz_byte,
 			                       op & op_param,
@@ -507,7 +507,7 @@ struct pack_unpack_cond_with_prp
 
 	template<typename Memory>
 	static void unpacking(S & recv,
-			              openfpm::vector<BMemory<Memory>> & recv_buf,
+			              openfpm::vector_fr<BMemory<Memory>> & recv_buf,
 						  openfpm::vector<size_t> * sz,
 						  openfpm::vector<size_t> * sz_byte,
 						  op & op_param,
@@ -553,7 +553,7 @@ struct op_ssend_recv_add_sr
 							  layout_base,
 							  prp...>(v2);
 
-			recv.template hostToDevice<prp...>();
+			recv.template hostToDevice<prp...>(recv.size(),recv.size()+v2.size());
 
 #endif
 
@@ -719,7 +719,7 @@ struct op_ssend_gg_recv_merge_impl<true>
 		recv.template merge_prp_v<replace_,
 		                          typename T::value_type,
 								  HeapMemory,
-								  openfpm::grow_policy_double,
+								  typename S::grow_policy,
 								  layout_base,
 								  prp...>(v2,start);
 

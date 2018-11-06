@@ -142,16 +142,9 @@ class Vcluster_base
 	//! vector of functions to execute after all the request has been performed
 	std::vector<int> post_exe;
 
-#if defined(CUDA_GPU) && defined(__NVCC__)
-
-	//! standard context for mgpu
+	//! standard context for mgpu (if cuda is detected otherwise is unused)
 	mgpu::standard_context_t * context;
 
-#else
-
-	void * context = NULL;
-
-#endif
 
 	// Object array
 
@@ -198,7 +191,7 @@ class Vcluster_base
 protected:
 
 	//! Receive buffers
-	openfpm::vector<BMemory<InternalMemory>> recv_buf;
+	openfpm::vector_fr<BMemory<InternalMemory>> recv_buf;
 
 	//! tags receiving
 	openfpm::vector<size_t> tags;
@@ -287,7 +280,7 @@ public:
 
 #if defined(CUDA_GPU) && defined(__NVCC__)
 
-		context = new mgpu::standard_context_t();
+		context = new mgpu::standard_context_t(false);
 
 #endif
 	}
@@ -345,24 +338,21 @@ public:
 
 #endif
 
-#if defined(CUDA_GPU) && defined(__NVCC__)
-
 	/*! \brief If nvidia cuda is activated return a mgpu context
 	 *
+	 * \param iw ignore warning
 	 *
 	 */
-	mgpu::standard_context_t & getmgpuContext()
+	mgpu::standard_context_t & getmgpuContext(bool iw = true)
 	{
-		if (context == NULL)
+		if (context == NULL && iw == true)
 		{
-			std::cout << __FILE__ << ":" << __LINE__ << " error: it seem that modern gpu context is not initialized."
+			std::cout << __FILE__ << ":" << __LINE__ << " Warning: it seem that modern gpu context is not initialized."
 					                                    "Either a compatible working cuda device has not been found, either openfpm_init has been called in a file that not compiled with NVCC" << std::endl;
 		}
 
 		return *context;
 	}
-
-#endif
 
 	/*! \brief Get the MPI_Communicator (or processor group) this VCluster is using
 	 *

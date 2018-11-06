@@ -136,8 +136,6 @@ class Vcluster: public Vcluster_base<InternalMemory>
 			pack_unpack_cond_with_prp<has_max_prop<T, has_value_type<T>::value>::value, op, T, S, layout_base>::packing(mem, send.get(i), sts, send_buf,opt);
 		}
 
-		self_base::tags.clear();
-
 		// receive information
 		base_info<InternalMemory> bi(&this->recv_buf,prc_recv,sz_recv_byte,this->tags,opt);
 
@@ -168,6 +166,7 @@ class Vcluster: public Vcluster_base<InternalMemory>
 		}
 		else
 		{
+			self_base::tags.clear();
 			prc_recv.clear();
 			self_base::sendrecvMultipleMessagesNBX(prc_send_.size(),(size_t *)send_sz_byte.getPointer(),(size_t *)prc_send_.getPointer(),(void **)send_buf.getPointer(),msg_alloc,(void *)&bi);
 		}
@@ -203,7 +202,7 @@ class Vcluster: public Vcluster_base<InternalMemory>
 	struct base_info
 	{
 		//! Receive buffer
-		openfpm::vector<BMemory<Memory>> * recv_buf;
+		openfpm::vector_fr<BMemory<Memory>> * recv_buf;
 		//! receiving processor list
 		openfpm::vector<size_t> & prc;
 		//! size of each message
@@ -215,7 +214,7 @@ class Vcluster: public Vcluster_base<InternalMemory>
 		size_t opt;
 
 		//! constructor
-		base_info(openfpm::vector<BMemory<Memory>> * recv_buf, openfpm::vector<size_t> & prc, openfpm::vector<size_t> & sz, openfpm::vector<size_t> & tags,size_t opt)
+		base_info(openfpm::vector_fr<BMemory<Memory>> * recv_buf, openfpm::vector<size_t> & prc, openfpm::vector<size_t> & sz, openfpm::vector<size_t> & tags,size_t opt)
 		:recv_buf(recv_buf),prc(prc),sz(sz),tags(tags),opt(opt)
 		{}
 	};
@@ -258,7 +257,7 @@ class Vcluster: public Vcluster_base<InternalMemory>
 		if (rinfo.opt & MPI_GPU_DIRECT)
 		{
 #if defined(MPIX_CUDA_AWARE_SUPPORT) && MPIX_CUDA_AWARE_SUPPORT
-			return rinfo.recv_buf->last().getDevicePointerNoCopy();
+			return rinfo.recv_buf->last().getDevicePointer();
 #else
 			return rinfo.recv_buf->last().getPointer();
 #endif
@@ -639,7 +638,7 @@ class Vcluster: public Vcluster_base<InternalMemory>
 		// we sort based on processor
 		rcv.sort();
 
-		openfpm::vector<BMemory<InternalMemory>> recv_ord;
+		openfpm::vector_fr<BMemory<InternalMemory>> recv_ord;
 		recv_ord.resize(rcv.size());
 
 		openfpm::vector<size_t> prc_ord;
@@ -657,7 +656,12 @@ class Vcluster: public Vcluster_base<InternalMemory>
 		}
 
 		// move rcv into recv
-		self_base::recv_buf.swap(recv_ord);
+		// Now we swap back to recv_buf in an ordered way
+		for (size_t i = 0 ; i < rcv.size() ; i++)
+		{
+			self_base::recv_buf.get(i).swap(recv_ord.get(i));
+		}
+
 		prc.swap(prc_ord);
 		sz_recv.swap(sz_recv_ord);
 
