@@ -10,7 +10,7 @@ add_library(vcluster STATIC VCluster/VCluster.cpp)
 
 if(CUDA_FOUND)
 	target_compile_options(vcluster_test PUBLIC $<$<COMPILE_LANGUAGE:CUDA>:-Xcudafe "--display_error_number --diag_suppress=2885 --diag_suppress=2887  --diag_suppress=2888 --diag_suppress=186 --diag_suppress=111" --expt-extended-lambda>)
-	target_include_directories (pdata PUBLIC ${MPI_C_INCLUDE_DIRS})
+	target_include_directories (vcluster_test PUBLIC ${MPI_C_INCLUDE_DIRS})
 endif()
 
 target_include_directories (vcluster_test PUBLIC ${CUDA_INCLUDE_DIRS})
