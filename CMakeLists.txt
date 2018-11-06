@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.8 FATAL_ERROR)
-project(openfpm_pdata LANGUAGES C CXX CUDA)
+project(openfpm_pdata LANGUAGES C CXX)
 
 
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_LIST_DIR}/CMakeFiles/)
@@ -9,9 +9,12 @@ set(SE_CLASS1 CACHE BOOL "Activate compilation with SE_CLASS1")
 set(SE_CLASS2 CACHE BOOL "Activate compilation with SE_CLASS2")
 set(SE_CLASS3 CACHE BOOL "Activate compilation with SE_CLASS3")
 
+if (ENABLE_GPU)
+	enable_language(CUDA)
+	find_package(CUDA)
+endif()
 
 find_package(Boost 1.52.0 REQUIRED unit_test_framework iostreams program_options)
-find_package(CUDA)
 find_package(MPI REQUIRED)
 
 if(CUDA_FOUND)
