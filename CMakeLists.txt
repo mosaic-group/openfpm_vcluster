@@ -9,12 +9,15 @@ set(SE_CLASS1 CACHE BOOL "Activate compilation with SE_CLASS1")
 set(SE_CLASS2 CACHE BOOL "Activate compilation with SE_CLASS2")
 set(SE_CLASS3 CACHE BOOL "Activate compilation with SE_CLASS3")
 
+set (CMAKE_CXX_STANDARD 11)
+set (CMAKE_CUDA_STANDARD 11)
+
 if (ENABLE_GPU)
 	enable_language(CUDA)
 	find_package(CUDA)
 endif()
 
-find_package(Boost 1.52.0 REQUIRED unit_test_framework iostreams program_options)
+find_package(Boost 1.66.0 REQUIRED COMPONENTS unit_test_framework iostreams program_options)
 find_package(MPI REQUIRED)
 
 if(CUDA_FOUND)
