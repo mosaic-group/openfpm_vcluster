@@ -4,12 +4,16 @@ cmake_minimum_required(VERSION 3.8 FATAL_ERROR)
 
 add_executable(vcluster_test main.cpp VCluster/VCluster.cpp  ../../openfpm_devices/src/memory/HeapMemory.cpp ../../openfpm_devices/src/memory/PtrMemory.cpp ../../openfpm_devices/src/Memleak_check.cpp ../../openfpm_devices/src/memory/CudaMemory.cu VCluster/cuda/VCluster_semantic_unit_cuda_tests.cu )
 
+if ( CMAKE_COMPILER_IS_GNUCC )
+    target_compile_options(vcluster_test PRIVATE "-Wno-deprecated-declarations")
+endif()
+
 add_library(vcluster STATIC VCluster/VCluster.cpp)
 
 ###########################
 
 if(CUDA_FOUND)
-	target_compile_options(vcluster_test PUBLIC $<$<COMPILE_LANGUAGE:CUDA>:-Xcudafe "--display_error_number --diag_suppress=2885 --diag_suppress=2887  --diag_suppress=2888 --diag_suppress=186 --diag_suppress=111" --expt-extended-lambda>)
+	target_compile_options(vcluster_test PUBLIC $<$<COMPILE_LANGUAGE:CUDA>:-Xcudafe "--display_error_number --diag_suppress=2885 --diag_suppress=2886  --diag_suppress=2887  --diag_suppress=2888 --diag_suppress=186 --diag_suppress=111" --expt-extended-lambda>)
 	target_include_directories (vcluster_test PUBLIC ${MPI_C_INCLUDE_DIRS})
 endif()
 
