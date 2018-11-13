@@ -60,7 +60,7 @@ struct unpack_each_prop_buffer
 {
 	S & recv;
 
-	openfpm::vector<BMemory<HeapMemory>> & recv_buf;
+	openfpm::vector_fr<BMemory<HeapMemory>> & recv_buf;
 
 	size_t i;
 
