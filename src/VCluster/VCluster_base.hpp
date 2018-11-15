@@ -23,6 +23,7 @@
 #include "data_type/aggregate.hpp"
 #if defined(CUDA_GPU) && defined(__NVCC__)
 #include "util/cuda/moderngpu/launch_box.hxx"
+#include "util/cuda/ofp_context.hxx"
 #endif
 
 #ifdef HAVE_PETSC
@@ -143,7 +144,7 @@ class Vcluster_base
 	std::vector<int> post_exe;
 
 	//! standard context for mgpu (if cuda is detected otherwise is unused)
-	mgpu::standard_context_t * context;
+	mgpu::ofp_context_t * context;
 
 
 	// Object array
@@ -182,6 +183,9 @@ class Vcluster_base
 
 	//! disable operator=
 	Vcluster_base & operator=(const Vcluster_base &)	{return *this;};
+
+	//! rank within the node
+	int shmrank;
 
 	//! disable copy constructor
 	Vcluster_base(const Vcluster_base &)
@@ -249,8 +253,16 @@ public:
 		// Check if MPI is already initialized
 		if (!already_initialised)
 		{
-
 			MPI_Init(argc,argv);
+
+			// We try to get the local processors rank
+
+			MPI_Comm shmcomm;
+			MPI_Comm_split_type(MPI_COMM_WORLD, MPI_COMM_TYPE_SHARED, 0,
+			                    MPI_INFO_NULL, &shmcomm);
+			MPI_Comm_size(shmcomm, &shmrank);
+			MPI_Comm_free(&shmcomm);
+
 		}
 
 		// Get the total number of process
@@ -280,7 +292,7 @@ public:
 
 #if defined(CUDA_GPU) && defined(__NVCC__)
 
-		context = new mgpu::standard_context_t(false);
+		context = new mgpu::ofp_context_t(false,shmrank);
 
 #endif
 	}
@@ -343,7 +355,7 @@ public:
 	 * \param iw ignore warning
 	 *
 	 */
-	mgpu::standard_context_t & getmgpuContext(bool iw = true)
+	mgpu::ofp_context_t & getmgpuContext(bool iw = true)
 	{
 		if (context == NULL && iw == true)
 		{
