@@ -290,11 +290,7 @@ public:
 		bar_req = MPI_Request();
 		bar_stat = MPI_Status();
 
-#if defined(CUDA_GPU) && defined(__NVCC__)
-
 		context = new mgpu::ofp_context_t(false,shmrank);
-
-#endif
 	}
 
 #ifdef SE_CLASS1
