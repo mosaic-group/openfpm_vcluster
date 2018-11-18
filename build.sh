@@ -18,10 +18,10 @@ mkdir openfpm_vcluster/src/config
 git clone git@git.mpi-cbg.de:/openfpm/openfpm_devices.git openfpm_devices
 git clone git@git.mpi-cbg.de:/openfpm/openfpm_data.git openfpm_data
 cd openfpm_data
-git checkout 6c2a5911ac16f93ab0ae1e7ac14723c952aa5c16
+git checkout 7b236b204edfe60d6a104da5a9e7e4f0aa1d6c90
 cd ..
 cd openfpm_devices
-git checkout 46e4994c5dff879a71e6ae090c50b2f23235d435
+git checkout d956f9fd5bea586ee6281a483e3f0d5fa93a5415
 cd ..
 
 cd "$1/openfpm_vcluster"
