@@ -7,6 +7,8 @@ echo "Directory: $1"
 echo "Machine: $2"
 echo "Branch: $4"
 
+exit 1 
+
 cd "$1/openfpm_vcluster"
 source $HOME/openfpm_vars_$4
 

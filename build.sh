@@ -13,6 +13,8 @@ mv /tmp/openfpm_vcluster openfpm_vcluster
 
 mkdir openfpm_vcluster/src/config
 
+## It is equivalent to the git modules
+
 git clone git@git.mpi-cbg.de:/openfpm/openfpm_devices.git openfpm_devices
 git clone git@git.mpi-cbg.de:/openfpm/openfpm_data.git openfpm_data
 cd openfpm_data
@@ -23,6 +25,35 @@ git checkout 46e4994c5dff879a71e6ae090c50b2f23235d435
 cd ..
 
 cd "$1/openfpm_vcluster"
+
+# install MPI and BOOST  LIBHILBERT if needed
+
+if [ ! -d $HOME/openfpm_dependencies/openfpm_vcluster/LIBHILBERT ]; then
+        ./install_LIBHILBERT.sh $HOME/openfpm_dependencies/openfpm_vcluster/ 4
+fi
+
+
+if [ ! -d $HOME/openfpm_dependencies/openfpm_vcluster/BOOST ]; then
+        if [ x"$2" == x"mac," ]; then
+                echo "Compiling for OSX"
+                ./install_BOOST.sh $HOME/openfpm_dependencies/openfpm_vcluster/ 4 darwin
+        else
+                echo "Compiling for Linux"
+                ./install_BOOST.sh $HOME/openfpm_dependencies/openfpm_vcluster/ 4 gcc
+        fi
+fi
+
+
+if [ ! -d $HOME/openfpm_dependencies/openfpm_vcluster/MPI ]; then
+        if [ x"$2" == x"mac," ]; then
+                echo "Compiling for OSX"
+                ./install_MPI.sh $HOME/openfpm_dependencies/openfpm_vcluster/ 4
+        else
+                echo "Compiling for Linux"
+                ./install_MPI.sh $HOME/openfpm_dependencies/openfpm_vcluster/ 4
+        fi
+fi
+
 
 source $HOME/openfpm_vars_$3
 
