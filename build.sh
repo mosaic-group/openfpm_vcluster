@@ -105,7 +105,7 @@ else
  echo "$PATH"
  echo "Compiling general"
  sh ./autogen.sh
- sh ./configure  CXX=mpic++
+ sh ./configure  CXX=mpic++ --with-boost=$HOME/openfpm_dependencies/openfpm_vcluster/BOOST
  make
  if [ $? -ne 0 ]; then exit 1 ; fi
 
