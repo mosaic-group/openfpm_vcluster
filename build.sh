@@ -54,8 +54,7 @@ if [ ! -d $HOME/openfpm_dependencies/openfpm_vcluster/MPI ]; then
         fi
 fi
 
-
-source $HOME/openfpm_vars_$3
+export PATH="$PATH:$HOME/openfpm_dependencies/openfpm_vcluster/MPI/bin"
 
 if [ "$2" == "gin" ]; then
  echo "Compiling on gin\n"
