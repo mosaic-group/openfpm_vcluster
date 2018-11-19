@@ -7,14 +7,12 @@ echo "Directory: $1"
 echo "Machine: $2"
 echo "Branch: $4"
 
-exit 1 
 
 cd "$1/openfpm_vcluster"
-source $HOME/openfpm_vars_$4
 
 if [ "$2" == "wetcluster" ]; then
 
- export MODULEPATH="/sw/apps/modules/modulefiles:$MODULEPATH"
+export MODULEPATH="/sw/apps/modules/modulefiles:$MODULEPATH"
 
  ## Run on the cluster
  bsub -o output_run2.%J -K -n 2 -R "span[hosts=1]" "module load openmpi/1.8.1 ; module load gcc/4.9.2;  mpirun -np $3 ./src/vcluster_test"
@@ -49,7 +47,9 @@ elif [ "$2" == "taurus" ]; then
 else
 
  source $HOME/.bashrc
- echo "$PATH"
+ export PATH="$PATH:$HOME/openfpm_dependencies/openfpm_vcluster/MPI/bin"
+
+ exit 1
 
  mpirun -np $3 ./src/vcluster_test
  if [ $? -ne 0 ]; then exit 1 ; fi
