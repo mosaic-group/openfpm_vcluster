@@ -1,6 +1,7 @@
 #! /bin/bash
 
 # Make a directory in /tmp/openfpm_data
+#
 
 echo "$PATH"
 echo "Directory: $1"
