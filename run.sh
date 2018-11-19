@@ -46,9 +46,11 @@ else
 
  source $HOME/.bashrc
  export PATH="$PATH:$HOME/openfpm_dependencies/openfpm_vcluster/MPI/bin"
+ export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:/$HOME/openfpm_dependencies/openfpm_vcluster/BOOST/lib"
+ export DYLD_LIBRARY_PATH="$DYLD_LIBRARY_PATH:/$HOME/openfpm_dependencies/openfpm_vcluster/BOOST/lib"
 
  cd openfpm_vcluster
- mpirun -np $4 ./build/src/vcluster_test
+ mpirun --oversubscribe -np $4 ./build/src/vcluster_test
  if [ $? -ne 0 ]; then exit 1 ; fi
 fi
 
