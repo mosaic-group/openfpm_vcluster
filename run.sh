@@ -6,7 +6,7 @@ echo "$PATH"
 echo "Directory: $1"
 echo "Machine: $2"
 echo "Nproc: $3"
-echo "Branch: $4"
+echo "Branch: $5"
 
 
 cd "$1/openfpm_vcluster"
