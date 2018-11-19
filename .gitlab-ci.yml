@@ -4,7 +4,7 @@ centos_build:
     - centos
   artifacts:
     paths:
-      - ./build/src/vcluster_test
+      - ./openfpm_vcluster/build/src/vcluster_test
   script:
     - ./build.sh $CI_PROJECT_DIR $CI_RUNNER_TAGS $CI_COMMIT_REF_NAME
 
@@ -26,7 +26,7 @@ mac_build:
     - mac
   artifacts:
     paths:
-      - ./build/src/vcluster_test
+      - ./openfpm_vcluster/build/src/vcluster_test
   script:
     - ./build.sh $CI_PROJECT_DIR $CI_RUNNER_TAGS $CI_COMMIT_REF_NAME
 
@@ -47,7 +47,7 @@ ubuntu_build:
     - ubuntu
   artifacts:
     paths:
-      - ./build/src/vcluster_test
+      - ./openfpm_vcluster/build/src/vcluster_test
   script:
     - ./build.sh $CI_PROJECT_DIR $CI_RUNNER_TAGS $CI_COMMIT_REF_NAME
 
