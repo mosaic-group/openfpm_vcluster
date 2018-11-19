@@ -5,7 +5,7 @@
 echo "$PATH"
 echo "Directory: $1"
 echo "Machine: $2"
-echo "Nproc: $3"
+echo "Nproc: $4"
 echo "Branch: $5"
 
 
@@ -52,7 +52,7 @@ else
 
  exit 1
 
- mpirun -np $3 ./src/vcluster_test
+ mpirun -np $4 ./src/vcluster_test
  if [ $? -ne 0 ]; then exit 1 ; fi
 fi
 
