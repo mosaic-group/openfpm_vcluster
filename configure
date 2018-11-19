@@ -3,6 +3,7 @@
 #
 #
 # Because we moved to cmake this script emulate the configure script from autotools
+#
 
 conf_options=
 
