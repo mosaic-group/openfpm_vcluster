@@ -11,6 +11,8 @@ echo "Branch: $5"
 
 cd "$1/openfpm_vcluster"
 
+ls
+
 if [ "$2" == "wetcluster" ]; then
 
 export MODULEPATH="/sw/apps/modules/modulefiles:$MODULEPATH"
