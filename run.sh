@@ -47,6 +47,7 @@ else
  source $HOME/.bashrc
  export PATH="$PATH:$HOME/openfpm_dependencies/openfpm_vcluster/MPI/bin"
 
+ ls
  ls ./build/src/vcluster_test
 
  exit 1
