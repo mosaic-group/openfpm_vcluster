@@ -3,12 +3,14 @@
 # Make a directory in /tmp/openfpm_data
 #
 
-echo "$PATH"
-echo "Directory: $1"
-echo "Machine: $2"
-echo "Branch: $3"
+workspace=$1
+hostname=$(hostname)
+branch=$3
 
-exit 1
+echo "Directory: $workspace"
+echo "Machine: $hostname"
+echo "Branch: $branch"
+
 
 mkdir /tmp/openfpm_vcluster
 mv * .[^.]* /tmp/openfpm_vcluster
@@ -27,7 +29,7 @@ cd openfpm_devices
 git checkout d956f9fd5bea586ee6281a483e3f0d5fa93a5415
 cd ..
 
-cd "$1/openfpm_vcluster"
+cd "$workspace/openfpm_vcluster"
 
 # install MPI and BOOST  LIBHILBERT if needed
 
@@ -37,7 +39,7 @@ fi
 
 
 if [ ! -d $HOME/openfpm_dependencies/openfpm_vcluster/BOOST ]; then
-        if [ x"$2" == x"mac," ]; then
+        if [ x"$hostname" == x"mac," ]; then
                 echo "Compiling for OSX"
                 ./install_BOOST.sh $HOME/openfpm_dependencies/openfpm_vcluster/ 4 darwin
         else
@@ -48,7 +50,7 @@ fi
 
 
 if [ ! -d $HOME/openfpm_dependencies/openfpm_vcluster/MPI ]; then
-        if [ x"$2" == x"mac," ]; then
+        if [ x"$hostname" == x"mac," ]; then
                 echo "Compiling for OSX"
                 ./install_MPI.sh $HOME/openfpm_dependencies/openfpm_vcluster/ 4
         else
@@ -59,12 +61,12 @@ fi
 
 export PATH="$PATH:$HOME/openfpm_dependencies/openfpm_vcluster/MPI/bin"
 
-if [ "$2" == "gin" ]; then
+if [ "$hostname" == "gin" ]; then
  echo "Compiling on gin\n"
  module load gcc/4.9.2
  module load openmpi/1.8.1
 
-elif [ "$2" == "wetcluster" ]; then
+elif [ "$hostname" == "wetcluster" ]; then
  echo "Compiling on wetcluster"
 
 ## produce the module path
@@ -86,7 +88,7 @@ exit(0)\n"
 
  bsub -o output_compile.%J -K -n 1 -J compile sh ./compile_script
 
-elif [ "$2" == "taurus" ]; then
+elif [ "$hostname" == "taurus" ]; then
  echo "Compiling on taurus"
 
  echo "$PATH"
