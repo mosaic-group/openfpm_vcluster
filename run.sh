@@ -8,6 +8,8 @@ echo "Machine: $2"
 echo "Nproc: $4"
 echo "Branch: $5"
 
+exit 1
+
 if [ "$2" == "wetcluster" ]; then
 
 export MODULEPATH="/sw/apps/modules/modulefiles:$MODULEPATH"

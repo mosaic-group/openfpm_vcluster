@@ -8,6 +8,8 @@ echo "Directory: $1"
 echo "Machine: $2"
 echo "Branch: $3"
 
+exit 1
+
 mkdir /tmp/openfpm_vcluster
 mv * .[^.]* /tmp/openfpm_vcluster
 mv /tmp/openfpm_vcluster openfpm_vcluster
