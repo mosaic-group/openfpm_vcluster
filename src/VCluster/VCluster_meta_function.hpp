@@ -544,6 +544,7 @@ struct op_ssend_recv_add_sr
 							  layout_base,
 							  prp...>(v2);
 #else
+			size_t old_size = recv.size();
 
 			// Merge the information
 			recv.template add_prp<typename T::value_type,
@@ -553,7 +554,7 @@ struct op_ssend_recv_add_sr
 							  layout_base,
 							  prp...>(v2);
 
-			recv.template hostToDevice<prp...>(recv.size(),recv.size()+v2.size());
+			recv.template hostToDevice<prp...>(old_size,old_size+v2.size()-1);
 
 #endif
 

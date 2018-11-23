@@ -839,6 +839,13 @@ BOOST_AUTO_TEST_CASE (Vcluster_semantic_sendrecv_receive_size_known)
 		// We receive to fill prc_recv2 and sz_recv2
 		vcl.SSendRecv(v1,v2,prc_send,prc_recv2,sz_recv2);
 
+		// carefull because SSendRecv does not fill prc_recv2 with processor that has a sending size of 0
+		for(size_t i = 0 ; i < v1.size() ; i++)
+		{
+			if( i % SSCATTER_MAX == 0)
+			{prc_recv2.add((i + vcl.getProcessUnitID()) % vcl.getProcessingUnits());}
+		}
+
 		// We reset v2 and we receive again saying that the processors are known and we know the elements
 		v2.clear();
 		vcl.SSendRecv(v1,v2,prc_send,prc_recv2,sz_recv2,RECEIVE_KNOWN | KNOWN_ELEMENT_OR_BYTE);
@@ -919,6 +926,14 @@ BOOST_AUTO_TEST_CASE (Vcluster_semantic_sendrecv_receive_known)
 
 		// Receive to fill prc_recv2
 		vcl.SSendRecv(v1,v2,prc_send,prc_recv2,sz_recv2);
+
+		// carefull because SSendRecv does not fill prc_recv2 with processor that has a sending size of 0
+
+		for(size_t i = 0 ; i < v1.size() ; i++)
+		{
+			if( i % SSCATTER_MAX == 0)
+			{prc_recv2.add((i + vcl.getProcessUnitID()) % vcl.getProcessingUnits());}
+		}
 
 		// Reset v2 and sz_recv2
 
