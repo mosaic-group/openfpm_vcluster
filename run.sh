@@ -2,7 +2,6 @@
 
 # Make a directory in /tmp/openfpm_data
 
-echo "$PATH"
 echo "Directory: $1"
 echo "Machine: $2"
 echo "Nproc: $4"
