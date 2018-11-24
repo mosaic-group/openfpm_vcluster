@@ -4,9 +4,10 @@
 
 echo "Directory: $1"
 echo "Machine: $2"
-echo "Nproc: $4"
-echo "Branch: $5"
+echo "Nproc: $3"
+echo "Branch: $4"
 
+exit 1
 
 if [ "$2" == "wetcluster" ]; then
 
