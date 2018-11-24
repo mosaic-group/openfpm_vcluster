@@ -61,7 +61,7 @@ else
  ls $HOME/openfpm_dependencies/openfpm_vcluster/BOOST/lib
  otool -L ./build/src/vcluster_test
 
- mpirun --oversubscribe -np $nproc ./build/src/vcluster_test
+ mpirun --oversubscribe -np $nproc ./build/src/vcluster_test --color_output=yes
  if [ $? -ne 0 ]; then exit 1 ; fi
 fi
 
