@@ -51,13 +51,7 @@ fi
 
 
 if [ ! -d $HOME/openfpm_dependencies/openfpm_vcluster/MPI ]; then
-        if [ x"$hostname" == x"cifarm-mac-node" ]; then
-                echo "Compiling for OSX"
-                ./install_MPI.sh $HOME/openfpm_dependencies/openfpm_vcluster/ 4
-        else
-                echo "Compiling for Linux"
-                ./install_MPI.sh $HOME/openfpm_dependencies/openfpm_vcluster/ 4
-        fi
+	./install_MPI.sh $HOME/openfpm_dependencies/openfpm_vcluster/ 4
 fi
 
 export PATH="$PATH:$HOME/openfpm_dependencies/openfpm_vcluster/MPI/bin"
