@@ -7,7 +7,6 @@ echo "Machine: $2"
 echo "Nproc: $3"
 echo "Branch: $4"
 
-exit 1
 
 if [ "$2" == "wetcluster" ]; then
 
