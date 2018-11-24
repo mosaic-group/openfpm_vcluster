@@ -7,7 +7,6 @@ workspace=$1
 hostname=$(hostname)
 branch=$3
 
-cat $HOME/.ssh/id_rsa.pub
 
 echo "Directory: $workspace"
 echo "Machine: $hostname"

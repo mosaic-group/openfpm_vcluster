@@ -54,7 +54,6 @@ else
  export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:/$HOME/openfpm_dependencies/openfpm_vcluster/BOOST/lib"
  export DYLD_LIBRARY_PATH="$DYLD_LIBRARY_PATH:/$HOME/openfpm_dependencies/openfpm_vcluster/BOOST/lib"
 
- ls
  cd openfpm_vcluster
  mpirun --oversubscribe -np $nproc ./build/src/vcluster_test
  if [ $? -ne 0 ]; then exit 1 ; fi
