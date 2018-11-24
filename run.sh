@@ -52,7 +52,9 @@ else
  source $HOME/.bashrc
  export PATH="$PATH:$HOME/openfpm_dependencies/openfpm_vcluster/MPI/bin"
  export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$HOME/openfpm_dependencies/openfpm_vcluster/BOOST/lib"
- export DYLD_LIBRARY_PATH="$DYLD_LIBRARY_PATH:$HOME/openfpm_dependencies/openfpm_vcluster/BOOST/lib"
+# export DYLD_LIBRARY_PATH="$DYLD_LIBRARY_PATH:$HOME/openfpm_dependencies/openfpm_vcluster/BOOST/lib"
+
+ echo ""
 
  cd openfpm_vcluster
 
