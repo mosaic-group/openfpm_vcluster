@@ -46,7 +46,7 @@ parallel (
                       sh "cd openfpm_vcluster && ./success.sh 2 mac openfpm_vcluster"
                     }
                   }
-                 }
+                 },
 
 "cifarm-ubuntu-node" : {node ('cifarm-ubuntu-node')
                   {
