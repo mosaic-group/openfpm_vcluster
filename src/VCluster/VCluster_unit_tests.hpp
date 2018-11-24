@@ -9,7 +9,7 @@
 #define VCLUSTER_UNIT_TESTS_HPP_
 
 #include <sstream>
-#include <boost/test/included/unit_test.hpp>
+#include <boost/test/unit_test.hpp>
 #include "timer.hpp"
 #include <random>
 #include "VCluster_unit_test_util.hpp"
