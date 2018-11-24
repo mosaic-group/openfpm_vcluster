@@ -39,7 +39,7 @@ fi
 
 
 if [ ! -d $HOME/openfpm_dependencies/openfpm_vcluster/BOOST ]; then
-        if [ x"$hostname" == x"mac," ]; then
+        if [ x"$hostname" == x"cifarm-mac-node" ]; then
                 echo "Compiling for OSX"
                 ./install_BOOST.sh $HOME/openfpm_dependencies/openfpm_vcluster/ 4 darwin
         else
@@ -50,7 +50,7 @@ fi
 
 
 if [ ! -d $HOME/openfpm_dependencies/openfpm_vcluster/MPI ]; then
-        if [ x"$hostname" == x"mac," ]; then
+        if [ x"$hostname" == x"cifarm-mac-node" ]; then
                 echo "Compiling for OSX"
                 ./install_MPI.sh $HOME/openfpm_dependencies/openfpm_vcluster/ 4
         else
