@@ -631,7 +631,10 @@ class Vcluster: public Vcluster_base<InternalMemory>
 		for (size_t i = 0 ; i < rcv.size() ; i++)
 		{
 			rcv.get(i).proc = prc.get(i);
-			rcv.get(i).tag = tags.get(i);
+			if (i < tags.size())
+			{rcv.get(i).tag = tags.get(i);}
+			else
+			{rcv.get(i).tag = (unsigned int)-1;}
 			rcv.get(i).pos = i;
 		}
 

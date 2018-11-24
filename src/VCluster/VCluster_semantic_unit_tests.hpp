@@ -273,6 +273,9 @@ BOOST_AUTO_TEST_CASE (Vcluster_semantic_gather_5)
 	{
 		Vcluster<> & vcl = create_vcluster();
 
+		if (vcl.size() == 1)
+		{return;}
+
 		if (vcl.getProcessingUnits() >= 32)
 		{return;}
 
@@ -843,7 +846,10 @@ BOOST_AUTO_TEST_CASE (Vcluster_semantic_sendrecv_receive_size_known)
 		for(size_t i = 0 ; i < v1.size() ; i++)
 		{
 			if( i % SSCATTER_MAX == 0)
-			{prc_recv2.add((i + vcl.getProcessUnitID()) % vcl.getProcessingUnits());}
+			{
+				prc_recv2.add((i + vcl.getProcessUnitID()) % vcl.getProcessingUnits());
+				sz_recv2.add(0);
+			}
 		}
 
 		// We reset v2 and we receive again saying that the processors are known and we know the elements
