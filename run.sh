@@ -2,21 +2,26 @@
 
 # Make a directory in /tmp/openfpm_data
 
-echo "Directory: $1"
-echo "Machine: $2"
-echo "Nproc: $3"
-echo "Branch: $4"
+workspace=$1
+hostname=$2
+nproc=$3
+branch=$4
+
+echo "Directory: $workspace"
+echo "Machine: $hostname"
+echo "Nproc: $nproc"
+echo "Branch: $branch"
 
 
-if [ "$2" == "wetcluster" ]; then
+if [ "$hostname" == "wetcluster" ]; then
 
 export MODULEPATH="/sw/apps/modules/modulefiles:$MODULEPATH"
 
  ## Run on the cluster
- bsub -o output_run2.%J -K -n 2 -R "span[hosts=1]" "module load openmpi/1.8.1 ; module load gcc/4.9.2;  mpirun -np $3 ./src/vcluster_test"
+ bsub -o output_run2.%J -K -n 2 -R "span[hosts=1]" "module load openmpi/1.8.1 ; module load gcc/4.9.2;  mpirun -np $nproc ./src/vcluster_test"
  if [ $? -ne 0 ]; then exit 1 ; fi
 
-elif [ "$2" == "taurus" ]; then
+elif [ "$hostname" == "taurus" ]; then
  echo "Running on taurus"
 
  echo "$PATH"
@@ -27,7 +32,7 @@ elif [ "$2" == "taurus" ]; then
 
 ### to exclude --exclude=taurusi[6300-6400],taurusi[5400-5500]
 
- salloc --nodes=1 --ntasks-per-node=$3 --time=00:05:00 --mem-per-cpu=1800 --partition=haswell bash -c "ulimit -s unlimited && mpirun -np $3 src/vcluster_test --report_level=no"
+ salloc --nodes=1 --ntasks-per-node=$nproc --time=00:05:00 --mem-per-cpu=1800 --partition=haswell bash -c "ulimit -s unlimited && mpirun -np $nproc src/vcluster_test --report_level=no"
  if [ $? -ne 0 ]; then exit 1 ; fi
  sleep 5
 # salloc --nodes=2 --ntasks-per-node=24 --time=00:05:00 --mem-per-cpu=1800 --partition=haswell bash -c "ulimit -s unlimited && mpirun -np 48 src/vcluster_test --report_level=no"
@@ -49,8 +54,9 @@ else
  export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:/$HOME/openfpm_dependencies/openfpm_vcluster/BOOST/lib"
  export DYLD_LIBRARY_PATH="$DYLD_LIBRARY_PATH:/$HOME/openfpm_dependencies/openfpm_vcluster/BOOST/lib"
 
+ ls
  cd openfpm_vcluster
- mpirun --oversubscribe -np $4 ./build/src/vcluster_test
+ mpirun --oversubscribe -np $nproc ./build/src/vcluster_test
  if [ $? -ne 0 ]; then exit 1 ; fi
 fi
 
