@@ -55,7 +55,7 @@ else
 
 
  cd openfpm_vcluster
- mpirun --oversubscribe -np $nproc otool -L ./build/src/vcluster_test
+ mpirun --oversubscribe -np $nproc ./build/src/vcluster_test
  if [ $? -ne 0 ]; then exit 1 ; fi
 fi
 
