@@ -3,7 +3,6 @@
 
 #include "config.h"
 #include <mpi.h>
-#include <mpi-ext.h>
 #include "MPI_wrapper/MPI_util.hpp"
 #include "Vector/map_vector.hpp"
 #include "MPI_wrapper/MPI_IallreduceW.hpp"
