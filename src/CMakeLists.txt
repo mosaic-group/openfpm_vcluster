@@ -24,13 +24,17 @@ target_include_directories (vcluster_test PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/../
 target_include_directories (vcluster_test PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/../../openfpm_data/src/)
 target_include_directories (vcluster_test PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/config)
 target_include_directories (vcluster_test PUBLIC ${Boost_INCLUDE_DIRS})
+target_include_directories (vcluster_test PUBLIC ${PETSC_INCLUDES})
 
 target_include_directories (vcluster PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+target_include_directories (vcluster PUBLIC ${PETSC_INCLUDES})
 target_include_directories (vcluster PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/config)
 target_include_directories (vcluster PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/../../openfpm_data/src/)
 target_include_directories (vcluster PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/../../openfpm_devices/src/)
 
 target_link_libraries(vcluster_test ${Boost_LIBRARIES})
+target_link_libraries(vcluster_test ${PETSC_LIBRARIES})
+
 
 # Request that particles be built with -std=c++11
 # As this is a public compile feature anything that links to particles

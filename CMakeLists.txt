@@ -1,13 +1,15 @@
 cmake_minimum_required(VERSION 3.8 FATAL_ERROR)
 project(openfpm_pdata LANGUAGES C CXX)
 
-
-list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_LIST_DIR}/CMakeFiles/)
+list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_LIST_DIR}/cmake_modules/)
 
 set(BOOST_INCLUDE ${Boost_INCLUDE_DIR} CACHE PATH "Include directory for BOOST")
 set(SE_CLASS1 CACHE BOOL "Activate compilation with SE_CLASS1")
 set(SE_CLASS2 CACHE BOOL "Activate compilation with SE_CLASS2")
 set(SE_CLASS3 CACHE BOOL "Activate compilation with SE_CLASS3")
+set(PETSC_ROOT CACHE PATH "If compiling with linear algebra indicate the PETSC root directory")
+
+set(ENV{PETSC_DIR} ${PETSC_ROOT})
 
 set (CMAKE_CXX_STANDARD 11)
 set (CMAKE_CUDA_STANDARD 11)
@@ -19,6 +21,7 @@ endif()
 
 find_package(Boost 1.66.0 REQUIRED COMPONENTS unit_test_framework iostreams program_options)
 find_package(MPI REQUIRED)
+find_package(PETSc)
 
 if(CUDA_FOUND)
 	set(OPENFPM_INIT_FILE "initialize/initialize_wrapper_cuda.cu")
@@ -38,6 +41,10 @@ endif()
 
 if(SE_CLASS3)
 	set(DEFINE_SE_CLASS3 "#define SE_CLASS3")
+endif()
+
+if(PETSC_FOUND)
+	set(DEFINE_HAVE_PETSC "#define HAVE_PETSC")
 endif()
 
 if(CUDA_FOUND)
