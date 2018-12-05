@@ -861,6 +861,12 @@ static inline void init_global_v_cluster_private(int *argc, char ***argv, init_o
 	global_option = option;
 	if (option == init_options::in_situ_visualization)
 	{
+		int flag;
+		MPI_Initialized(&flag);
+
+		if (flag == false)
+		{MPI_Init(argc,argv);}
+
 		MPI_Comm com_compute;
 
 		int rank;
