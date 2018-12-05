@@ -181,7 +181,9 @@ BOOST_AUTO_TEST_CASE( VCluster_use_sendrecv)
 	std::cout << "VCluster unit test start sendrecv" << "\n";
 
 	totp_check = false;
-	test<NBX>(RECEIVE_UNKNOWN);
+	auto & v_cl = create_vcluster();
+
+	test<NBX>(v_cl,RECEIVE_UNKNOWN);
 
 	totp_check = false;
 	test_no_send_some_peer<NBX>();
@@ -193,8 +195,10 @@ BOOST_AUTO_TEST_CASE( VCluster_use_sendrecv_size_known)
 {
 	std::cout << "VCluster unit test start sendrecv known size" << "\n";
 
+	auto & v_cl = create_vcluster();
+
 	totp_check = false;
-	test<NBX>(RECEIVE_SIZE_UNKNOWN);
+	test<NBX>(v_cl,RECEIVE_SIZE_UNKNOWN);
 
 	totp_check = false;
 	test_no_send_some_peer<NBX>();
@@ -206,12 +210,32 @@ BOOST_AUTO_TEST_CASE( VCluster_use_sendrecv_known)
 {
 	std::cout << "VCluster unit test start known" << "\n";
 
-	test_known<NBX>();
+	test_known<NBX>(create_vcluster());
 
 	std::cout << "VCluster unit test stop known" << "\n";
 }
 
+BOOST_AUTO_TEST_CASE( VCluster_communicator_with_external_communicator )
+{
+	std::cout << "VCluster unit test external communicator start" << std::endl;
 
+	MPI_Comm com_compute;
+	int rank = create_vcluster().rank();
+
+	if (rank == 0)
+	{MPI_Comm_split(MPI_COMM_WORLD, MPI_UNDEFINED,rank, &com_compute);}
+	else
+	{MPI_Comm_split(MPI_COMM_WORLD,0,rank, &com_compute);}
+
+	if (rank != 0 )
+	{
+		Vcluster v_cl(&boost::unit_test::framework::master_test_suite().argc,&boost::unit_test::framework::master_test_suite().argv,com_compute);
+		test_known<NBX>(v_cl);
+		test<NBX>(v_cl,RECEIVE_SIZE_UNKNOWN);
+	}
+
+	std::cout << "VCluster unit test external communicator stop" << std::endl;
+}
 
 BOOST_AUTO_TEST_SUITE_END()
 

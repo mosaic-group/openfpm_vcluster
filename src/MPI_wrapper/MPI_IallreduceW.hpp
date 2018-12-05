@@ -19,7 +19,7 @@
 template<typename T> class MPI_IallreduceW
 {
 public:
-	static inline void reduce(T & buf,MPI_Op op, MPI_Request & req)
+	static inline void reduce(T & buf,MPI_Op op, MPI_Request & req, MPI_Comm ext_comm)
 	{
 		std::cerr << "Error: " << __FILE__ << ":" << __LINE__ << " cannot recognize " << typeid(T).name() << "\n";
 	}
@@ -32,9 +32,9 @@ public:
 template<> class MPI_IallreduceW<int>
 {
 public:
-	static inline void reduce(int & buf,MPI_Op op, MPI_Request & req)
+	static inline void reduce(int & buf,MPI_Op op, MPI_Request & req, MPI_Comm ext_comm)
 	{
-		MPI_SAFE_CALL(MPI_Iallreduce(MPI_IN_PLACE, &buf, 1,MPI_INT, op, MPI_COMM_WORLD,&req));
+		MPI_SAFE_CALL(MPI_Iallreduce(MPI_IN_PLACE, &buf, 1,MPI_INT, op, ext_comm,&req));
 	}
 };
 
@@ -44,9 +44,9 @@ public:
 template<> class MPI_IallreduceW<unsigned int>
 {
 public:
-	static inline void reduce(unsigned int & buf,MPI_Op op, MPI_Request & req)
+	static inline void reduce(unsigned int & buf,MPI_Op op, MPI_Request & req, MPI_Comm ext_comm)
 	{
-		MPI_SAFE_CALL(MPI_Iallreduce(MPI_IN_PLACE, &buf, 1,MPI_UNSIGNED, op, MPI_COMM_WORLD,&req));
+		MPI_SAFE_CALL(MPI_Iallreduce(MPI_IN_PLACE, &buf, 1,MPI_UNSIGNED, op, ext_comm,&req));
 	}
 };
 
@@ -56,9 +56,9 @@ public:
 template<> class MPI_IallreduceW<short>
 {
 public:
-	static inline void reduce(short & buf,MPI_Op op, MPI_Request & req)
+	static inline void reduce(short & buf,MPI_Op op, MPI_Request & req, MPI_Comm ext_comm)
 	{
-		MPI_SAFE_CALL(MPI_Iallreduce(MPI_IN_PLACE, &buf, 1,MPI_SHORT, op, MPI_COMM_WORLD,&req));
+		MPI_SAFE_CALL(MPI_Iallreduce(MPI_IN_PLACE, &buf, 1,MPI_SHORT, op, ext_comm,&req));
 	}
 };
 
@@ -68,9 +68,9 @@ public:
 template<> class MPI_IallreduceW<unsigned short>
 {
 public:
-	static inline void reduce(unsigned short & buf,MPI_Op op, MPI_Request & req)
+	static inline void reduce(unsigned short & buf,MPI_Op op, MPI_Request & req, MPI_Comm ext_comm)
 	{
-		MPI_SAFE_CALL(MPI_Iallreduce(MPI_IN_PLACE, &buf, 1,MPI_UNSIGNED_SHORT, op, MPI_COMM_WORLD,&req));
+		MPI_SAFE_CALL(MPI_Iallreduce(MPI_IN_PLACE, &buf, 1,MPI_UNSIGNED_SHORT, op, ext_comm,&req));
 	}
 };
 
@@ -80,9 +80,9 @@ public:
 template<> class MPI_IallreduceW<char>
 {
 public:
-	static inline void reduce(char & buf,MPI_Op op, MPI_Request & req)
+	static inline void reduce(char & buf,MPI_Op op, MPI_Request & req, MPI_Comm ext_comm)
 	{
-		MPI_SAFE_CALL(MPI_Iallreduce(MPI_IN_PLACE, &buf, 1,MPI_CHAR, op, MPI_COMM_WORLD,&req));
+		MPI_SAFE_CALL(MPI_Iallreduce(MPI_IN_PLACE, &buf, 1,MPI_CHAR, op, ext_comm,&req));
 	}
 };
 
@@ -92,9 +92,9 @@ public:
 template<> class MPI_IallreduceW<unsigned char>
 {
 public:
-	static inline void reduce(unsigned char & buf,MPI_Op op, MPI_Request & req)
+	static inline void reduce(unsigned char & buf,MPI_Op op, MPI_Request & req, MPI_Comm ext_comm)
 	{
-		MPI_SAFE_CALL(MPI_Iallreduce(MPI_IN_PLACE, &buf, 1,MPI_UNSIGNED_CHAR, op, MPI_COMM_WORLD,&req));
+		MPI_SAFE_CALL(MPI_Iallreduce(MPI_IN_PLACE, &buf, 1,MPI_UNSIGNED_CHAR, op, ext_comm,&req));
 	}
 };
 
@@ -104,9 +104,9 @@ public:
 template<> class MPI_IallreduceW<size_t>
 {
 public:
-	static inline void reduce(size_t & buf,MPI_Op op, MPI_Request & req)
+	static inline void reduce(size_t & buf,MPI_Op op, MPI_Request & req, MPI_Comm ext_comm)
 	{
-		MPI_SAFE_CALL(MPI_Iallreduce(MPI_IN_PLACE, &buf, 1,MPI_UNSIGNED_LONG, op, MPI_COMM_WORLD,&req));
+		MPI_SAFE_CALL(MPI_Iallreduce(MPI_IN_PLACE, &buf, 1,MPI_UNSIGNED_LONG, op, ext_comm,&req));
 	}
 };
 
@@ -116,9 +116,9 @@ public:
 template<> class MPI_IallreduceW<long int>
 {
 public:
-	static inline void reduce(long int & buf,MPI_Op op, MPI_Request & req)
+	static inline void reduce(long int & buf,MPI_Op op, MPI_Request & req, MPI_Comm ext_comm)
 	{
-		MPI_SAFE_CALL(MPI_Iallreduce(MPI_IN_PLACE, &buf, 1,MPI_LONG, op, MPI_COMM_WORLD,&req));
+		MPI_SAFE_CALL(MPI_Iallreduce(MPI_IN_PLACE, &buf, 1,MPI_LONG, op, ext_comm,&req));
 	}
 };
 
@@ -128,9 +128,9 @@ public:
 template<> class MPI_IallreduceW<float>
 {
 public:
-	static inline void reduce(float & buf,MPI_Op op, MPI_Request & req)
+	static inline void reduce(float & buf,MPI_Op op, MPI_Request & req, MPI_Comm ext_comm)
 	{
-		MPI_SAFE_CALL(MPI_Iallreduce(MPI_IN_PLACE, &buf, 1,MPI_FLOAT, op, MPI_COMM_WORLD,&req));
+		MPI_SAFE_CALL(MPI_Iallreduce(MPI_IN_PLACE, &buf, 1,MPI_FLOAT, op, ext_comm,&req));
 	}
 };
 
@@ -140,9 +140,9 @@ public:
 template<> class MPI_IallreduceW<double>
 {
 public:
-	static inline void reduce(double & buf,MPI_Op op, MPI_Request & req)
+	static inline void reduce(double & buf,MPI_Op op, MPI_Request & req, MPI_Comm ext_comm)
 	{
-		MPI_SAFE_CALL(MPI_Iallreduce(MPI_IN_PLACE, &buf, 1,MPI_DOUBLE, op, MPI_COMM_WORLD,&req));
+		MPI_SAFE_CALL(MPI_Iallreduce(MPI_IN_PLACE, &buf, 1,MPI_DOUBLE, op, ext_comm,&req));
 	}
 };
 
@@ -154,9 +154,9 @@ public:
 /*template<> class MPI_IallreduceW<openfpm::vector<int>>
 {
 public:
-	static inline void reduce(openfpm::vector<int> & buf,MPI_Op op, MPI_Request & req)
+	static inline void reduce(openfpm::vector<int> & buf,MPI_Op op, MPI_Request & req, MPI_Comm ext_comm)
 	{
-		MPI_Iallreduce(MPI_IN_PLACE, &buf.get(0), buf.size(),MPI_INT, op, MPI_COMM_WORLD,&req);
+		MPI_Iallreduce(MPI_IN_PLACE, &buf.get(0), buf.size(),MPI_INT, op, ext_comm,&req);
 	}
 };*/
 
@@ -166,9 +166,9 @@ public:
 /*template<> class MPI_IallreduceW<openfpm::vector<short>>
 {
 public:
-	static inline void reduce(openfpm::vector<short> & buf,MPI_Op op, MPI_Request & req)
+	static inline void reduce(openfpm::vector<short> & buf,MPI_Op op, MPI_Request & req, MPI_Comm ext_comm)
 	{
-		MPI_Iallreduce(MPI_IN_PLACE, &buf.get(0), buf.size(),MPI_SHORT, op, MPI_COMM_WORLD,&req);
+		MPI_Iallreduce(MPI_IN_PLACE, &buf.get(0), buf.size(),MPI_SHORT, op, ext_comm,&req);
 	}
 };*/
 
@@ -178,9 +178,9 @@ public:
 /*template<> class MPI_IallreduceW<openfpm::vector<char>>
 {
 public:
-	static inline void reduce(openfpm::vector<char> & buf,MPI_Op op, MPI_Request & req)
+	static inline void reduce(openfpm::vector<char> & buf,MPI_Op op, MPI_Request & req, MPI_Comm ext_comm)
 	{
-		MPI_Iallreduce(MPI_IN_PLACE, &buf.get(0), buf.size(),MPI_CHAR, op, MPI_COMM_WORLD,&req);
+		MPI_Iallreduce(MPI_IN_PLACE, &buf.get(0), buf.size(),MPI_CHAR, op, ext_comm,&req);
 	}
 };*/
 
@@ -190,9 +190,9 @@ public:
 /*template<> class MPI_IallreduceW<openfpm::vector<size_t>>
 {
 public:
-	static inline void reduce(openfpm::vector<size_t> & buf,MPI_Op op, MPI_Request & req)
+	static inline void reduce(openfpm::vector<size_t> & buf,MPI_Op op, MPI_Request & req, MPI_Comm ext_comm)
 	{
-		MPI_Iallreduce(MPI_IN_PLACE, &buf.get(0), buf.size(),MPI_UNSIGNED_LONG, op, MPI_COMM_WORLD,&req);
+		MPI_Iallreduce(MPI_IN_PLACE, &buf.get(0), buf.size(),MPI_UNSIGNED_LONG, op, ext_comm,&req);
 	}
 };*/
 
@@ -202,9 +202,9 @@ public:
 /*template<> class MPI_IallreduceW<openfpm::vector<float>>
 {
 public:
-	static inline void reduce(openfpm::vector<float> & buf,MPI_Op op, MPI_Request & req)
+	static inline void reduce(openfpm::vector<float> & buf,MPI_Op op, MPI_Request & req, MPI_Comm ext_comm)
 	{
-		MPI_Iallreduce(MPI_IN_PLACE, &buf.get(0), buf.size(),MPI_FLOAT, op, MPI_COMM_WORLD,&req);
+		MPI_Iallreduce(MPI_IN_PLACE, &buf.get(0), buf.size(),MPI_FLOAT, op, ext_comm,&req);
 	}
 };*/
 
@@ -215,9 +215,9 @@ public:
 /*template<> class MPI_IallreduceW<openfpm::vector<double>>
 {
 public:
-	static inline void reduce(openfpm::vector<double> & buf,MPI_Op op, MPI_Request & req)
+	static inline void reduce(openfpm::vector<double> & buf,MPI_Op op, MPI_Request & req, MPI_Comm ext_comm)
 	{
-		MPI_Iallreduce(MPI_IN_PLACE, &buf.get(0), buf.size(),MPI_DOUBLE, op, MPI_COMM_WORLD,&req);
+		MPI_Iallreduce(MPI_IN_PLACE, &buf.get(0), buf.size(),MPI_DOUBLE, op, ext_comm,&req);
 	}
 };*/
 

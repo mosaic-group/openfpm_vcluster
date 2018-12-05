@@ -7,7 +7,9 @@
 
 #include "util/print_stack.hpp"
 
+init_options global_option;
 Vcluster * global_v_cluster_private = NULL;
+
 
 // number of vcluster instances
 size_t n_vcluster = 0;

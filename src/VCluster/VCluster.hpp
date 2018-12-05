@@ -295,8 +295,8 @@ class Vcluster: public Vcluster_base
 	 * \param argv main set of arguments
 	 *
 	 */
-	Vcluster(int *argc, char ***argv)
-	:Vcluster_base(argc,argv)
+	Vcluster(int *argc, char ***argv,MPI_Comm ext_comm = MPI_COMM_WORLD)
+	:Vcluster_base(argc,argv,ext_comm)
 	{
 	}
 
@@ -809,11 +809,46 @@ class Vcluster: public Vcluster_base
 
 };
 
+enum init_options
+{
+	none = 0x0,
+	in_situ_visualization = 0x1,
+};
 
+extern init_options global_option;
 
 // Function to initialize the global VCluster //
 
 extern Vcluster * global_v_cluster_private;
+
+static inline void delete_global_v_cluster_private()
+{
+	delete global_v_cluster_private;
+}
+
+
+/*! \brief Finalize the library
+ *
+ * This function MUST be called at the end of the program
+ *
+ */
+static inline void openfpm_finalize()
+{
+	if (global_option == init_options::in_situ_visualization)
+	{
+		MPI_Request bar_req;
+		MPI_Ibarrier(MPI_COMM_WORLD,&bar_req);
+	}
+
+#ifdef HAVE_PETSC
+
+	PetscFinalize();
+
+#endif
+
+	delete_global_v_cluster_private();
+	ofp_initialized = false;
+}
 
 /*! \brief Initialize a global instance of Runtime Virtual Cluster Machine
  *
@@ -821,15 +856,50 @@ extern Vcluster * global_v_cluster_private;
  *
  */
 
-static inline void init_global_v_cluster_private(int *argc, char ***argv)
+static inline void init_global_v_cluster_private(int *argc, char ***argv, init_options option)
 {
-	if (global_v_cluster_private == NULL)
-		global_v_cluster_private = new Vcluster(argc,argv);
-}
+	global_option = option;
+	if (option == init_options::in_situ_visualization)
+	{
+		MPI_Comm com_compute;
 
-static inline void delete_global_v_cluster_private()
-{
-	delete global_v_cluster_private;
+		int rank;
+		MPI_Comm_rank(MPI_COMM_WORLD,&rank);
+
+		if (rank == 0)
+		{MPI_Comm_split(MPI_COMM_WORLD, MPI_UNDEFINED,rank, &com_compute);}
+		else
+		{MPI_Comm_split(MPI_COMM_WORLD,0,rank, &com_compute);}
+
+		if (rank != 0 )
+		{
+			if (global_v_cluster_private == NULL)
+			{global_v_cluster_private = new Vcluster(argc,argv,com_compute);}
+		}
+		else
+		{
+			int flag = false;
+			MPI_Request bar_req;
+			MPI_Ibarrier(MPI_COMM_WORLD,&bar_req);
+			//! barrier status
+			MPI_Status bar_stat;
+
+			while(flag == false)
+			{
+				std::cout << "I am node " << rank << std::endl;
+				sleep(1);
+				MPI_SAFE_CALL(MPI_Test(&bar_req,&flag,&bar_stat));
+			}
+
+			openfpm_finalize();
+			exit(0);
+		}
+	}
+	else
+	{
+		if (global_v_cluster_private == NULL)
+		{global_v_cluster_private = new Vcluster(argc,argv);}
+	}
 }
 
 static inline Vcluster & create_vcluster()
@@ -861,7 +931,7 @@ static inline bool is_openfpm_init()
  * This function MUST be called before any other function
  *
  */
-static inline void openfpm_init(int *argc, char ***argv)
+static inline void openfpm_init(int *argc, char ***argv, init_options option = init_options::none )
 {
 #ifdef HAVE_PETSC
 
@@ -869,7 +939,7 @@ static inline void openfpm_init(int *argc, char ***argv)
 
 #endif
 
-	init_global_v_cluster_private(argc,argv);
+	init_global_v_cluster_private(argc,argv,option);
 
 #ifdef SE_CLASS1
 	std::cout << "OpenFPM is compiled with debug mode LEVEL:1. Remember to remove SE_CLASS1 when you go in production" << std::endl;
@@ -899,23 +969,6 @@ static inline void openfpm_init(int *argc, char ***argv)
 	ofp_initialized = true;
 }
 
-
-/*! \brief Finalize the library
- *
- * This function MUST be called at the end of the program
- *
- */
-static inline void openfpm_finalize()
-{
-#ifdef HAVE_PETSC
-
-	PetscFinalize();
-
-#endif
-
-	delete_global_v_cluster_private();
-	ofp_initialized = false;
-}
 
 
 #endif

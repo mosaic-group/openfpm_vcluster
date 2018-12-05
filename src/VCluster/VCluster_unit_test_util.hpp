@@ -216,10 +216,8 @@ template<unsigned int ip> void test_no_send_some_peer()
 	}
 }
 
-template<unsigned int ip> void test_known()
+template<unsigned int ip> void test_known(Vcluster & vcl)
 {
-	Vcluster & vcl = create_vcluster();
-
 	// send/recv messages
 
 	global_rank = vcl.getProcessUnitID();
@@ -324,10 +322,8 @@ template<unsigned int ip> void test_known()
 	}
 }
 
-template<unsigned int ip> void test(unsigned int opt)
+template<unsigned int ip> void test(Vcluster & vcl, unsigned int opt)
 {
-	Vcluster & vcl = create_vcluster();
-
 	// send/recv messages
 
 	global_rank = vcl.getProcessUnitID();

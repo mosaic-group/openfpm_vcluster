@@ -102,6 +102,9 @@ union red
 
 class Vcluster_base
 {
+	//! external communicator
+	MPI_Comm ext_comm;
+
 	//! log file
 	Vcluster_log log;
 
@@ -216,8 +219,8 @@ public:
 	 * \param argv pointer to arguments vector passed to the program
 	 *
 	 */
-	Vcluster_base(int *argc, char ***argv)
-	:NBX_cnt(0)
+	Vcluster_base(int *argc, char ***argv, MPI_Comm ext_comm)
+	:ext_comm(ext_comm),NBX_cnt(0)
 	{
 #ifdef SE_CLASS2
 		check_new(this,8,VCLUSTER_EVENT,PRJ_VCLUSTER);
@@ -238,8 +241,8 @@ public:
 		// Get the total number of process
 		// and the rank of this process
 
-		MPI_Comm_size(MPI_COMM_WORLD, &m_size);
-		MPI_Comm_rank(MPI_COMM_WORLD, &m_rank);
+		MPI_Comm_size(ext_comm, &m_size);
+		MPI_Comm_rank(ext_comm, &m_rank);
 
 #ifdef SE_CLASS2
 			process_v_cl = m_rank;
@@ -321,7 +324,7 @@ public:
 	 */
 	MPI_Comm getMPIComm()
 	{
-		return MPI_COMM_WORLD;
+		return ext_comm;
 	}
 
 	/*! \brief Get the total number of processors
@@ -391,7 +394,7 @@ public:
 		req.add();
 
 		// reduce
-		MPI_IallreduceW<T>::reduce(num,MPI_SUM,req.last());
+		MPI_IallreduceW<T>::reduce(num,MPI_SUM,req.last(),ext_comm);
 	}
 
 	/*! \brief Get the maximum number across all processors (or reduction with infinity norm)
@@ -410,7 +413,7 @@ public:
 		req.add();
 
 		// reduce
-		MPI_IallreduceW<T>::reduce(num,MPI_MAX,req.last());
+		MPI_IallreduceW<T>::reduce(num,MPI_MAX,req.last(),ext_comm);
 	}
 
 	/*! \brief Get the minimum number across all processors (or reduction with insinity norm)
@@ -430,7 +433,7 @@ public:
 		req.add();
 
 		// reduce
-		MPI_IallreduceW<T>::reduce(num,MPI_MIN,req.last());
+		MPI_IallreduceW<T>::reduce(num,MPI_MIN,req.last(),ext_comm);
 	}
 
 	/*! \brief Send and receive multiple messages
@@ -772,7 +775,7 @@ public:
 #endif
 
 				tot_sent += sz[i];
-				MPI_SAFE_CALL(MPI_Issend(ptr[i], sz[i], MPI_BYTE, prc[i], SEND_SPARSE + NBX_cnt, MPI_COMM_WORLD,&req.last()));
+				MPI_SAFE_CALL(MPI_Issend(ptr[i], sz[i], MPI_BYTE, prc[i], SEND_SPARSE + NBX_cnt, ext_comm,&req.last()));
 				log.logSend(prc[i]);
 			}
 		}
@@ -793,7 +796,7 @@ public:
 
 			MPI_Status stat_t;
 			int stat = false;
-			MPI_SAFE_CALL(MPI_Iprobe(MPI_ANY_SOURCE,SEND_SPARSE + NBX_cnt,MPI_COMM_WORLD,&stat,&stat_t));
+			MPI_SAFE_CALL(MPI_Iprobe(MPI_ANY_SOURCE,SEND_SPARSE + NBX_cnt,ext_comm,&stat,&stat_t));
 
 			// If I have an incoming message and is related to this NBX communication
 			if (stat == true)
@@ -815,7 +818,7 @@ public:
 				check_valid(ptr,msize);
 #endif
 				tot_recv += msize;
-				MPI_SAFE_CALL(MPI_Recv(ptr,msize,MPI_BYTE,stat_t.MPI_SOURCE,SEND_SPARSE+NBX_cnt,MPI_COMM_WORLD,&stat_t));
+				MPI_SAFE_CALL(MPI_Recv(ptr,msize,MPI_BYTE,stat_t.MPI_SOURCE,SEND_SPARSE+NBX_cnt,ext_comm,&stat_t));
 
 #ifdef SE_CLASS2
 				check_valid(ptr,msize);
@@ -834,7 +837,7 @@ public:
 
 				// If all send has been completed
 				if (flag == true)
-				{MPI_SAFE_CALL(MPI_Ibarrier(MPI_COMM_WORLD,&bar_req));reached_bar_req = true;}
+				{MPI_SAFE_CALL(MPI_Ibarrier(ext_comm,&bar_req));reached_bar_req = true;}
 			}
 
 			// Check if all processor reached the async barrier
@@ -882,7 +885,7 @@ public:
 		req.add();
 
 		// send
-		MPI_IsendWB::send(proc,SEND_RECV_BASE + tag,mem,sz,req.last());
+		MPI_IsendWB::send(proc,SEND_RECV_BASE + tag,mem,sz,req.last(),ext_comm);
 
 		return true;
 	}
@@ -917,7 +920,7 @@ public:
 		req.add();
 
 		// send
-		MPI_IsendW<T,Mem,gr>::send(proc,SEND_RECV_BASE + tag,v,req.last());
+		MPI_IsendW<T,Mem,gr>::send(proc,SEND_RECV_BASE + tag,v,req.last(),ext_comm);
 
 		return true;
 	}
@@ -948,7 +951,7 @@ public:
 		req.add();
 
 		// receive
-		MPI_IrecvWB::recv(proc,SEND_RECV_BASE + tag,v,sz,req.last());
+		MPI_IrecvWB::recv(proc,SEND_RECV_BASE + tag,v,sz,req.last(),ext_comm);
 
 		return true;
 	}
@@ -982,7 +985,7 @@ public:
             req.add();
 
             // receive
-            MPI_IrecvW<T>::recv(proc,SEND_RECV_BASE + tag,v,req.last());
+            MPI_IrecvW<T>::recv(proc,SEND_RECV_BASE + tag,v,req.last(),ext_comm);
 
             return true;
     }
@@ -1012,7 +1015,7 @@ public:
 		v.resize(getProcessingUnits());
 
 		// gather
-		MPI_IAllGatherW<T>::gather(&send,1,v.getPointer(),1,req.last());
+		MPI_IAllGatherW<T>::gather(&send,1,v.getPointer(),1,req.last(),ext_comm);
 
 		return true;
 	}
@@ -1043,7 +1046,7 @@ public:
 		req.add();
 
 		// gather
-		MPI_IBcastW<T>::bcast(root,v,req.last());
+		MPI_IBcastW<T>::bcast(root,v,req.last(),ext_comm);
 
 		return true;
 	}
