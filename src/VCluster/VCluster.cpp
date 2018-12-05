@@ -9,6 +9,7 @@
 #include "util/print_stack.hpp"
 #include "util/math_util_complex.hpp"
 
+//init_options global_option;
 Vcluster<> * global_v_cluster_private_heap = NULL;
 Vcluster<CudaMemory> * global_v_cluster_private_cuda = NULL;
 

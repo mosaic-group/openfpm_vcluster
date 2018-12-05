@@ -415,8 +415,8 @@ class Vcluster: public Vcluster_base<InternalMemory>
 	 * \param argv main set of arguments
 	 *
 	 */
-	Vcluster(int *argc, char ***argv)
-	:Vcluster_base<InternalMemory>(argc,argv)
+	Vcluster(int *argc, char ***argv, MPI_Comm ext_comm = MPI_COMM_WORLD)
+	:Vcluster_base<InternalMemory>(argc,argv, ext_comm)
 	{
 	}
 
@@ -1357,8 +1357,6 @@ class Vcluster: public Vcluster_base<InternalMemory>
 
 };
 
-
-
 // Function to initialize the global VCluster //
 
 extern Vcluster<> * global_v_cluster_private_heap;
@@ -1457,7 +1455,7 @@ static void openfpm_init(int *argc, char ***argv)
 	if (compiler_mask != openfpm_vcluster_compilation_mask() || compiler_mask != openfpm_ofpmmemory_compilation_mask())
 	{
 		std::cout << __FILE__ << ":" << __LINE__ << " Error: the program has been compiled with CUDA_ON_BACKEND: " << compiler_mask << " but libvcluster has been compiled with CUDA_ON_BACKEND: " <<
-		                                            openfpm_vcluster_compilation_mask() << ", and libofpmmemory has been compiled with CUDA_ON_BACKEND: " << openfpm_ofpmmemory_compilation_mask() << 
+		                                            openfpm_vcluster_compilation_mask() << ", and libofpmmemory has been compiled with CUDA_ON_BACKEND: " << openfpm_ofpmmemory_compilation_mask() <<
 													" recompile the library with the right CUDA_ON_BACKEND" << std::endl;
 	}
 }
