@@ -31,12 +31,12 @@
 
 #define MSG_LENGTH 1024
 #define MSG_SEND_RECV 1025
-#define SEND_SPARSE 4096
+#define SEND_SPARSE 8192
 #define NONE 1
 #define NEED_ALL_SIZE 2
 
 #define SERIVCE_MESSAGE_TAG 16384
-#define SEND_RECV_BASE 8192
+#define SEND_RECV_BASE 4096
 #define GATHER_BASE 24576
 
 #define RECEIVE_KNOWN 4
@@ -534,19 +534,19 @@ public:
 		// Allocate the buffers
 
 		for (size_t i = 0 ; i < prc.size() ; i++)
-		{send(prc.get(i),SEND_SPARSE + NBX_cnt,data.get(i).getPointer(),data.get(i).size());}
+		{send(prc.get(i),SEND_SPARSE + NBX_cnt*131072,data.get(i).getPointer(),data.get(i).size());}
 
 		for (size_t i = 0 ; i < prc_recv.size() ; i++)
 		{
-			void * ptr_recv = msg_alloc(recv_sz.get(i),0,0,prc_recv.get(i),i,SEND_SPARSE + NBX_cnt,ptr_arg);
+			void * ptr_recv = msg_alloc(recv_sz.get(i),0,0,prc_recv.get(i),i,SEND_SPARSE + NBX_cnt*131072,ptr_arg);
 
-			recv(prc_recv.get(i),SEND_SPARSE + NBX_cnt,ptr_recv,recv_sz.get(i));
+			recv(prc_recv.get(i),SEND_SPARSE + NBX_cnt*131072,ptr_recv,recv_sz.get(i));
 		}
 
 		execute();
 
 		// Circular counter
-		NBX_cnt = (NBX_cnt + 1) % 1024;
+		NBX_cnt = (NBX_cnt + 1) % 2048;
 	}
 
 
@@ -614,6 +614,7 @@ public:
 	 * function. In this particular case the receiver know from which processor is going
 	 * to receive.
 	 *
+	 * \warning this function only work with one send for each processor
 	 *
 	 * suppose the following situation the calling processor want to communicate
 	 * * 2 messages of size 100 byte to processor 1
@@ -658,19 +659,19 @@ public:
 		// Allocate the buffers
 
 		for (size_t i = 0 ; i < n_send ; i++)
-			send(prc[i],SEND_SPARSE + NBX_cnt,ptr[i],sz[i]);
+		{send(prc[i],SEND_SPARSE + NBX_cnt*131072,ptr[i],sz[i]);}
 
 		for (size_t i = 0 ; i < n_recv ; i++)
 		{
-			void * ptr_recv = msg_alloc(sz_recv[i],0,0,prc_recv[i],i,SEND_SPARSE + NBX_cnt,ptr_arg);
+			void * ptr_recv = msg_alloc(sz_recv[i],0,0,prc_recv[i],i,SEND_SPARSE + NBX_cnt*131072,ptr_arg);
 
-			recv(prc_recv[i],SEND_SPARSE + NBX_cnt,ptr_recv,sz_recv[i]);
+			recv(prc_recv[i],SEND_SPARSE + NBX_cnt*131072,ptr_recv,sz_recv[i]);
 		}
 
 		execute();
 
 		// Circular counter
-		NBX_cnt = (NBX_cnt + 1) % 1024;
+		NBX_cnt = (NBX_cnt + 1) % 2048;
 	}
 
 	openfpm::vector<size_t> sz_recv_tmp;
@@ -727,32 +728,32 @@ public:
 		// First we understand the receive size for each processor
 
 		for (size_t i = 0 ; i < n_send ; i++)
-		{send(prc[i],SEND_SPARSE + NBX_cnt,&sz[i],sizeof(size_t));}
+		{send(prc[i],SEND_SPARSE + NBX_cnt*131072,&sz[i],sizeof(size_t));}
 
 		for (size_t i = 0 ; i < n_recv ; i++)
-		{recv(prc_recv[i],SEND_SPARSE + NBX_cnt,&sz_recv_tmp.get(i),sizeof(size_t));}
+		{recv(prc_recv[i],SEND_SPARSE + NBX_cnt*131072,&sz_recv_tmp.get(i),sizeof(size_t));}
 
 		execute();
 
 		// Circular counter
-		NBX_cnt = (NBX_cnt + 1) % 1024;
+		NBX_cnt = (NBX_cnt + 1) % 2048;
 
 		// Allocate the buffers
 
 		for (size_t i = 0 ; i < n_send ; i++)
-		{send(prc[i],SEND_SPARSE + NBX_cnt,ptr[i],sz[i]);}
+		{send(prc[i],SEND_SPARSE + NBX_cnt*131072 + i,ptr[i],sz[i]);}
 
 		for (size_t i = 0 ; i < n_recv ; i++)
 		{
 			void * ptr_recv = msg_alloc(sz_recv_tmp.get(i),0,0,prc_recv[i],i,0,ptr_arg);
 
-			recv(prc_recv[i],SEND_SPARSE + NBX_cnt,ptr_recv,sz_recv_tmp.get(i));
+			recv(prc_recv[i],SEND_SPARSE + NBX_cnt*131072,ptr_recv,sz_recv_tmp.get(i));
 		}
 
 		execute();
 
 		// Circular counter
-		NBX_cnt = (NBX_cnt + 1) % 1024;
+		NBX_cnt = (NBX_cnt + 1) % 2048;
 	}
 
 	/*! \brief Send and receive multiple messages
@@ -905,7 +906,7 @@ public:
 		log.clear();
 
 		// Circular counter
-		NBX_cnt = (NBX_cnt + 1) % 1024;
+		NBX_cnt = (NBX_cnt + 1) % 2048;
 	}
 
 	/*! \brief Send data to a processor
