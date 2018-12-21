@@ -17,5 +17,3 @@ int main(int argc, char* argv[])
 #include "VCluster/VCluster.hpp"
 
 #include "unit_test_init_cleanup.hpp"
-#include "VCluster/VCluster_unit_tests.hpp"
-#include "VCluster/VCluster_semantic_unit_tests.hpp"

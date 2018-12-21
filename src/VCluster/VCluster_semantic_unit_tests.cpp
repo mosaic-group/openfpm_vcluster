@@ -5,9 +5,8 @@
  *      Author: i-bird
  */
 
-#ifndef OPENFPM_VCLUSTER_SRC_VCLUSTER_SEMANTIC_UNIT_TESTS_HPP_
-#define OPENFPM_VCLUSTER_SRC_VCLUSTER_SEMANTIC_UNIT_TESTS_HPP_
-
+#define BOOST_TEST_DYN_LINK
+#include <boost/test/unit_test.hpp>
 #include "Grid/grid_util_test.hpp"
 #include "data_type/aggregate.hpp"
 #include "VCluster/cuda/VCluster_semantic_unit_tests_funcs.hpp"
@@ -539,57 +538,11 @@ BOOST_AUTO_TEST_CASE (Vcluster_semantic_struct_gather)
 	}
 }
 
-template<typename Memory, template<typename> class layout_base>
-void test_different_layouts()
-{
-	for (size_t i = 0 ; i < 100 ; i++)
-	{
-		Vcluster<> & vcl = create_vcluster();
-
-		if (vcl.getProcessingUnits() >= 32)
-			return;
-
-		openfpm::vector<aggregate<int,float,size_t>,Memory,typename layout_base<aggregate<int,float,size_t>>::type,layout_base> v1;
-		v1.resize(vcl.getProcessUnitID());
-
-		for(size_t i = 0 ; i < vcl.getProcessUnitID() ; i++)
-		{
-			v1.template get<0>(i) = 5;
-			v1.template get<1>(i) = 10.0+1000.0;
-			v1.template get<2>(i) = 11.0+100000;
-		}
-
-		openfpm::vector<aggregate<int,float,size_t>,Memory,typename layout_base<aggregate<int,float,size_t>>::type,layout_base> v2;
-
-		vcl.SGather<decltype(v1),decltype(v2),layout_base>(v1,v2,(i%vcl.getProcessingUnits()));
-
-		if (vcl.getProcessUnitID() == (i%vcl.getProcessingUnits()))
-		{
-			size_t n = vcl.getProcessingUnits();
-			BOOST_REQUIRE_EQUAL(v2.size(),n*(n-1)/2);
-
-			bool is_correct = true;
-			for (size_t i = 0 ; i < v2.size() ; i++)
-			{
-				is_correct &= (v2.template get<0>(i) == 5);
-				is_correct &= (v2.template get<1>(i) == 10.0+1000.0);
-				is_correct &= (v2.template get<2>(i) == 11.0+100000.0);
-			}
-
-			BOOST_REQUIRE_EQUAL(is_correct,true);
-		}
-		if (vcl.getProcessUnitID() == 0 && i == 99)
-			std::cout << "Semantic gather test stop" << std::endl;
-	}
-}
 
 BOOST_AUTO_TEST_CASE (Vcluster_semantic_layout_inte_gather)
 {
 	test_different_layouts<HeapMemory,memory_traits_inte>();
 	test_different_layouts<HeapMemory,memory_traits_lin>();
-
-	test_different_layouts<CudaMemory,memory_traits_inte>();
-	test_different_layouts<CudaMemory,memory_traits_lin>();
 }
 
 #define SSCATTER_MAX 7
@@ -1656,4 +1609,3 @@ BOOST_AUTO_TEST_CASE (Vcluster_semantic_sendrecv_6)
 
 BOOST_AUTO_TEST_SUITE_END()
 
-#endif /* OPENFPM_VCLUSTER_SRC_VCLUSTER_SEMANTIC_UNIT_TESTS_HPP_ */

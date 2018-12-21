@@ -5,10 +5,8 @@
  *      Author: Pietro incardona
  */
 
-#ifndef VCLUSTER_UNIT_TESTS_HPP_
-#define VCLUSTER_UNIT_TESTS_HPP_
-
 #include <sstream>
+#define BOOST_TEST_DYN_LINK
 #include <boost/test/unit_test.hpp>
 #include "timer.hpp"
 #include <random>
@@ -16,6 +14,8 @@
 #include "Point_test.hpp"
 #include "VCluster_base.hpp"
 #include "Vector/vector_test_util.hpp"
+#include "VCluster/VCluster.hpp"
+#include "VCluster/cuda/VCluster_unit_test_util_cuda.cuh"
 
 BOOST_AUTO_TEST_SUITE( VCluster_test )
 
@@ -184,8 +184,6 @@ BOOST_AUTO_TEST_CASE(VCluster_bcast_complex_test)
 
 	test_single_all_broadcast_complex<aggregate<int,int>,HeapMemory,memory_traits_lin>(vcl);
 	test_single_all_broadcast_complex<aggregate<int,int>,HeapMemory,memory_traits_inte>(vcl);
-	test_single_all_broadcast_complex<aggregate<int,int>,CudaMemory,memory_traits_lin>(vcl);
-	test_single_all_broadcast_complex<aggregate<int,int>,CudaMemory,memory_traits_inte>(vcl);
 }
 
 BOOST_AUTO_TEST_CASE( VCluster_use_sendrecv)
@@ -227,5 +225,3 @@ BOOST_AUTO_TEST_CASE( VCluster_use_sendrecv_known )
 
 BOOST_AUTO_TEST_SUITE_END()
 
-
-#endif /* VCLUSTER_UNIT_TESTS_HPP_ */

@@ -941,6 +941,20 @@ static inline bool is_openfpm_init()
 	return ofp_initialized;
 }
 
+/*! \brief Return true is
+ *
+ *
+ * \return
+ */
+static inline bool is_mpi_rdma_cuda_active()
+{
+#if defined(MPIX_CUDA_AWARE_SUPPORT) && MPIX_CUDA_AWARE_SUPPORT
+			return true;
+#else
+			return false;
+#endif
+}
+
 /*! \brief Initialize the library
  *
  * This function MUST be called before any other function

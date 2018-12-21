@@ -18,4 +18,10 @@ BOOST_AUTO_TEST_CASE( Vcluster_semantic_gpu_direct )
 	test_ssend_recv_layout_switch<CudaMemory>(MPI_GPU_DIRECT);
 }
 
+BOOST_AUTO_TEST_CASE (Vcluster_semantic_layout_inte_gather)
+{
+	test_different_layouts<CudaMemory,memory_traits_inte>();
+	test_different_layouts<CudaMemory,memory_traits_lin>();
+}
+
 BOOST_AUTO_TEST_SUITE_END()

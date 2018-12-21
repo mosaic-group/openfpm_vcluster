@@ -2,7 +2,12 @@
 #define VCLUSTER_BASE_HPP_
 
 #include "config.h"
+#ifdef OPENMPI
 #include <mpi.h>
+#include <mpi-ext.h>
+#else
+#include <mpi.h>
+#endif
 #include "MPI_wrapper/MPI_util.hpp"
 #include "Vector/map_vector.hpp"
 #include "MPI_wrapper/MPI_IallreduceW.hpp"
@@ -741,7 +746,7 @@ public:
 		// Allocate the buffers
 
 		for (size_t i = 0 ; i < n_send ; i++)
-		{send(prc[i],SEND_SPARSE + NBX_cnt*131072 + i,ptr[i],sz[i]);}
+		{send(prc[i],SEND_SPARSE + NBX_cnt*131072,ptr[i],sz[i]);}
 
 		for (size_t i = 0 ; i < n_recv ; i++)
 		{

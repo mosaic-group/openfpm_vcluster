@@ -8,6 +8,52 @@
 #ifndef VCLUSTER_SEMANTIC_UNIT_TESTS_FUNCS_HPP_
 #define VCLUSTER_SEMANTIC_UNIT_TESTS_FUNCS_HPP_
 
+#include "VCluster/VCluster.hpp"
+
+template<typename Memory, template<typename> class layout_base>
+void test_different_layouts()
+{
+	for (size_t i = 0 ; i < 100 ; i++)
+	{
+		Vcluster<> & vcl = create_vcluster();
+
+		if (vcl.getProcessingUnits() >= 32)
+			return;
+
+		openfpm::vector<aggregate<int,float,size_t>,Memory,typename layout_base<aggregate<int,float,size_t>>::type,layout_base> v1;
+		v1.resize(vcl.getProcessUnitID());
+
+		for(size_t j = 0 ; j < vcl.getProcessUnitID() ; j++)
+		{
+			v1.template get<0>(j) = 5;
+			v1.template get<1>(j) = 10.0+1000.0;
+			v1.template get<2>(j) = 11.0+100000;
+		}
+
+		openfpm::vector<aggregate<int,float,size_t>,Memory,typename layout_base<aggregate<int,float,size_t>>::type,layout_base> v2;
+
+		vcl.SGather<decltype(v1),decltype(v2),layout_base>(v1,v2,(i%vcl.getProcessingUnits()));
+
+		if (vcl.getProcessUnitID() == (i%vcl.getProcessingUnits()))
+		{
+			size_t n = vcl.getProcessingUnits();
+			BOOST_REQUIRE_EQUAL(v2.size(),n*(n-1)/2);
+
+			bool is_correct = true;
+			for (size_t i = 0 ; i < v2.size() ; i++)
+			{
+				is_correct &= (v2.template get<0>(i) == 5);
+				is_correct &= (v2.template get<1>(i) == 10.0+1000.0);
+				is_correct &= (v2.template get<2>(i) == 11.0+100000.0);
+			}
+
+			BOOST_REQUIRE_EQUAL(is_correct,true);
+		}
+		if (vcl.getProcessUnitID() == 0 && i == 99)
+			std::cout << "Semantic gather test stop" << std::endl;
+	}
+}
+
 template<typename Memory>
 void test_ssend_recv_layout_switch(size_t opt)
 {
@@ -105,8 +151,6 @@ void test_ssend_recv_layout_switch(size_t opt)
 		for (size_t j = 0 ; j < 100 ; j++)
 		{
 			match &= collect.template get<0>(i*100 +j) == v_cl.rank()*10000 + i*100 + j;
-
-			std::cout << "COLLECT: " << collect.template get<0>(i*100 +j) << std::endl;
 
 			match &= collect.template get<1>(i*100 +j)[0] == 400000 + v_cl.rank()*10000 + i*100 + j;
 			match &= collect.template get<1>(i*100 +j)[1] == 400000 + v_cl.rank()*10000 + i*100 + j;
