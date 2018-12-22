@@ -11,6 +11,19 @@
 #include "memory/BHeapMemory.hpp"
 #include "Packer_Unpacker/has_max_prop.hpp"
 
+/*! \brief Return true is MPI is compiled with CUDA
+ *
+ * \return true i MPI is compiled with CUDA
+ */
+static inline bool is_mpi_rdma_cuda_active()
+{
+#if defined(MPIX_CUDA_AWARE_SUPPORT) && MPIX_CUDA_AWARE_SUPPORT
+			return true;
+#else
+			return false;
+#endif
+}
+
 template<bool result, typename T, typename S, template<typename> class layout_base, typename Memory>
 struct unpack_selector_with_prp
 {
@@ -705,6 +718,55 @@ struct op_ssend_gg_recv_merge_impl
 	}
 };
 
+//! Helper class to merge data without serialization, using host memory
+template<bool sr>
+struct op_ssend_gg_recv_merge_impl_run_device
+{
+	//! Merge the
+	template<typename T,
+	         typename D,
+			 typename S,
+			 template <typename> class layout_base,
+			 int ... prp>
+	inline static void execute(D & recv,S & v2,size_t i,size_t & start)
+	{
+		// Merge the information
+		recv.template merge_prp_v<replace_,
+		                          typename T::value_type,
+								  typename S::Memory_type,
+								  openfpm::grow_policy_identity,
+								  layout_base,
+								  prp...>(v2,start);
+
+		recv.template hostToDevice<prp ...>();
+
+		start += v2.size();
+	}
+};
+
+//! Helper class to merge data without serialization direct transfer to CUDA buffer
+template<bool sr>
+struct op_ssend_gg_recv_merge_impl_run_device_direct
+{
+	//! Merge the
+	template<typename T,
+	         typename D,
+			 typename S,
+			 template <typename> class layout_base,
+			 int ... prp>
+	inline static void execute(D & recv,S & v2,size_t i,size_t & start)
+	{
+		// Merge the information
+		recv.template merge_prp_device<replace_,
+		                          typename T::value_type,
+								  typename S::Memory_type,
+								  openfpm::grow_policy_identity,
+								  prp...>(v2,start);
+
+		start += v2.size();
+	}
+};
+
 //! Helper class to merge data with serialization
 template<>
 struct op_ssend_gg_recv_merge_impl<true>
@@ -744,6 +806,28 @@ struct op_ssend_gg_recv_merge
 	template<bool sr, typename T, typename D, typename S, template<typename> class layout_base, int ... prp> void execute(D & recv,S & v2,size_t i,size_t opt)
 	{
 		op_ssend_gg_recv_merge_impl<sr>::template execute<T,D,S,layout_base,prp...>(recv,v2,i,start);
+	}
+};
+
+//! Helper class to merge data
+struct op_ssend_gg_recv_merge_run_device
+{
+	//! starting marker
+	size_t start;
+
+	//! constructor
+	op_ssend_gg_recv_merge_run_device(size_t start)
+	:start(start)
+	{}
+
+	//! execute the merge
+	template<bool sr, typename T, typename D, typename S, template<typename> class layout_base, int ... prp> void execute(D & recv,S & v2,size_t i,size_t opt)
+	{
+		bool active = is_mpi_rdma_cuda_active();
+		if (active == true)
+		{op_ssend_gg_recv_merge_impl_run_device_direct<sr>::template execute<T,D,S,layout_base,prp...>(recv,v2,i,start);}
+		else
+		{op_ssend_gg_recv_merge_impl_run_device<sr>::template execute<T,D,S,layout_base,prp...>(recv,v2,i,start);}
 	}
 };
 
