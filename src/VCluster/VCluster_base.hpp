@@ -295,6 +295,15 @@ public:
 		bar_stat = MPI_Status();
 
 		context = new mgpu::ofp_context_t(false,shmrank);
+
+#if defined(PRINT_RANK_TO_GPU) && defined(HAVE_CUDA)
+		unsigned char node_name[MPI_MAX_PROCESSOR_NAME];
+		int len;
+
+		int MPI_Get_processor_name(node_name,&len);
+
+		std::cout << "Rank: " << m_rank << " on host: " << node_name << " work no GPU: " << cudaGetDevice() << std::endl;
+#endif
 	}
 
 #ifdef SE_CLASS1
