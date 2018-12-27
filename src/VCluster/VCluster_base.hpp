@@ -303,7 +303,7 @@ public:
 
                 MPI_Get_processor_name(node_name,&len);
 
-                std::cout << "Rank: " << m_rank << " on host: " << node_name << " work on GPU: " << context->getDevice() << std::endl;
+                std::cout << "Rank: " << m_rank << " on host: " << node_name << " work on GPU: " << context->getDevice() << "/" << context->getNDevice() << std::endl;
 #endif
 	}
 
