@@ -300,7 +300,6 @@ public:
 
                 char node_name[MPI_MAX_PROCESSOR_NAME];
                 int len;
-                int dev;
 
                 MPI_Get_processor_name(node_name,&len);
 
