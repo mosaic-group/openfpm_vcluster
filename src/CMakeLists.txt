@@ -30,6 +30,7 @@ target_include_directories (vcluster_test PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/con
 target_include_directories (vcluster_test PUBLIC ${Boost_INCLUDE_DIRS})
 target_include_directories (vcluster_test PUBLIC ${PETSC_INCLUDES})
 
+target_include_directories (vcluster PUBLIC ${CUDA_INCLUDE_DIRS})
 target_include_directories (vcluster PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 target_include_directories (vcluster PUBLIC ${PETSC_INCLUDES})
 target_include_directories (vcluster PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/config)

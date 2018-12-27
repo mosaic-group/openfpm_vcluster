@@ -2,6 +2,9 @@
 #define VCLUSTER_BASE_HPP_
 
 #include "config.h"
+#ifdef CUDA_GPU
+#include <cuda_runtime.h>
+#endif
 #ifdef OPENMPI
 #include <mpi.h>
 #include <mpi-ext.h>
@@ -296,13 +299,15 @@ public:
 
 		context = new mgpu::ofp_context_t(false,shmrank);
 
-#if defined(PRINT_RANK_TO_GPU) && defined(HAVE_CUDA)
-		unsigned char node_name[MPI_MAX_PROCESSOR_NAME];
-		int len;
+#if defined(PRINT_RANK_TO_GPU) && defined(CUDA_GPU)
 
-		int MPI_Get_processor_name(node_name,&len);
+                char node_name[MPI_MAX_PROCESSOR_NAME];
+                int len;
+                int dev;
 
-		std::cout << "Rank: " << m_rank << " on host: " << node_name << " work no GPU: " << cudaGetDevice() << std::endl;
+                MPI_Get_processor_name(node_name,&len);
+
+                std::cout << "Rank: " << m_rank << " on host: " << node_name << " work on GPU: " << context->getDevice() << std::endl;
 #endif
 	}
 
