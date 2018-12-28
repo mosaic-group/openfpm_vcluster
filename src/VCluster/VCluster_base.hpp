@@ -258,16 +258,16 @@ public:
 		if (!already_initialised)
 		{
 			MPI_Init(argc,argv);
-
-			// We try to get the local processors rank
-
-			MPI_Comm shmcomm;
-			MPI_Comm_split_type(MPI_COMM_WORLD, MPI_COMM_TYPE_SHARED, 0,
-			                    MPI_INFO_NULL, &shmcomm);
-			MPI_Comm_size(shmcomm, &shmrank);
-			MPI_Comm_free(&shmcomm);
-
 		}
+
+		// We try to get the local processors rank
+
+		MPI_Comm shmcomm;
+		MPI_Comm_split_type(MPI_COMM_WORLD, MPI_COMM_TYPE_SHARED, 0,
+		                    MPI_INFO_NULL, &shmcomm);
+
+		MPI_Comm_rank(shmcomm, &shmrank);
+		MPI_Comm_free(&shmcomm);
 
 		// Get the total number of process
 		// and the rank of this process
@@ -294,7 +294,7 @@ public:
 		bar_req = MPI_Request();
 		bar_stat = MPI_Status();
 
-		context = new mgpu::ofp_context_t(false,shmrank);
+		context = new mgpu::ofp_context_t(mgpu::gpu_context_opt::no_print_props,shmrank);
 
 #if defined(PRINT_RANK_TO_GPU) && defined(CUDA_GPU)
 
