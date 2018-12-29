@@ -27,8 +27,8 @@
 #include "data_type/aggregate.hpp"
 #if defined(CUDA_GPU) && defined(__NVCC__)
 #include "util/cuda/moderngpu/launch_box.hxx"
-#include "util/cuda/ofp_context.hxx"
 #endif
+#include "util/cuda/ofp_context.hxx"
 
 #ifdef HAVE_PETSC
 #include <petscvec.h>
