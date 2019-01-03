@@ -738,7 +738,7 @@ struct op_ssend_gg_recv_merge_impl_run_device
 								  layout_base,
 								  prp...>(v2,start);
 
-		recv.template hostToDevice<prp ...>();
+		recv.template hostToDevice<prp ...>(start,start+v2.size()-1);
 
 		start += v2.size();
 	}
