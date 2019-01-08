@@ -23,6 +23,14 @@ size_t tot_recv = 0;
 
 std::string program_name;
 
+#ifdef CUDA_GPU
+
+#include "memory/CudaMemory.cuh"
+
+CudaMemory mem_tmp;
+
+#endif
+
 // Segmentation fault signal handler
 void bt_sighandler(int sig, siginfo_t * info, void * ctx_p)
 {

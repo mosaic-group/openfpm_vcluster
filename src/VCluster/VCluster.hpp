@@ -14,6 +14,10 @@
 #include "VCluster_meta_function.hpp"
 #include "util/math_util_complex.hpp"
 
+#ifdef CUDA_GPU
+extern CudaMemory mem_tmp;
+#endif
+
 void bt_sighandler(int sig, siginfo_t * info, void * ctx);
 
 /*! \brief Implementation of VCluster class
@@ -986,6 +990,13 @@ static inline void openfpm_init(int *argc, char ***argv)
 	openfpm::math::init_getFactorization();
 
 	ofp_initialized = true;
+
+#ifdef CUDA_GPU
+
+	// Initialize temporal memory
+	mem_tmp.incRef();
+
+#endif
 }
 
 
@@ -1004,6 +1015,14 @@ static inline void openfpm_finalize()
 
 	delete_global_v_cluster_private();
 	ofp_initialized = false;
+
+#ifdef CUDA_GPU
+
+	// Release memory
+	mem_tmp.destroy();
+	mem_tmp.decRef();
+
+#endif
 }
 
 
