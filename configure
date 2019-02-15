@@ -3,7 +3,6 @@
 #
 #
 # Because we moved to cmake this script emulate the configure script from autotools
-#
 
 conf_options=
 
@@ -227,7 +226,15 @@ do
     se_class3)
        conf_options="$conf_options -DSE_CLASS3=ON"
        ;;
+    test_coverage)
+       conf_options="$conf_options -DTEST_COVERAGE=ON"
+       ;;
     gpu)
+        if [ x"$CXX" == x"" ]; then
+                conf_options="$conf_options"
+        else
+		conf_options="$conf_options -DCMAKE_CUDA_HOST_COMPILER=$(which $CXX)"
+        fi
        conf_options="$conf_options -DENABLE_GPU=ON"
        ;;
     *) ac_unrecognized_opts="$ac_unrecognized_opts$ac_unrecognized_sep--enable-$ac_useropt_orig"
@@ -462,6 +469,9 @@ do
       boost)
       conf_options="$conf_options -DBOOST_ROOT=$ac_optarg"
       ;;
+      mpivendor)
+      conf_options="$conf_options -DMPI_VENDOR=$ac_optarg"
+      ;;
       *) ac_unrecognized_opts="$ac_unrecognized_opts$ac_unrecognized_sep--with-$ac_useropt_orig"
 	 ac_unrecognized_sep=', ';;
     esac
@@ -561,6 +571,12 @@ clean:
 	\$(MAKE) -C build \$@
 
 install:
+	\$(MAKE) -C build \$@
+
+pdata:
+	\$(MAKE) -C build \$@
+
+numerics:
 	\$(MAKE) -C build \$@
 
 .PHONY: all clean install" > Makefile
