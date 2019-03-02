@@ -229,11 +229,7 @@ public:
 			}
 		}
 
-#if defined(CUDA_GPU) && defined(__NVCC__)
-
 		delete context;
-
-#endif
 	}
 
 	/*! \brief Virtual cluster constructor
