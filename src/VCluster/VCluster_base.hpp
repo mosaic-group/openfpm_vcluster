@@ -320,19 +320,19 @@ public:
 		// if T is a primitive like int, long int, float, double, ... make sense
 		// (pointers, l-references and r-references are not fundamentals)
 		if (std::is_fundamental<T>::value == true)
-			return;
+		{return;}
 
 		// if it is a pointer make no sense
 		if (std::is_pointer<T>::value == true)
-			std::cerr << "Error: " << __FILE__ << ":" << __LINE__ << " the type " << demangle(typeid(T).name()) << " is a pointer, sending pointers values has no sense\n";
+		{std::cerr << "Error: " << __FILE__ << ":" << __LINE__ << " the type " << demangle(typeid(T).name()) << " is a pointer, sending pointers values has no sense\n";}
 
 		// if it is an l-value reference make no send
 		if (std::is_lvalue_reference<T>::value == true)
-			std::cerr << "Error: " << __FILE__ << ":" << __LINE__ << " the type " << demangle(typeid(T).name()) << " is a pointer, sending pointers values has no sense\n";
+		{std::cerr << "Error: " << __FILE__ << ":" << __LINE__ << " the type " << demangle(typeid(T).name()) << " is a pointer, sending pointers values has no sense\n";}
 
 		// if it is an r-value reference make no send
 		if (std::is_rvalue_reference<T>::value == true)
-			std::cerr << "Error: " << __FILE__ << ":" << __LINE__ << " the type " << demangle(typeid(T).name()) << " is a pointer, sending pointers values has no sense\n";
+		{std::cerr << "Error: " << __FILE__ << ":" << __LINE__ << " the type " << demangle(typeid(T).name()) << " is a pointer, sending pointers values has no sense\n";}
 
 		// ... if not, check that T has a method called noPointers
 		switch (check_no_pointers<T>::value())

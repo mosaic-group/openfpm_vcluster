@@ -20,7 +20,7 @@ add_library(vcluster STATIC VCluster/VCluster.cpp)
 ###########################
 
 if(CUDA_FOUND)
-	target_compile_options(vcluster_test PUBLIC $<$<COMPILE_LANGUAGE:CUDA>:-Xcudafe "--display_error_number --diag_suppress=611 --diag_suppress=2885 --diag_suppress=2886  --diag_suppress=2887  --diag_suppress=2888 --diag_suppress=186 --diag_suppress=111" --expt-extended-lambda>)
+	target_compile_options(vcluster_test PUBLIC $<$<COMPILE_LANGUAGE:CUDA>: ${WARNING_SUPPRESSION_AND_OPTION_NVCC} >)
 	target_include_directories (vcluster_test PUBLIC ${MPI_C_INCLUDE_DIRS})
         if (TEST_COVERAGE)
                 target_compile_options(mem PRIVATE $<$<COMPILE_LANGUAGE:CUDA>: -Xcompiler "-fprofile-arcs -ftest-coverage">)
