@@ -5,11 +5,11 @@
  *      Author: i-bird
  */
 
-#ifndef OPENFPM_VCLUSTER_SRC_VCLUSTER_SEMANTIC_UNIT_TESTS_HPP_
-#define OPENFPM_VCLUSTER_SRC_VCLUSTER_SEMANTIC_UNIT_TESTS_HPP_
-
+#define BOOST_TEST_DYN_LINK
+#include <boost/test/unit_test.hpp>
 #include "Grid/grid_util_test.hpp"
 #include "data_type/aggregate.hpp"
+#include "VCluster/cuda/VCluster_semantic_unit_tests_funcs.hpp"
 
 //! Example structure
 struct Aexample
@@ -31,7 +31,7 @@ BOOST_AUTO_TEST_CASE (Vcluster_semantic_gather)
 {
 	for (size_t i = 0 ; i < 100 ; i++)
 	{
-		Vcluster & vcl = create_vcluster();
+		Vcluster<> & vcl = create_vcluster();
 
 		if (vcl.getProcessUnitID() == 0 && i == 0)
 			std::cout << "Semantic gather test start" << std::endl;
@@ -71,7 +71,7 @@ BOOST_AUTO_TEST_CASE (Vcluster_semantic_gather_2)
 {
 	for (size_t i = 0 ; i < 100 ; i++)
 	{
-		Vcluster & vcl = create_vcluster();
+		Vcluster<> & vcl = create_vcluster();
 
 		if (vcl.getProcessingUnits() >= 32)
 			return;
@@ -130,7 +130,7 @@ BOOST_AUTO_TEST_CASE (Vcluster_semantic_gather_3)
 {
 	for (size_t i = 0 ; i < 100 ; i++)
 	{
-		Vcluster & vcl = create_vcluster();
+		Vcluster<> & vcl = create_vcluster();
 
 		if (vcl.getProcessingUnits() >= 32)
 		{return;}
@@ -207,7 +207,7 @@ BOOST_AUTO_TEST_CASE (Vcluster_semantic_gather_4)
 {
 	for (size_t i = 0 ; i < 100 ; i++)
 	{
-		Vcluster & vcl = create_vcluster();
+		Vcluster<> & vcl = create_vcluster();
 
 		if (vcl.getProcessingUnits() >= 32)
 		{return;}
@@ -270,7 +270,10 @@ BOOST_AUTO_TEST_CASE (Vcluster_semantic_gather_5)
 {
 	for (size_t i = 0 ; i < 100 ; i++)
 	{
-		Vcluster & vcl = create_vcluster();
+		Vcluster<> & vcl = create_vcluster();
+
+		if (vcl.size() == 1)
+		{return;}
 
 		if (vcl.getProcessingUnits() >= 32)
 		{return;}
@@ -337,7 +340,7 @@ BOOST_AUTO_TEST_CASE (Vcluster_semantic_gather_6)
 {
 	for (size_t i = 0 ; i < 100 ; i++)
 	{
-		Vcluster & vcl = create_vcluster();
+		Vcluster<> & vcl = create_vcluster();
 
 		if (vcl.getProcessingUnits() >= 32)
 		{return;}
@@ -386,7 +389,7 @@ BOOST_AUTO_TEST_CASE (Vcluster_semantic_gather_7)
 {
 	for (size_t i = 0 ; i < 100 ; i++)
 	{
-		Vcluster & vcl = create_vcluster();
+		Vcluster<> & vcl = create_vcluster();
 
 		if (vcl.getProcessingUnits() >= 32)
 		{return;}
@@ -450,7 +453,7 @@ BOOST_AUTO_TEST_CASE (Vcluster_semantic_gather_8)
 {
 	for (size_t i = 0 ; i < 100 ; i++)
 	{
-		Vcluster & vcl = create_vcluster();
+		Vcluster<> & vcl = create_vcluster();
 
 		if (vcl.getProcessingUnits() >= 32)
 		{return;}
@@ -496,7 +499,7 @@ BOOST_AUTO_TEST_CASE (Vcluster_semantic_struct_gather)
 {
 	for (size_t i = 0 ; i < 100 ; i++)
 	{
-		Vcluster & vcl = create_vcluster();
+		Vcluster<> & vcl = create_vcluster();
 
 		if (vcl.getProcessingUnits() >= 32)
 			return;
@@ -535,13 +538,20 @@ BOOST_AUTO_TEST_CASE (Vcluster_semantic_struct_gather)
 	}
 }
 
+
+BOOST_AUTO_TEST_CASE (Vcluster_semantic_layout_inte_gather)
+{
+	test_different_layouts<HeapMemory,memory_traits_inte>();
+	test_different_layouts<HeapMemory,memory_traits_lin>();
+}
+
 #define SSCATTER_MAX 7
 
 BOOST_AUTO_TEST_CASE (Vcluster_semantic_scatter)
 {
 	for (size_t i = 0 ; i < 100 ; i++)
 	{
-		Vcluster & vcl = create_vcluster();
+		Vcluster<> & vcl = create_vcluster();
 
 		if (vcl.getProcessingUnits() >= 32)
 		{return;}
@@ -591,7 +601,7 @@ BOOST_AUTO_TEST_CASE (Vcluster_semantic_struct_scatter)
 {
 	for (size_t i = 0 ; i < 100 ; i++)
 	{
-		Vcluster & vcl = create_vcluster();
+		Vcluster<> & vcl = create_vcluster();
 
 		if (vcl.getProcessingUnits() >= 32)
 		{return;}
@@ -647,7 +657,7 @@ BOOST_AUTO_TEST_CASE (Vcluster_semantic_sendrecv_all_unknown)
 
 	for (size_t i = 0 ; i < 100 ; i++)
 	{
-		Vcluster & vcl = create_vcluster();
+		Vcluster<> & vcl = create_vcluster();
 
 		if (vcl.getProcessUnitID() == 0 && i == 0)
 			std::cout << "Semantic sendrecv test start" << std::endl;
@@ -751,7 +761,7 @@ BOOST_AUTO_TEST_CASE (Vcluster_semantic_sendrecv_receive_size_known)
 
 	for (size_t i = 0 ; i < 100 ; i++)
 	{
-		Vcluster & vcl = create_vcluster();
+		Vcluster<> & vcl = create_vcluster();
 
 		if (vcl.getProcessUnitID() == 0 && i == 0)
 		{std::cout << "Semantic sendrecv test start" << std::endl;}
@@ -784,6 +794,16 @@ BOOST_AUTO_TEST_CASE (Vcluster_semantic_sendrecv_receive_size_known)
 
 		// We receive to fill prc_recv2 and sz_recv2
 		vcl.SSendRecv(v1,v2,prc_send,prc_recv2,sz_recv2);
+
+		// carefull because SSendRecv does not fill prc_recv2 with processor that has a sending size of 0
+		for(size_t i = 0 ; i < v1.size() ; i++)
+		{
+			if( i % SSCATTER_MAX == 0)
+			{
+				prc_recv2.add((i + vcl.getProcessUnitID()) % vcl.getProcessingUnits());
+				sz_recv2.add(0);
+			}
+		}
 
 		// We reset v2 and we receive again saying that the processors are known and we know the elements
 		v2.clear();
@@ -832,7 +852,7 @@ BOOST_AUTO_TEST_CASE (Vcluster_semantic_sendrecv_receive_known)
 
 	for (size_t i = 0 ; i < 100 ; i++)
 	{
-		Vcluster & vcl = create_vcluster();
+		Vcluster<> & vcl = create_vcluster();
 
 		if (vcl.getProcessUnitID() == 0 && i == 0)
 		{std::cout << "Semantic sendrecv test start" << std::endl;}
@@ -865,6 +885,14 @@ BOOST_AUTO_TEST_CASE (Vcluster_semantic_sendrecv_receive_known)
 
 		// Receive to fill prc_recv2
 		vcl.SSendRecv(v1,v2,prc_send,prc_recv2,sz_recv2);
+
+		// carefull because SSendRecv does not fill prc_recv2 with processor that has a sending size of 0
+
+		for(size_t i = 0 ; i < v1.size() ; i++)
+		{
+			if( i % SSCATTER_MAX == 0)
+			{prc_recv2.add((i + vcl.getProcessUnitID()) % vcl.getProcessingUnits());}
+		}
 
 		// Reset v2 and sz_recv2
 
@@ -908,7 +936,7 @@ BOOST_AUTO_TEST_CASE (Vcluster_semantic_struct_sendrecv)
 {
 	for (size_t i = 0 ; i < 100 ; i++)
 	{
-		Vcluster & vcl = create_vcluster();
+		Vcluster<> & vcl = create_vcluster();
 
 		if (vcl.getProcessingUnits() >= 32)
 		{return;}
@@ -980,7 +1008,7 @@ BOOST_AUTO_TEST_CASE (Vcluster_semantic_struct_sendrecv)
 	// Send and receive 0 and check
 
 	{
-		Vcluster & vcl = create_vcluster();
+		Vcluster<> & vcl = create_vcluster();
 
 		openfpm::vector<size_t> prc_recv2;
 		openfpm::vector<size_t> prc_send;
@@ -1008,7 +1036,7 @@ BOOST_AUTO_TEST_CASE (Vcluster_semantic_sendrecv_2)
 {
 	for (size_t i = 0 ; i < 100 ; i++)
 	{
-		Vcluster & vcl = create_vcluster();
+		Vcluster<> & vcl = create_vcluster();
 
 		if (vcl.getProcessingUnits() >= 32)
 			return;
@@ -1098,7 +1126,7 @@ BOOST_AUTO_TEST_CASE (Vcluster_semantic_sendrecv_3)
 {
 	for (size_t i = 0 ; i < 100 ; i++)
 	{
-		Vcluster & vcl = create_vcluster();
+		Vcluster<> & vcl = create_vcluster();
 
 		if (vcl.getProcessingUnits() >= 32)
 			return;
@@ -1239,7 +1267,7 @@ BOOST_AUTO_TEST_CASE (Vcluster_semantic_sendrecv_4)
 {
 	for (size_t i = 0 ; i < 100 ; i++)
 	{
-		Vcluster & vcl = create_vcluster();
+		Vcluster<> & vcl = create_vcluster();
 
 		if (vcl.getProcessingUnits() >= 32)
 			return;
@@ -1364,7 +1392,7 @@ BOOST_AUTO_TEST_CASE (Vcluster_semantic_sendrecv_5)
 {
 	for (size_t i = 0 ; i < 100 ; i++)
 	{
-		Vcluster & vcl = create_vcluster();
+		Vcluster<> & vcl = create_vcluster();
 
 		if (vcl.getProcessingUnits() >= 32)
 			return;
@@ -1500,7 +1528,7 @@ BOOST_AUTO_TEST_CASE (Vcluster_semantic_sendrecv_6)
 {
 	for (size_t i = 0 ; i < 100 ; i++)
 	{
-		Vcluster & vcl = create_vcluster();
+		Vcluster<> & vcl = create_vcluster();
 
 		if (vcl.getProcessingUnits() >= 32)
 			return;
@@ -1578,49 +1606,6 @@ BOOST_AUTO_TEST_CASE (Vcluster_semantic_sendrecv_6)
 	}
 }
 
-/*BOOST_AUTO_TEST_CASE (Vcluster_semantic_bench_all_all)
-{
-                Vcluster & vcl = create_vcluster();
-
-                if (vcl.getProcessingUnits() >= 32)
-                        return;
-
-                openfpm::vector<size_t> prc_recv2;
-                openfpm::vector<size_t> prc_recv3;
-                openfpm::vector<size_t> prc_send;
-                openfpm::vector<size_t> sz_recv2;
-                openfpm::vector<size_t> sz_recv3;
-                openfpm::vector<openfpm::vector<Box<3,size_t>>> v1;
-                openfpm::vector<Box<3,size_t>> v2;
-                openfpm::vector<openfpm::vector<Box<3,size_t>>> v3;
-
-                v1.resize(vcl.getProcessingUnits());
-
-                for(size_t i = 0 ; i < v1.size() ; i++)
-                {
-                        for (size_t j = 0 ; j < 1000000 ; j++)
-                        {
-                                Box<3,size_t> b({j,j,j},{j,j,j});
-                                v1.get(i).add(b);
-                        }
-
-                        prc_send.add(i);
-                }
-
-                timer comm_time;
-                comm_time.start();
-
-                vcl.SSendRecv(v1,v2,prc_send,prc_recv2,sz_recv2);
-
-                comm_time.stop();
-                std::cout << "Communication time " << comm_time.getwct() << std::endl;
-
-                std::cout << "Total sent: " << tot_sent << "    Tot recv: "  << tot_recv << std::endl;
-
-                std::cout << "END" << std::endl;
-}*/
-
 
 BOOST_AUTO_TEST_SUITE_END()
 
-#endif /* OPENFPM_VCLUSTER_SRC_VCLUSTER_SEMANTIC_UNIT_TESTS_HPP_ */

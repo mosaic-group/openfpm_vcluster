@@ -11,6 +11,7 @@
 #include "Point_test.hpp"
 #include "VCluster_base.hpp"
 #include "Vector/vector_test_util.hpp"
+#include "VCluster/VCluster.hpp"
 
 #define RECEIVE_UNKNOWN 1
 #define RECEIVE_SIZE_UNKNOWN 2
@@ -40,7 +41,7 @@ int mod(int x, int m) {
 
 //! [message alloc]
 
-void * msg_alloc(size_t msg_i ,size_t total_msg, size_t total_p, size_t i,size_t ri, void * ptr)
+void * msg_alloc(size_t msg_i ,size_t total_msg, size_t total_p, size_t i,size_t ri, size_t tag, void * ptr)
 {
 	// convert the void pointer argument into a pointer to receiving buffers
 	openfpm::vector<openfpm::vector<unsigned char>> * v = static_cast<openfpm::vector<openfpm::vector<unsigned char>> *>(ptr);
@@ -88,7 +89,7 @@ void * msg_alloc2(size_t msg_i ,size_t total_msg, size_t total_p, size_t i, size
 	return &(v->get(id-1).get(0));
 }
 
-void * msg_alloc3(size_t msg_i ,size_t total_msg, size_t total_p, size_t i, size_t ri, void * ptr)
+void * msg_alloc3(size_t msg_i ,size_t total_msg, size_t total_p, size_t i, size_t ri, size_t tag, void * ptr)
 {
 	openfpm::vector<openfpm::vector<unsigned char>> * v = static_cast<openfpm::vector<openfpm::vector<unsigned char>> *>(ptr);
 
@@ -103,12 +104,12 @@ void * msg_alloc3(size_t msg_i ,size_t total_msg, size_t total_p, size_t i, size
 	return &(v->last().get(0));
 }
 
-template<unsigned int ip, typename T> void commFunc(Vcluster & vcl,openfpm::vector< size_t > & prc, openfpm::vector< T > & data, void * (* msg_alloc)(size_t,size_t,size_t,size_t,size_t,void *), void * ptr_arg)
+template<unsigned int ip, typename T> void commFunc(Vcluster<> & vcl,openfpm::vector< size_t > & prc, openfpm::vector< T > & data, void * (* msg_alloc)(size_t,size_t,size_t,size_t,size_t,size_t,void *), void * ptr_arg)
 {
 	vcl.sendrecvMultipleMessagesNBX(prc,data,msg_alloc,ptr_arg);
 }
 
-template<unsigned int ip, typename T> void commFunc_null_odd(Vcluster & vcl,openfpm::vector< size_t > & prc, openfpm::vector< T > & data, void * (* msg_alloc)(size_t,size_t,size_t,size_t,size_t,void *), void * ptr_arg)
+template<unsigned int ip, typename T> void commFunc_null_odd(Vcluster<> & vcl,openfpm::vector< size_t > & prc, openfpm::vector< T > & data, void * (* msg_alloc)(size_t,size_t,size_t,size_t,size_t,size_t,void *), void * ptr_arg)
 {
 	if (vcl.getProcessUnitID() % 2 == 0)
 		vcl.sendrecvMultipleMessagesNBX(prc,data,msg_alloc,ptr_arg);
@@ -126,7 +127,7 @@ template <unsigned int ip> std::string method()
 
 template<unsigned int ip> void test_no_send_some_peer()
 {
-	Vcluster & vcl = create_vcluster();
+	Vcluster<> & vcl = create_vcluster();
 
 	size_t n_proc = vcl.getProcessingUnits();
 
@@ -218,6 +219,8 @@ template<unsigned int ip> void test_no_send_some_peer()
 
 template<unsigned int ip> void test_known(Vcluster & vcl)
 {
+	Vcluster<> & vcl = create_vcluster();
+
 	// send/recv messages
 
 	global_rank = vcl.getProcessUnitID();
@@ -324,6 +327,8 @@ template<unsigned int ip> void test_known(Vcluster & vcl)
 
 template<unsigned int ip> void test(Vcluster & vcl, unsigned int opt)
 {
+	Vcluster<> & vcl = create_vcluster();
+
 	// send/recv messages
 
 	global_rank = vcl.getProcessUnitID();
@@ -700,7 +705,7 @@ template<unsigned int ip> void test(Vcluster & vcl, unsigned int opt)
  * \param vcl VCluster
  *
  */
-void test_send_recv_complex(const size_t n, Vcluster & vcl)
+void test_send_recv_complex(const size_t n, Vcluster<> & vcl)
 {
 	//! [Send and receive vectors of complex]
 
@@ -763,7 +768,7 @@ void test_send_recv_complex(const size_t n, Vcluster & vcl)
  * \param n size
  *
  */
-template<typename T> void test_send_recv_primitives(size_t n, Vcluster & vcl)
+template<typename T> void test_send_recv_primitives(size_t n, Vcluster<> & vcl)
 {
 	openfpm::vector<T> v_send = allocate_openfpm_primitive<T>(n,vcl.getProcessUnitID());
 
@@ -840,7 +845,7 @@ template<typename T> void test_send_recv_primitives(size_t n, Vcluster & vcl)
 	}
 }
 
-template<typename T>  void test_single_all_gather_primitives(Vcluster & vcl)
+template<typename T>  void test_single_all_gather_primitives(Vcluster<> & vcl)
 {
 	//! [allGather numbers]
 
@@ -854,37 +859,6 @@ template<typename T>  void test_single_all_gather_primitives(Vcluster & vcl)
 		BOOST_REQUIRE_EQUAL(i,(size_t)clt.get(i));
 
 	//! [allGather numbers]
-
-}
-
-template<typename T>  void test_single_all_broadcast_primitives(Vcluster & vcl)
-{
-	//! [bcast numbers]
-
-	openfpm::vector<T> bdata;
-
-	if (vcl.getProcessUnitID() == 0)
-	{
-		bdata.add(0);
-		bdata.add(1);
-		bdata.add(2);
-		bdata.add(3);
-		bdata.add(4);
-		bdata.add(5);
-		bdata.add(6);
-	}
-	else
-	{
-		bdata.resize(7);
-	}
-
-	vcl.Bcast(bdata,0);
-	vcl.execute();
-
-	for (size_t i = 0 ; i < bdata.size() ; i++)
-		BOOST_REQUIRE_EQUAL(i,(size_t)bdata.get(i));
-
-	//! [bcast numbers]
 
 }
 

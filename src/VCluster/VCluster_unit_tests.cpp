@@ -5,23 +5,23 @@
  *      Author: Pietro incardona
  */
 
-#ifndef VCLUSTER_UNIT_TESTS_HPP_
-#define VCLUSTER_UNIT_TESTS_HPP_
-
 #include <sstream>
-#include <boost/test/included/unit_test.hpp>
+#define BOOST_TEST_DYN_LINK
+#include <boost/test/unit_test.hpp>
 #include "timer.hpp"
 #include <random>
 #include "VCluster_unit_test_util.hpp"
 #include "Point_test.hpp"
 #include "VCluster_base.hpp"
 #include "Vector/vector_test_util.hpp"
+#include "VCluster/VCluster.hpp"
+#include "VCluster/cuda/VCluster_unit_test_util_cuda.cuh"
 
 BOOST_AUTO_TEST_SUITE( VCluster_test )
 
 BOOST_AUTO_TEST_CASE (Vcluster_robustness)
 {
-	Vcluster & vcl = create_vcluster();
+	Vcluster<> & vcl = create_vcluster();
 
 	vcl.execute();
 }
@@ -31,7 +31,7 @@ BOOST_AUTO_TEST_CASE( VCluster_use_reductions)
 
 	//! [max min sum]
 
-	Vcluster & vcl = create_vcluster();
+	Vcluster<> & vcl = create_vcluster();
 
 	unsigned char uc = 1;
 	char c = 1;
@@ -117,7 +117,7 @@ BOOST_AUTO_TEST_CASE( VCluster_use_reductions)
 
 BOOST_AUTO_TEST_CASE(VCluster_send_recv)
 {
-	Vcluster & vcl = create_vcluster();
+	Vcluster<> & vcl = create_vcluster();
 
 	test_send_recv_complex(N_V_ELEMENTS,vcl);
 	test_send_recv_primitives<unsigned char>(N_V_ELEMENTS,vcl);
@@ -134,7 +134,7 @@ BOOST_AUTO_TEST_CASE(VCluster_send_recv)
 
 BOOST_AUTO_TEST_CASE(VCluster_allgather)
 {
-	Vcluster & vcl = create_vcluster();
+	Vcluster<> & vcl = create_vcluster();
 
 	if (vcl.getProcessingUnits() < 256)
 		test_single_all_gather_primitives<unsigned char>(vcl);
@@ -160,20 +160,30 @@ struct brt_test
 
 BOOST_AUTO_TEST_CASE(VCluster_bcast_test)
 {
-	Vcluster & vcl = create_vcluster();
+	Vcluster<> & vcl = create_vcluster();
 
 	std::cout << "Broadcast test " << std::endl;
 
-	test_single_all_broadcast_primitives<unsigned char>(vcl);
-	test_single_all_broadcast_primitives<char>(vcl);
-	test_single_all_broadcast_primitives<short>(vcl);
-	test_single_all_broadcast_primitives<unsigned short>(vcl);
-	test_single_all_broadcast_primitives<int>(vcl);
-	test_single_all_broadcast_primitives<unsigned int>(vcl);
-	test_single_all_broadcast_primitives<long int>(vcl);
-	test_single_all_broadcast_primitives<unsigned long int>(vcl);
-	test_single_all_broadcast_primitives<float>(vcl);
-	test_single_all_broadcast_primitives<double>(vcl);
+	test_single_all_broadcast_primitives<unsigned char,HeapMemory,memory_traits_lin>(vcl);
+	test_single_all_broadcast_primitives<char,HeapMemory,memory_traits_lin>(vcl);
+	test_single_all_broadcast_primitives<short,HeapMemory,memory_traits_lin>(vcl);
+	test_single_all_broadcast_primitives<unsigned short,HeapMemory,memory_traits_lin>(vcl);
+	test_single_all_broadcast_primitives<int,HeapMemory,memory_traits_lin>(vcl);
+	test_single_all_broadcast_primitives<unsigned int,HeapMemory,memory_traits_lin>(vcl);
+	test_single_all_broadcast_primitives<long int,HeapMemory,memory_traits_lin>(vcl);
+	test_single_all_broadcast_primitives<unsigned long int,HeapMemory,memory_traits_lin>(vcl);
+	test_single_all_broadcast_primitives<float,HeapMemory,memory_traits_lin>(vcl);
+	test_single_all_broadcast_primitives<double,HeapMemory,memory_traits_lin>(vcl);
+}
+
+BOOST_AUTO_TEST_CASE(VCluster_bcast_complex_test)
+{
+	Vcluster<> & vcl = create_vcluster();
+
+	std::cout << "Broadcast complex test " << std::endl;
+
+	test_single_all_broadcast_complex<aggregate<int,int>,HeapMemory,memory_traits_lin>(vcl);
+	test_single_all_broadcast_complex<aggregate<int,int>,HeapMemory,memory_traits_inte>(vcl);
 }
 
 BOOST_AUTO_TEST_CASE( VCluster_use_sendrecv)
@@ -206,7 +216,7 @@ BOOST_AUTO_TEST_CASE( VCluster_use_sendrecv_size_known)
 	std::cout << "VCluster unit test stop sendrecv known size" << "\n";
 }
 
-BOOST_AUTO_TEST_CASE( VCluster_use_sendrecv_known)
+BOOST_AUTO_TEST_CASE( VCluster_use_sendrecv_known )
 {
 	std::cout << "VCluster unit test start known" << "\n";
 
@@ -239,5 +249,3 @@ BOOST_AUTO_TEST_CASE( VCluster_communicator_with_external_communicator )
 
 BOOST_AUTO_TEST_SUITE_END()
 
-
-#endif /* VCLUSTER_UNIT_TESTS_HPP_ */

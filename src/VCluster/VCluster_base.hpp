@@ -1,8 +1,13 @@
 #ifndef VCLUSTER_BASE_HPP_
 #define VCLUSTER_BASE_HPP_
 
-#include "config.h"
+#include "util/cuda_util.hpp"
+#ifdef OPENMPI
 #include <mpi.h>
+#include <mpi-ext.h>
+#else
+#include <mpi.h>
+#endif
 #include "MPI_wrapper/MPI_util.hpp"
 #include "Vector/map_vector.hpp"
 #include "MPI_wrapper/MPI_IallreduceW.hpp"
@@ -20,6 +25,10 @@
 #include "memory/BHeapMemory.hpp"
 #include "Packer_Unpacker/has_max_prop.hpp"
 #include "data_type/aggregate.hpp"
+#if defined(CUDA_GPU) && defined(__NVCC__)
+#include "util/cuda/moderngpu/launch_box.hxx"
+#endif
+#include "util/cuda/ofp_context.hxx"
 
 #ifdef HAVE_PETSC
 #include <petscvec.h>
@@ -27,16 +36,17 @@
 
 #define MSG_LENGTH 1024
 #define MSG_SEND_RECV 1025
-#define SEND_SPARSE 4096
+#define SEND_SPARSE 8192
 #define NONE 1
 #define NEED_ALL_SIZE 2
 
 #define SERIVCE_MESSAGE_TAG 16384
-#define SEND_RECV_BASE 8192
+#define SEND_RECV_BASE 4096
 #define GATHER_BASE 24576
 
 #define RECEIVE_KNOWN 4
 #define KNOWN_ELEMENT_OR_BYTE 8
+#define MPI_GPU_DIRECT 16
 
 // number of vcluster instances
 extern size_t n_vcluster;
@@ -99,7 +109,7 @@ union red
  * \snippet VCluster_unit_test_util.hpp allGather numbers
  *
  */
-
+template<typename InternalMemory>
 class Vcluster_base
 {
 	//! external communicator
@@ -140,6 +150,10 @@ class Vcluster_base
 	//! vector of functions to execute after all the request has been performed
 	std::vector<int> post_exe;
 
+	//! standard context for mgpu (if cuda is detected otherwise is unused)
+	mgpu::ofp_context_t * context;
+
+
 	// Object array
 
 
@@ -177,6 +191,9 @@ class Vcluster_base
 	//! disable operator=
 	Vcluster_base & operator=(const Vcluster_base &)	{return *this;};
 
+	//! rank within the node
+	int shmrank;
+
 	//! disable copy constructor
 	Vcluster_base(const Vcluster_base &)
 	:NBX_cnt(0)
@@ -185,7 +202,10 @@ class Vcluster_base
 protected:
 
 	//! Receive buffers
-	openfpm::vector<BHeapMemory> recv_buf;
+	openfpm::vector_fr<BMemory<InternalMemory>> recv_buf;
+
+	//! tags receiving
+	openfpm::vector<size_t> tags;
 
 public:
 
@@ -211,6 +231,8 @@ public:
 				}
 			}
 		}
+
+		delete context;
 	}
 
 	/*! \brief Virtual cluster constructor
@@ -234,9 +256,17 @@ public:
 		// Check if MPI is already initialized
 		if (!already_initialised)
 		{
-
 			MPI_Init(argc,argv);
 		}
+
+		// We try to get the local processors rank
+
+		MPI_Comm shmcomm;
+		MPI_Comm_split_type(MPI_COMM_WORLD, MPI_COMM_TYPE_SHARED, 0,
+		                    MPI_INFO_NULL, &shmcomm);
+
+		MPI_Comm_rank(shmcomm, &shmrank);
+		MPI_Comm_free(&shmcomm);
 
 		// Get the total number of process
 		// and the rank of this process
@@ -262,6 +292,18 @@ public:
 		// Initialize bar_req
 		bar_req = MPI_Request();
 		bar_stat = MPI_Status();
+
+		context = new mgpu::ofp_context_t(mgpu::gpu_context_opt::no_print_props,shmrank);
+
+#if defined(PRINT_RANK_TO_GPU) && defined(CUDA_GPU)
+
+                char node_name[MPI_MAX_PROCESSOR_NAME];
+                int len;
+
+                MPI_Get_processor_name(node_name,&len);
+
+                std::cout << "Rank: " << m_rank << " on host: " << node_name << " work on GPU: " << context->getDevice() << "/" << context->getNDevice() << std::endl;
+#endif
 	}
 
 #ifdef SE_CLASS1
@@ -281,19 +323,19 @@ public:
 		// if T is a primitive like int, long int, float, double, ... make sense
 		// (pointers, l-references and r-references are not fundamentals)
 		if (std::is_fundamental<T>::value == true)
-			return;
+		{return;}
 
 		// if it is a pointer make no sense
 		if (std::is_pointer<T>::value == true)
-			std::cerr << "Error: " << __FILE__ << ":" << __LINE__ << " the type " << demangle(typeid(T).name()) << " is a pointer, sending pointers values has no sense\n";
+		{std::cerr << "Error: " << __FILE__ << ":" << __LINE__ << " the type " << demangle(typeid(T).name()) << " is a pointer, sending pointers values has no sense\n";}
 
 		// if it is an l-value reference make no send
 		if (std::is_lvalue_reference<T>::value == true)
-			std::cerr << "Error: " << __FILE__ << ":" << __LINE__ << " the type " << demangle(typeid(T).name()) << " is a pointer, sending pointers values has no sense\n";
+		{std::cerr << "Error: " << __FILE__ << ":" << __LINE__ << " the type " << demangle(typeid(T).name()) << " is a pointer, sending pointers values has no sense\n";}
 
 		// if it is an r-value reference make no send
 		if (std::is_rvalue_reference<T>::value == true)
-			std::cerr << "Error: " << __FILE__ << ":" << __LINE__ << " the type " << demangle(typeid(T).name()) << " is a pointer, sending pointers values has no sense\n";
+		{std::cerr << "Error: " << __FILE__ << ":" << __LINE__ << " the type " << demangle(typeid(T).name()) << " is a pointer, sending pointers values has no sense\n";}
 
 		// ... if not, check that T has a method called noPointers
 		switch (check_no_pointers<T>::value())
@@ -316,6 +358,22 @@ public:
 	}
 
 #endif
+
+	/*! \brief If nvidia cuda is activated return a mgpu context
+	 *
+	 * \param iw ignore warning
+	 *
+	 */
+	mgpu::ofp_context_t & getmgpuContext(bool iw = true)
+	{
+		if (context == NULL && iw == true)
+		{
+			std::cout << __FILE__ << ":" << __LINE__ << " Warning: it seem that modern gpu context is not initialized."
+					                                    "Either a compatible working cuda device has not been found, either openfpm_init has been called in a file that not compiled with NVCC" << std::endl;
+		}
+
+		return *context;
+	}
 
 	/*! \brief Get the MPI_Communicator (or processor group) this VCluster is using
 	 *
@@ -483,26 +541,26 @@ public:
 			                                              openfpm::vector< T > & data,
 														  openfpm::vector< size_t > prc_recv,
 														  openfpm::vector< size_t > & recv_sz ,
-														  void * (* msg_alloc)(size_t,size_t,size_t,size_t,size_t,void *),
+														  void * (* msg_alloc)(size_t,size_t,size_t,size_t,size_t,size_t,void *),
 														  void * ptr_arg,
 														  long int opt=NONE)
 	{
 		// Allocate the buffers
 
 		for (size_t i = 0 ; i < prc.size() ; i++)
-			send(prc.get(i),SEND_SPARSE + NBX_cnt,data.get(i).getPointer(),data.get(i).size());
+		{send(prc.get(i),SEND_SPARSE + NBX_cnt*131072,data.get(i).getPointer(),data.get(i).size());}
 
 		for (size_t i = 0 ; i < prc_recv.size() ; i++)
 		{
-			void * ptr_recv = msg_alloc(recv_sz.get(i),0,0,prc_recv.get(i),i,ptr_arg);
+			void * ptr_recv = msg_alloc(recv_sz.get(i),0,0,prc_recv.get(i),i,SEND_SPARSE + NBX_cnt*131072,ptr_arg);
 
-			recv(prc_recv.get(i),SEND_SPARSE + NBX_cnt,ptr_recv,recv_sz.get(i));
+			recv(prc_recv.get(i),SEND_SPARSE + NBX_cnt*131072,ptr_recv,recv_sz.get(i));
 		}
 
 		execute();
 
 		// Circular counter
-		NBX_cnt = (NBX_cnt + 1) % 1024;
+		NBX_cnt = (NBX_cnt + 1) % 2048;
 	}
 
 
@@ -544,7 +602,7 @@ public:
 	template<typename T>
 	void sendrecvMultipleMessagesNBX(openfpm::vector< size_t > & prc,
 									 openfpm::vector< T > & data,
-									 void * (* msg_alloc)(size_t,size_t,size_t,size_t,size_t,void *),
+									 void * (* msg_alloc)(size_t,size_t,size_t,size_t,size_t,size_t,void *),
 									 void * ptr_arg, long int opt=NONE)
 	{
 #ifdef SE_CLASS1
@@ -570,6 +628,7 @@ public:
 	 * function. In this particular case the receiver know from which processor is going
 	 * to receive.
 	 *
+	 * \warning this function only work with one send for each processor
 	 *
 	 * suppose the following situation the calling processor want to communicate
 	 * * 2 messages of size 100 byte to processor 1
@@ -605,28 +664,28 @@ public:
 	 * \param opt options, NONE (ignored in this moment)
 	 *
 	 */
-	void sendrecvMultipleMessagesNBX(size_t n_send , size_t sz[], size_t prc[] ,
-									 void * ptr[], size_t n_recv, size_t prc_recv[] ,
-									 size_t sz_recv[] ,
-									 void * (* msg_alloc)(size_t,size_t,size_t,size_t,size_t,void *),
-									 void * ptr_arg, long int opt=NONE)
+	void sendrecvMultipleMessagesNBX(size_t n_send , size_t sz[],
+			                         size_t prc[] , void * ptr[],
+			                         size_t n_recv, size_t prc_recv[] ,
+			                         size_t sz_recv[] ,void * (* msg_alloc)(size_t,size_t,size_t,size_t,size_t, size_t,void *),
+			                         void * ptr_arg, long int opt=NONE)
 	{
 		// Allocate the buffers
 
 		for (size_t i = 0 ; i < n_send ; i++)
-			send(prc[i],SEND_SPARSE + NBX_cnt,ptr[i],sz[i]);
+		{send(prc[i],SEND_SPARSE + NBX_cnt*131072,ptr[i],sz[i]);}
 
 		for (size_t i = 0 ; i < n_recv ; i++)
 		{
-			void * ptr_recv = msg_alloc(sz_recv[i],0,0,prc_recv[i],i,ptr_arg);
+			void * ptr_recv = msg_alloc(sz_recv[i],0,0,prc_recv[i],i,SEND_SPARSE + NBX_cnt*131072,ptr_arg);
 
-			recv(prc_recv[i],SEND_SPARSE + NBX_cnt,ptr_recv,sz_recv[i]);
+			recv(prc_recv[i],SEND_SPARSE + NBX_cnt*131072,ptr_recv,sz_recv[i]);
 		}
 
 		execute();
 
 		// Circular counter
-		NBX_cnt = (NBX_cnt + 1) % 1024;
+		NBX_cnt = (NBX_cnt + 1) % 2048;
 	}
 
 	openfpm::vector<size_t> sz_recv_tmp;
@@ -675,7 +734,7 @@ public:
 	 */
 	void sendrecvMultipleMessagesNBX(size_t n_send , size_t sz[], size_t prc[] ,
 									 void * ptr[], size_t n_recv, size_t prc_recv[] ,
-									 void * (* msg_alloc)(size_t,size_t,size_t,size_t,size_t,void *),
+									 void * (* msg_alloc)(size_t,size_t,size_t,size_t,size_t,size_t,void *),
 									 void * ptr_arg, long int opt=NONE)
 	{
 		sz_recv_tmp.resize(n_recv);
@@ -683,32 +742,32 @@ public:
 		// First we understand the receive size for each processor
 
 		for (size_t i = 0 ; i < n_send ; i++)
-		{send(prc[i],SEND_SPARSE + NBX_cnt,&sz[i],sizeof(size_t));}
+		{send(prc[i],SEND_SPARSE + NBX_cnt*131072,&sz[i],sizeof(size_t));}
 
 		for (size_t i = 0 ; i < n_recv ; i++)
-		{recv(prc_recv[i],SEND_SPARSE + NBX_cnt,&sz_recv_tmp.get(i),sizeof(size_t));}
+		{recv(prc_recv[i],SEND_SPARSE + NBX_cnt*131072,&sz_recv_tmp.get(i),sizeof(size_t));}
 
 		execute();
 
 		// Circular counter
-		NBX_cnt = (NBX_cnt + 1) % 1024;
+		NBX_cnt = (NBX_cnt + 1) % 2048;
 
 		// Allocate the buffers
 
 		for (size_t i = 0 ; i < n_send ; i++)
-		{send(prc[i],SEND_SPARSE + NBX_cnt,ptr[i],sz[i]);}
+		{send(prc[i],SEND_SPARSE + NBX_cnt*131072,ptr[i],sz[i]);}
 
 		for (size_t i = 0 ; i < n_recv ; i++)
 		{
-			void * ptr_recv = msg_alloc(sz_recv_tmp.get(i),0,0,prc_recv[i],i,ptr_arg);
+			void * ptr_recv = msg_alloc(sz_recv_tmp.get(i),0,0,prc_recv[i],i,0,ptr_arg);
 
-			recv(prc_recv[i],SEND_SPARSE + NBX_cnt,ptr_recv,sz_recv_tmp.get(i));
+			recv(prc_recv[i],SEND_SPARSE + NBX_cnt*131072,ptr_recv,sz_recv_tmp.get(i));
 		}
 
 		execute();
 
 		// Circular counter
-		NBX_cnt = (NBX_cnt + 1) % 1024;
+		NBX_cnt = (NBX_cnt + 1) % 2048;
 	}
 
 	/*! \brief Send and receive multiple messages
@@ -751,10 +810,10 @@ public:
 	 * \param opt options, NONE (ignored in this moment)
 	 *
 	 */
-	void sendrecvMultipleMessagesNBX(size_t n_send , size_t sz[], size_t prc[] ,
-									 void * ptr[],
-									 void * (* msg_alloc)(size_t,size_t,size_t,size_t,size_t,void *),
-									 void * ptr_arg, long int opt = NONE)
+	void sendrecvMultipleMessagesNBX(size_t n_send , size_t sz[],
+			                         size_t prc[] , void * ptr[],
+			                         void * (* msg_alloc)(size_t,size_t,size_t,size_t,size_t,size_t,void *),
+			                         void * ptr_arg, long int opt = NONE)
 	{
 		if (stat.size() != 0 || req.size() != 0)
 			std::cerr << "Error: " << __FILE__ << ":" << __LINE__ << " this function must be called when no other requests are in progress. Please remember that if you use function like max(),sum(),send(),recv() check that you did not miss to call the function execute() \n";
@@ -775,7 +834,7 @@ public:
 #endif
 
 				tot_sent += sz[i];
-				MPI_SAFE_CALL(MPI_Issend(ptr[i], sz[i], MPI_BYTE, prc[i], SEND_SPARSE + NBX_cnt, ext_comm,&req.last()));
+				MPI_SAFE_CALL(MPI_Issend(ptr[i], sz[i], MPI_BYTE, prc[i], SEND_SPARSE + NBX_cnt*131072 + i, ext_comm,&req.last()));
 				log.logSend(prc[i]);
 			}
 		}
@@ -796,33 +855,38 @@ public:
 
 			MPI_Status stat_t;
 			int stat = false;
-			MPI_SAFE_CALL(MPI_Iprobe(MPI_ANY_SOURCE,SEND_SPARSE + NBX_cnt,ext_comm,&stat,&stat_t));
+			MPI_SAFE_CALL(MPI_Iprobe(MPI_ANY_SOURCE,MPI_ANY_TAG/*SEND_SPARSE + NBX_cnt*/,ext_comm,&stat,&stat_t));
 
 			// If I have an incoming message and is related to this NBX communication
 			if (stat == true)
 			{
-				// Get the message size
 				int msize;
+
+				// Get the message tag and size
 				MPI_SAFE_CALL(MPI_Get_count(&stat_t,MPI_BYTE,&msize));
 
-				// Get the pointer to receive the message
-				void * ptr = msg_alloc(msize,0,0,stat_t.MPI_SOURCE,rid,ptr_arg);
+				// Ok we check if the TAG come from one of our send TAG
+				if (stat_t.MPI_TAG >= (int)(SEND_SPARSE + NBX_cnt*131072) && stat_t.MPI_TAG < (int)(SEND_SPARSE + (NBX_cnt + 1)*131072))
+				{
+					// Get the pointer to receive the message
+					void * ptr = msg_alloc(msize,0,0,stat_t.MPI_SOURCE,rid,stat_t.MPI_TAG,ptr_arg);
 
-				// Log the receiving request
-				log.logRecv(stat_t);
+					// Log the receiving request
+					log.logRecv(stat_t);
 
-				rid++;
+					rid++;
 
-				// Check the pointer
+					// Check the pointer
 #ifdef SE_CLASS2
-				check_valid(ptr,msize);
+					check_valid(ptr,msize);
 #endif
-				tot_recv += msize;
-				MPI_SAFE_CALL(MPI_Recv(ptr,msize,MPI_BYTE,stat_t.MPI_SOURCE,SEND_SPARSE+NBX_cnt,ext_comm,&stat_t));
+					tot_recv += msize;
+					MPI_SAFE_CALL(MPI_Recv(ptr,msize,MPI_BYTE,stat_t.MPI_SOURCE,stat_t.MPI_TAG,ext_comm,&stat_t));
 
 #ifdef SE_CLASS2
-				check_valid(ptr,msize);
+					check_valid(ptr,msize);
 #endif
+				}
 			}
 
 			// Check the status of all the MPI_issend and call the barrier if finished
@@ -856,7 +920,7 @@ public:
 		log.clear();
 
 		// Circular counter
-		NBX_cnt = (NBX_cnt + 1) % 1024;
+		NBX_cnt = (NBX_cnt + 1) % 2048;
 	}
 
 	/*! \brief Send data to a processor
@@ -1036,17 +1100,14 @@ public:
 	 * \return true if succeed false otherwise
 	 *
 	 */
-	template<typename T, typename Mem, typename gr> bool Bcast(openfpm::vector<T,Mem,gr> & v, size_t root)
+	template<typename T, typename Mem, typename lt_type, template<typename> class layout_base >
+	bool Bcast(openfpm::vector<T,Mem,lt_type,layout_base> & v, size_t root)
 	{
 #ifdef SE_CLASS1
 		checkType<T>();
 #endif
 
-		// Create one request
-		req.add();
-
-		// gather
-		MPI_IBcastW<T>::bcast(root,v,req.last(),ext_comm);
+		b_cast_helper<openfpm::vect_isel<T>::value == STD_VECTOR || is_layout_mlin<layout_base<T>>::value >::bcast_(req,v,root,ext_comm);
 
 		return true;
 	}

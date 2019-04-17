@@ -1,11 +1,17 @@
 #! /bin/bash
 
 # Make a directory in /tmp/openfpm_data
+#
 
-echo "$PATH"
-echo "Directory: $1"
-echo "Machine: $2"
-echo "Branch: $3"
+workspace=$1
+hostname=$(hostname)
+branch=$3
+
+
+echo "Directory: $workspace"
+echo "Machine: $hostname"
+echo "Branch: $branch"
+
 
 mkdir /tmp/openfpm_vcluster
 mv * .[^.]* /tmp/openfpm_vcluster
@@ -13,25 +19,49 @@ mv /tmp/openfpm_vcluster openfpm_vcluster
 
 mkdir openfpm_vcluster/src/config
 
+## It is equivalent to the git modules
+
 git clone git@git.mpi-cbg.de:/openfpm/openfpm_devices.git openfpm_devices
 git clone git@git.mpi-cbg.de:/openfpm/openfpm_data.git openfpm_data
 cd openfpm_data
-git checkout 6c2a5911ac16f93ab0ae1e7ac14723c952aa5c16
+git checkout master
 cd ..
 cd openfpm_devices
-git checkout 46e4994c5dff879a71e6ae090c50b2f23235d435
+git checkout master
 cd ..
 
-cd "$1/openfpm_vcluster"
+cd "$workspace/openfpm_vcluster"
 
-source $HOME/openfpm_vars_$3
+# install MPI and BOOST  LIBHILBERT if needed
 
-if [ "$2" == "gin" ]; then
+if [ ! -d $HOME/openfpm_dependencies/openfpm_vcluster/LIBHILBERT ]; then
+        ./install_LIBHILBERT.sh $HOME/openfpm_dependencies/openfpm_vcluster/ 4
+fi
+
+
+if [ ! -d $HOME/openfpm_dependencies/openfpm_vcluster/BOOST ]; then
+        if [ x"$hostname" == x"cifarm-mac-node" ]; then
+                echo "Compiling for OSX"
+                ./install_BOOST.sh $HOME/openfpm_dependencies/openfpm_vcluster/ 4 darwin
+        else
+                echo "Compiling for Linux"
+                ./install_BOOST.sh $HOME/openfpm_dependencies/openfpm_vcluster/ 4 gcc
+        fi
+fi
+
+
+if [ ! -d $HOME/openfpm_dependencies/openfpm_vcluster/MPI ]; then
+	./install_MPI.sh $HOME/openfpm_dependencies/openfpm_vcluster/ 4
+fi
+
+export PATH="$PATH:$HOME/openfpm_dependencies/openfpm_vcluster/MPI/bin"
+
+if [ "$hostname" == "gin" ]; then
  echo "Compiling on gin\n"
  module load gcc/4.9.2
  module load openmpi/1.8.1
 
-elif [ "$2" == "wetcluster" ]; then
+elif [ "$hostname" == "wetcluster" ]; then
  echo "Compiling on wetcluster"
 
 ## produce the module path
@@ -53,7 +83,7 @@ exit(0)\n"
 
  bsub -o output_compile.%J -K -n 1 -J compile sh ./compile_script
 
-elif [ "$2" == "taurus" ]; then
+elif [ "$hostname" == "taurus" ]; then
  echo "Compiling on taurus"
 
  echo "$PATH"
@@ -75,8 +105,8 @@ else
  echo "$PATH"
  echo "Compiling general"
  sh ./autogen.sh
- sh ./configure  CXX=mpic++
- make
+ sh ./configure  CXX=mpic++ --with-boost=$HOME/openfpm_dependencies/openfpm_vcluster/BOOST
+ make VERBOSE=1 -j 4
  if [ $? -ne 0 ]; then exit 1 ; fi
 
 fi

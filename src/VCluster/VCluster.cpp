@@ -6,9 +6,14 @@
 #endif
 
 #include "util/print_stack.hpp"
+#include "util/math_util_complex.hpp"
 
 init_options global_option;
-Vcluster * global_v_cluster_private = NULL;
+Vcluster<> * global_v_cluster_private_heap = NULL;
+Vcluster<CudaMemory> * global_v_cluster_private_cuda = NULL;
+
+//
+std::vector<int> sieve_spf;
 
 
 // number of vcluster instances
@@ -19,6 +24,14 @@ size_t tot_sent = 0;
 size_t tot_recv = 0;
 
 std::string program_name;
+
+#ifdef CUDA_GPU
+
+#include "memory/CudaMemory.cuh"
+
+CudaMemory mem_tmp;
+
+#endif
 
 // Segmentation fault signal handler
 void bt_sighandler(int sig, siginfo_t * info, void * ctx_p)
