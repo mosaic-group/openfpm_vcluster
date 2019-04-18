@@ -337,7 +337,7 @@ class Vcluster: public Vcluster_base<InternalMemory>
 	 *
 	 */
 	Vcluster(int *argc, char ***argv,MPI_Comm ext_comm = MPI_COMM_WORLD)
-	:Vcluster_base(argc,argv,ext_comm)
+	:Vcluster_base<InternalMemory>(argc,argv,ext_comm)
 	{
 	}
 
@@ -893,7 +893,8 @@ extern Vcluster<CudaMemory> * global_v_cluster_private_cuda;
 
 static inline void delete_global_v_cluster_private()
 {
-	delete global_v_cluster_private;
+        delete global_v_cluster_private_heap;
+        delete global_v_cluster_private_cuda;
 }
 
 
@@ -904,21 +905,30 @@ static inline void delete_global_v_cluster_private()
  */
 static inline void openfpm_finalize()
 {
-	if (global_option == init_options::in_situ_visualization)
-	{
-		MPI_Request bar_req;
-		MPI_Ibarrier(MPI_COMM_WORLD,&bar_req);
-	}
+        if (global_option == init_options::in_situ_visualization)
+        {
+                MPI_Request bar_req;
+                MPI_Ibarrier(MPI_COMM_WORLD,&bar_req);
+        }
 
 #ifdef HAVE_PETSC
 
-	PetscFinalize();
+        PetscFinalize();
 
 #endif
 
-	delete_global_v_cluster_private();
-	ofp_initialized = false;
+        delete_global_v_cluster_private();
+        ofp_initialized = false;
+
+#ifdef CUDA_GPU
+
+        // Release memory
+        mem_tmp.destroy();
+        mem_tmp.decRef();
+
+#endif
 }
+
 
 /*! \brief Initialize a global instance of Runtime Virtual Cluster Machine
  *
@@ -949,11 +959,11 @@ static inline void init_global_v_cluster_private(int *argc, char ***argv, init_o
 
 		if (rank != 0 )
 		{
-			if (global_v_cluster_private == NULL)
-			{global_v_cluster_private = new Vcluster(argc,argv,com_compute);}
+			if (global_v_cluster_private_heap == NULL)
+			{global_v_cluster_private_heap = new Vcluster<>(argc,argv,com_compute);}
 
                 	if (global_v_cluster_private_cuda == NULL)
-                	{global_v_cluster_private_cuda = new Vcluster<CudaMemory>(argc,argv,comm_compute);}
+                	{global_v_cluster_private_cuda = new Vcluster<CudaMemory>(argc,argv,com_compute);}
 		}
 		else
 		{
@@ -984,11 +994,6 @@ static inline void init_global_v_cluster_private(int *argc, char ***argv, init_o
 	}
 }
 
-static inline void delete_global_v_cluster_private()
-{
-	delete global_v_cluster_private_heap;
-	delete global_v_cluster_private_cuda;
-}
 
 template<typename Memory>
 struct get_vcl
@@ -1084,30 +1089,6 @@ static inline void openfpm_init(int *argc, char ***argv, init_options option = i
 }
 
 
-/*! \brief Finalize the library
- *
- * This function MUST be called at the end of the program
- *
- */
-static inline void openfpm_finalize()
-{
-#ifdef HAVE_PETSC
-
-	PetscFinalize();
-
-#endif
-
-	delete_global_v_cluster_private();
-	ofp_initialized = false;
-
-#ifdef CUDA_GPU
-
-	// Release memory
-	mem_tmp.destroy();
-	mem_tmp.decRef();
-
-#endif
-}
 
 
 #endif

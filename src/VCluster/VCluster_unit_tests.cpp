@@ -239,7 +239,7 @@ BOOST_AUTO_TEST_CASE( VCluster_communicator_with_external_communicator )
 
 	if (rank != 0 )
 	{
-		Vcluster v_cl(&boost::unit_test::framework::master_test_suite().argc,&boost::unit_test::framework::master_test_suite().argv,com_compute);
+		Vcluster<> v_cl(&boost::unit_test::framework::master_test_suite().argc,&boost::unit_test::framework::master_test_suite().argv,com_compute);
 		test_known<NBX>(v_cl);
 		test<NBX>(v_cl,RECEIVE_SIZE_UNKNOWN);
 	}

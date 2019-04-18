@@ -206,7 +206,7 @@ struct bcast_inte_impl
 	inline bcast_inte_impl(vect & send,
 			       openfpm::vector<MPI_Request> & req,
 			       size_t root,
-			       ext_comm)
+			       MPI_Comm ext_comm)
 	:send(send),req(req),root(root),ext_comm(ext_comm)
 	{};
 
