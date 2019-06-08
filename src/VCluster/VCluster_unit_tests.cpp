@@ -186,42 +186,160 @@ BOOST_AUTO_TEST_CASE(VCluster_bcast_complex_test)
 	test_single_all_broadcast_complex<aggregate<int,int>,HeapMemory,memory_traits_inte>(vcl);
 }
 
-BOOST_AUTO_TEST_CASE( VCluster_use_sendrecv)
+BOOST_AUTO_TEST_CASE( VCluster_use_sendrecv_short_unkn)
 {
-	std::cout << "VCluster unit test start sendrecv" << "\n";
+	std::cout << "VCluster unit test start sendrecv short unknown" << "\n";
 
 	totp_check = false;
-	test<NBX>(RECEIVE_UNKNOWN);
+	test_short<NBX>(RECEIVE_UNKNOWN);
 
-	totp_check = false;
-	test_no_send_some_peer<NBX>();
-
-	std::cout << "VCluster unit test stop sendrecv" << "\n";
+	std::cout << "VCluster unit test stop sendrecv short unknown" << "\n";
 }
 
-BOOST_AUTO_TEST_CASE( VCluster_use_sendrecv_size_known)
+BOOST_AUTO_TEST_CASE( VCluster_use_sendrecv_short_unkn_async)
 {
-	std::cout << "VCluster unit test start sendrecv known size" << "\n";
+	std::cout << "VCluster unit test start sendrecv short unknown async" << "\n";
 
 	totp_check = false;
-	test<NBX>(RECEIVE_SIZE_UNKNOWN);
+	test_short<NBX_ASYNC>(RECEIVE_UNKNOWN);
+
+	std::cout << "VCluster unit test stop sendrecv short unknown async" << "\n";
+}
+
+BOOST_AUTO_TEST_CASE( VCluster_use_sendrecv_short_unkn_async_multiple)
+{
+	std::cout << "VCluster unit test start sendrecv short unknown async multiple" << "\n";
+
+	totp_check = false;
+	test_short_multiple<NBX_ASYNC>(RECEIVE_UNKNOWN);
+
+	std::cout << "VCluster unit test stop sendrecv short unknown async multiple" << "\n";
+}
+
+BOOST_AUTO_TEST_CASE( VCluster_use_sendrecv_rand_unkn)
+{
+	std::cout << "VCluster unit test start sendrecv random unknown" << "\n";
+
+	totp_check = false;
+	test_random<NBX>(RECEIVE_UNKNOWN);
+
+	std::cout << "VCluster unit test stop sendrecv random unknown" << "\n";
+}
+
+BOOST_AUTO_TEST_CASE( VCluster_use_sendrecv_rand_unkn_async)
+{
+	std::cout << "VCluster unit test start sendrecv random unknown async" << "\n";
+
+	totp_check = false;
+	test_random<NBX_ASYNC>(RECEIVE_UNKNOWN);
+
+	std::cout << "VCluster unit test stop sendrecv random unknown async" << "\n";
+}
+
+BOOST_AUTO_TEST_CASE( VCluster_use_sendrecv_rand_unkn_async_multiple)
+{
+	std::cout << "VCluster unit test start sendrecv random unknown async" << "\n";
+
+	totp_check = false;
+	test_random_multiple<NBX_ASYNC>(RECEIVE_UNKNOWN);
+
+	std::cout << "VCluster unit test stop sendrecv random unknown async" << "\n";
+}
+
+
+BOOST_AUTO_TEST_CASE( VCluster_use_sendrecv_someempty)
+{
+	std::cout << "VCluster unit test start sendrecv some empty" << "\n";
 
 	totp_check = false;
 	test_no_send_some_peer<NBX>();
 
-	std::cout << "VCluster unit test stop sendrecv known size" << "\n";
+	std::cout << "VCluster unit test stop sendrecv some empty" << "\n";
+}
+
+BOOST_AUTO_TEST_CASE( VCluster_use_sendrecv_short_prc_known)
+{
+	std::cout << "VCluster unit test start sendrecv short known prc" << "\n";
+
+	totp_check = false;
+	test_short<NBX>(RECEIVE_SIZE_UNKNOWN);
+
+	std::cout << "VCluster unit test stop sendrecv short known prc" << "\n";
+}
+
+BOOST_AUTO_TEST_CASE( VCluster_use_sendrecv_short_prc_known_multiple)
+{
+	std::cout << "VCluster unit test start sendrecv short known prc" << "\n";
+
+	totp_check = false;
+	test_short_multiple<NBX>(RECEIVE_SIZE_UNKNOWN);
+
+	std::cout << "VCluster unit test stop sendrecv short known prc" << "\n";
+}
+
+BOOST_AUTO_TEST_CASE( VCluster_use_sendrecv_random_prc_known)
+{
+	std::cout << "VCluster unit test start sendrecv random known prc" << "\n";
+
+	totp_check = false;
+	test_random<NBX>(RECEIVE_SIZE_UNKNOWN);
+
+	std::cout << "VCluster unit test stop sendrecv random known prc" << "\n";
 }
 
 BOOST_AUTO_TEST_CASE( VCluster_use_sendrecv_known )
 {
 	std::cout << "VCluster unit test start known" << "\n";
 
-	test_known<NBX>();
+	test_known<NBX>(0);
 
 	std::cout << "VCluster unit test stop known" << "\n";
 }
 
+BOOST_AUTO_TEST_CASE( VCluster_use_sendrecv_known_async )
+{
+	std::cout << "VCluster unit test start known" << "\n";
 
+	test_known<NBX_ASYNC>(0);
+
+	std::cout << "VCluster unit test stop known" << "\n";
+}
+
+BOOST_AUTO_TEST_CASE( VCluster_use_sendrecv_known_async_multiple )
+{
+	std::cout << "VCluster unit test start known" << "\n";
+
+	test_known_multiple<NBX_ASYNC>(0);
+
+	std::cout << "VCluster unit test stop known" << "\n";
+}
+
+BOOST_AUTO_TEST_CASE( VCluster_use_sendrecv_known_prc )
+{
+	std::cout << "VCluster unit test start known prc" << "\n";
+
+	test_known<NBX>(KNOWN_PRC);
+
+	std::cout << "VCluster unit test stop known prc" << "\n";
+}
+
+BOOST_AUTO_TEST_CASE( VCluster_use_sendrecv_known_prc_async )
+{
+	std::cout << "VCluster unit test start known prc" << "\n";
+
+	test_known<NBX_ASYNC>(KNOWN_PRC);
+
+	std::cout << "VCluster unit test stop known prc" << "\n";
+}
+
+BOOST_AUTO_TEST_CASE( VCluster_use_sendrecv_known_prc_async_multiple )
+{
+	std::cout << "VCluster unit test start known prc" << "\n";
+
+	test_known_multiple<NBX_ASYNC>(KNOWN_PRC);
+
+	std::cout << "VCluster unit test stop known prc" << "\n";
+}
 
 BOOST_AUTO_TEST_SUITE_END()
 

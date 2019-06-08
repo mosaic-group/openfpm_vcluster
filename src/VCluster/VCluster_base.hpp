@@ -34,19 +34,29 @@
 #include <petscvec.h>
 #endif
 
-#define MSG_LENGTH 1024
-#define MSG_SEND_RECV 1025
-#define SEND_SPARSE 8192
-#define NONE 1
-#define NEED_ALL_SIZE 2
+enum NBX_Type
+{
+	NBX_UNACTIVE,
+	NBX_UNKNOWN,
+	NBX_KNOWN,
+	NBX_KNOWN_PRC
+};
 
-#define SERIVCE_MESSAGE_TAG 16384
-#define SEND_RECV_BASE 4096
-#define GATHER_BASE 24576
+constexpr int MSG_LENGTH = 1024;
+constexpr int MSG_SEND_RECV = 1025;
+constexpr int SEND_SPARSE = 8192;
+constexpr int NONE = 1;
+constexpr int NEED_ALL_SIZE = 2;
 
-#define RECEIVE_KNOWN 4
-#define KNOWN_ELEMENT_OR_BYTE 8
-#define MPI_GPU_DIRECT 16
+constexpr int SERIVCE_MESSAGE_TAG = 16384;
+constexpr int SEND_RECV_BASE = 4096;
+constexpr int GATHER_BASE = 24576;
+
+constexpr int RECEIVE_KNOWN = 4;
+constexpr int KNOWN_ELEMENT_OR_BYTE = 8;
+constexpr int MPI_GPU_DIRECT = 16;
+
+constexpr int NQUEUE = 4;
 
 // number of vcluster instances
 extern size_t n_vcluster;
@@ -150,10 +160,6 @@ class Vcluster_base
 	//! standard context for mgpu (if cuda is detected otherwise is unused)
 	mgpu::ofp_context_t * context;
 
-
-	// Object array
-
-
 	// Single objects
 
 	//! number of processes
@@ -163,6 +169,31 @@ class Vcluster_base
 
 	//! number of processing unit per process
 	int numPE = 1;
+
+	//////////////// NBX calls status variables ///////////////
+
+	NBX_Type NBX_active[NQUEUE];
+
+	//! request id
+	size_t rid[NQUEUE];
+
+	//! Is the barrier request reached
+	unsigned int NBX_prc_qcnt = 0;
+	bool NBX_prc_reached_bar_req[NQUEUE];
+
+	////// Status variables for NBX send with known/unknown processors
+
+	unsigned int NBX_prc_cnt_base = 0;
+	size_t NBX_prc_n_send[NQUEUE];
+	size_t * NBX_prc_prc[NQUEUE];
+	void ** NBX_prc_ptr[NQUEUE];
+	size_t * NBX_prc_sz[NQUEUE];
+	size_t NBX_prc_n_recv[NQUEUE];
+	void * (* NBX_prc_msg_alloc[NQUEUE])(size_t,size_t,size_t,size_t,size_t,size_t,void *);
+	size_t * NBX_prc_prc_recv[NQUEUE];
+	void * NBX_prc_ptr_arg[NQUEUE];
+
+	///////////////////////////////////////////////////////////
 
 	/*! This buffer is a temporal buffer for reductions
 	 *
@@ -174,10 +205,10 @@ class Vcluster_base
 	std::vector<red> r;
 
 	//! vector of pointers of send buffers
-	openfpm::vector<void *> ptr_send;
+	openfpm::vector<void *> ptr_send[NQUEUE];
 
 	//! vector of the size of send buffers
-	openfpm::vector<size_t> sz_send;
+	openfpm::vector<size_t> sz_send[NQUEUE];
 
 	//! barrier request
 	MPI_Request bar_req;
@@ -196,13 +227,44 @@ class Vcluster_base
 	:NBX_cnt(0)
 	{};
 
+	void queue_all_sends(size_t n_send , size_t sz[],
+            			 size_t prc[], void * ptr[])
+	{
+		if (stat.size() != 0 || req.size() != 0 && NBX_prc_qcnt == 0)
+		{std::cerr << "Error: " << __FILE__ << ":" << __LINE__ << " this function must be called when no other requests are in progress. Please remember that if you use function like max(),sum(),send(),recv() check that you did not miss to call the function execute() \n";}
+
+
+		if (NBX_prc_qcnt == 0)
+		{
+			stat.clear();
+			req.clear();
+			// Do MPI_Issend
+		}
+
+		for (size_t i = 0 ; i < n_send ; i++)
+		{
+			if (sz[i] != 0)
+			{
+				req.add();
+
+#ifdef SE_CLASS2
+				check_valid(ptr[i],sz[i]);
+#endif
+
+				tot_sent += sz[i];
+				MPI_SAFE_CALL(MPI_Issend(ptr[i], sz[i], MPI_BYTE, prc[i], SEND_SPARSE + (NBX_cnt + NBX_prc_qcnt)*131072 + i, MPI_COMM_WORLD,&req.last()));
+				log.logSend(prc[i]);
+			}
+		}
+	}
+
 protected:
 
 	//! Receive buffers
-	openfpm::vector_fr<BMemory<InternalMemory>> recv_buf;
+	openfpm::vector_fr<BMemory<InternalMemory>> recv_buf[NQUEUE];
 
 	//! tags receiving
-	openfpm::vector<size_t> tags;
+	openfpm::vector<size_t> tags[NQUEUE];
 
 public:
 
@@ -241,6 +303,14 @@ public:
 	Vcluster_base(int *argc, char ***argv)
 	:NBX_cnt(0)
 	{
+		// reset NBX_Active
+
+		for (unsigned int i = 0 ; i < NQUEUE ; i++)
+		{
+			NBX_active[i] = NBX_Type::NBX_UNACTIVE;
+			rid[i] = 0;
+		}
+
 #ifdef SE_CLASS2
 		check_new(this,8,VCLUSTER_EVENT,PRJ_VCLUSTER);
 #endif
@@ -491,6 +561,76 @@ public:
 		MPI_IallreduceW<T>::reduce(num,MPI_MIN,req.last());
 	}
 
+	/*! \brief In case of Asynchonous communications like sendrecvMultipleMessagesNBXAsync this function
+	 * progress the communication
+	 *
+	 *
+	 */
+	void progressCommunication()
+	{
+		MPI_Status stat_t;
+		int stat = false;
+		MPI_SAFE_CALL(MPI_Iprobe(MPI_ANY_SOURCE,MPI_ANY_TAG,MPI_COMM_WORLD,&stat,&stat_t));
+
+		// If I have an incoming message and is related to this NBX communication
+		if (stat == true)
+		{
+			unsigned int i = (stat_t.MPI_TAG - SEND_SPARSE) / 131072 - NBX_prc_cnt_base;
+
+			if (i >= NQUEUE || NBX_active[i] == NBX_Type::NBX_UNACTIVE || NBX_active[i] == NBX_Type::NBX_KNOWN)
+			{return;}
+
+			int msize;
+
+			// Get the message tag and size
+			MPI_SAFE_CALL(MPI_Get_count(&stat_t,MPI_BYTE,&msize));
+
+			// Ok we check if the TAG come from one of our send TAG
+			if (stat_t.MPI_TAG >= (int)(SEND_SPARSE + NBX_prc_cnt_base*131072) && stat_t.MPI_TAG < (int)(SEND_SPARSE + (NBX_prc_cnt_base + NBX_prc_qcnt + 1)*131072))
+			{
+				// Get the pointer to receive the message
+				void * ptr = this->NBX_prc_msg_alloc[i](msize,0,0,stat_t.MPI_SOURCE,rid[i],stat_t.MPI_TAG,this->NBX_prc_ptr_arg[i]);
+
+				// Log the receiving request
+				log.logRecv(stat_t);
+
+				rid[i]++;
+
+				// Check the pointer
+#ifdef SE_CLASS2
+				check_valid(ptr,msize);
+#endif
+				tot_recv += msize;
+				MPI_SAFE_CALL(MPI_Recv(ptr,msize,MPI_BYTE,stat_t.MPI_SOURCE,stat_t.MPI_TAG,MPI_COMM_WORLD,&stat_t));
+
+#ifdef SE_CLASS2
+				check_valid(ptr,msize);
+#endif
+			}
+		}
+
+		// Check the status of all the MPI_issend and call the barrier if finished
+
+		for (unsigned int i = 0 ; i < NQUEUE ; i++)
+		{
+			if (i >= NQUEUE || NBX_active[i] == NBX_Type::NBX_UNACTIVE || NBX_active[i] == NBX_Type::NBX_KNOWN || NBX_active[i] == NBX_Type::NBX_KNOWN_PRC)
+			{continue;}
+
+			if (NBX_prc_reached_bar_req[i] == false)
+			{
+				int flag = false;
+				if (req.size() != 0)
+				{MPI_SAFE_CALL(MPI_Testall(req.size(),&req.get(0),&flag,MPI_STATUSES_IGNORE));}
+				else
+				{flag = true;}
+
+				// If all send has been completed
+				if (flag == true)
+				{MPI_SAFE_CALL(MPI_Ibarrier(MPI_COMM_WORLD,&bar_req));NBX_prc_reached_bar_req[i] = true;}
+			}
+		}
+	}
+
 	/*! \brief Send and receive multiple messages
 	 *
 	 * It send multiple messages to a set of processors the and receive
@@ -536,7 +676,7 @@ public:
 	 */
 	template<typename T> void sendrecvMultipleMessagesNBX(openfpm::vector< size_t > & prc,
 			                                              openfpm::vector< T > & data,
-														  openfpm::vector< size_t > prc_recv,
+														  openfpm::vector< size_t > & prc_recv,
 														  openfpm::vector< size_t > & recv_sz ,
 														  void * (* msg_alloc)(size_t,size_t,size_t,size_t,size_t,size_t,void *),
 														  void * ptr_arg,
@@ -560,6 +700,80 @@ public:
 		NBX_cnt = (NBX_cnt + 1) % 2048;
 	}
 
+	/*! \brief Send and receive multiple messages asynchronous version
+	 *
+	 * It send multiple messages to a set of processors the and receive
+	 * multiple messages from another set of processors, all the processor must call this
+	 * function. In this particular case the receiver know from which processor is going
+	 * to receive.
+	 *
+	 *
+	 * suppose the following situation the calling processor want to communicate
+	 * * 2 messages of size 100 byte to processor 1
+	 * * 1 message of size 50 byte to processor 6
+	 * * 1 message of size 48 byte to processor 7
+	 * * 1 message of size 70 byte to processor 8
+	 *
+	 *
+	 * \param prc list of processor with which it should communicate
+	 *        [1,1,6,7,8]
+	 *
+	 * \param data data to send for each processors in contain a pointer to some type T
+	 *        this type T must have a method size() that return the size of the data-structure
+	 *
+	 * \param prc_recv processor that receive data
+	 *
+	 * \param recv_sz for each processor indicate the size of the data received
+	 *
+	 * \param msg_alloc This is a call-back with the purpose of allocate space
+	 *        for the incoming message and give back a valid pointer, supposing that this call-back has been triggered by
+	 *        the processor of id 5 that want to communicate with me a message of size 100 byte the call-back will have
+	 *        the following 6 parameters
+	 *        in the call-back are in order:
+	 *        * message size required to receive the message [100]
+	 *        * total message size to receive from all the processors (NBX does not provide this information)
+	 *        * the total number of processor want to communicate with you (NBX does not provide this information)
+	 *        * processor id [5]
+	 *        * ri request id (it is an id that goes from 0 to total_p, and is incremented
+	 *           every time message_alloc is called)
+	 *        * void pointer, parameter for additional data to pass to the call-back
+	 *
+	 * \param ptr_arg data passed to the call-back function specified
+	 *
+	 * \param opt options, NONE (ignored in this moment)
+	 *
+	 */
+	template<typename T> void sendrecvMultipleMessagesNBXAsync(openfpm::vector< size_t > & prc,
+			                                              openfpm::vector< T > & data,
+														  openfpm::vector< size_t > & prc_recv,
+														  openfpm::vector< size_t > & recv_sz ,
+														  void * (* msg_alloc)(size_t,size_t,size_t,size_t,size_t,size_t,void *),
+														  void * ptr_arg,
+														  long int opt=NONE)
+	{
+		if (NBX_prc_qcnt >= NQUEUE)
+		{
+			std::cout << __FILE__ << ":" << __LINE__ << " error you can queue at most " << NQUEUE << " asychronous communication functions " << std::endl;
+			return;
+		}
+
+		// Allocate the buffers
+
+		for (size_t i = 0 ; i < prc.size() ; i++)
+		{send(prc.get(i),SEND_SPARSE + NBX_cnt*131072,data.get(i).getPointer(),data.get(i).size());}
+
+		for (size_t i = 0 ; i < prc_recv.size() ; i++)
+		{
+			void * ptr_recv = msg_alloc(recv_sz.get(i),0,0,prc_recv.get(i),i,SEND_SPARSE + NBX_cnt*131072,ptr_arg);
+
+			recv(prc_recv.get(i),SEND_SPARSE + NBX_cnt*131072,ptr_recv,recv_sz.get(i));
+		}
+
+		NBX_active[NBX_prc_qcnt] = NBX_Type::NBX_KNOWN;
+		if (NBX_prc_qcnt == 0)
+		{NBX_prc_cnt_base = NBX_cnt;}
+		NBX_prc_qcnt++;
+	}
 
 	/*! \brief Send and receive multiple messages
 	 *
@@ -606,16 +820,77 @@ public:
 		checkType<typename T::value_type>();
 #endif
 		// resize the pointer list
-		ptr_send.resize(prc.size());
-		sz_send.resize(prc.size());
+		ptr_send[NBX_prc_qcnt].resize(prc.size());
+		sz_send[NBX_prc_qcnt].resize(prc.size());
 
 		for (size_t i = 0 ; i < prc.size() ; i++)
 		{
-			ptr_send.get(i) = data.get(i).getPointer();
-			sz_send.get(i) = data.get(i).size() * sizeof(typename T::value_type);
+			ptr_send[NBX_prc_qcnt].get(i) = data.get(i).getPointer();
+			sz_send[NBX_prc_qcnt].get(i) = data.get(i).size() * sizeof(typename T::value_type);
 		}
 
-		sendrecvMultipleMessagesNBX(prc.size(),(size_t *)sz_send.getPointer(),(size_t *)prc.getPointer(),(void **)ptr_send.getPointer(),msg_alloc,ptr_arg,opt);
+		sendrecvMultipleMessagesNBX(prc.size(),(size_t *)sz_send[NBX_prc_qcnt].getPointer(),(size_t *)prc.getPointer(),(void **)ptr_send[NBX_prc_qcnt].getPointer(),msg_alloc,ptr_arg,opt);
+	}
+
+	/*! \brief Send and receive multiple messages asynchronous version
+	 *
+	 * This is the Asynchronous version of Send and receive NBX. This call return immediately, use
+	 * sendrecvMultipleMessagesNBXWait to synchronize. Optionally you can use the function progress_communication
+	 * to move on the communication
+	 *
+	 * It send multiple messages to a set of processors the and receive
+	 * multiple messages from another set of processors, all the processor must call this
+	 * function
+	 *
+	 * suppose the following situation the calling processor want to communicate
+	 * * 2 vector of 100 integers to processor 1
+	 * * 1 vector of 50 integers to processor 6
+	 * * 1 vector of 48 integers to processor 7
+	 * * 1 vector of 70 integers to processor 8
+	 *
+	 * \param prc list of processors you should communicate with [1,1,6,7,8]
+	 *
+	 * \param data vector containing the data to send [v=vector<vector<int>>, v.size()=4, T=vector<int>], T at the moment
+	 *          is only tested for vectors of 0 or more generic elements (without pointers)
+	 *
+	 * \param msg_alloc This is a call-back with the purpose to allocate space
+	 *        for the incoming messages and give back a valid pointer, supposing that this call-back has been triggered by
+	 *        the processor of id 5 that want to communicate with me a message of size 100 byte the call-back will have
+	 *        the following 6 parameters
+	 *        in the call-back in order:
+	 *        * message size required to receive the message (100)
+	 *        * total message size to receive from all the processors (NBX does not provide this information)
+	 *        * the total number of processor want to communicate with you (NBX does not provide this information)
+	 *        * processor id (5)
+	 *        * ri request id (it is an id that goes from 0 to total_p, and is incremented
+	 *           every time message_alloc is called)
+	 *        * void pointer, parameter for additional data to pass to the call-back
+	 *
+	 * \param ptr_arg data passed to the call-back function specified
+	 *
+	 * \param opt options, only NONE supported
+	 *
+	 */
+	template<typename T>
+	void sendrecvMultipleMessagesNBXAsync(openfpm::vector< size_t > & prc,
+									 openfpm::vector< T > & data,
+									 void * (* msg_alloc)(size_t,size_t,size_t,size_t,size_t,size_t,void *),
+									 void * ptr_arg, long int opt=NONE)
+	{
+#ifdef SE_CLASS1
+		checkType<typename T::value_type>();
+#endif
+		// resize the pointer list
+		ptr_send[NBX_prc_qcnt].resize(prc.size());
+		sz_send[NBX_prc_qcnt].resize(prc.size());
+
+		for (size_t i = 0 ; i < prc.size() ; i++)
+		{
+			ptr_send[NBX_prc_qcnt].get(i) = data.get(i).getPointer();
+			sz_send[NBX_prc_qcnt].get(i) = data.get(i).size() * sizeof(typename T::value_type);
+		}
+
+		sendrecvMultipleMessagesNBXAsync(prc.size(),(size_t *)sz_send[NBX_prc_qcnt].getPointer(),(size_t *)prc.getPointer(),(void **)ptr_send[NBX_prc_qcnt].getPointer(),msg_alloc,ptr_arg,opt);
 	}
 
 	/*! \brief Send and receive multiple messages
@@ -683,6 +958,79 @@ public:
 
 		// Circular counter
 		NBX_cnt = (NBX_cnt + 1) % 2048;
+	}
+
+	/*! \brief Send and receive multiple messages asynchronous version
+	 *
+	 * It send multiple messages to a set of processors the and receive
+	 * multiple messages from another set of processors, all the processor must call this
+	 * function. In this particular case the receiver know from which processor is going
+	 * to receive.
+	 *
+	 * \warning this function only work with one send for each processor
+	 *
+	 * suppose the following situation the calling processor want to communicate
+	 * * 2 messages of size 100 byte to processor 1
+	 * * 1 message of size 50 byte to processor 6
+	 * * 1 message of size 48 byte to processor 7
+	 * * 1 message of size 70 byte to processor 8
+	 *
+	 * \param n_send number of send for this processor [4]
+	 *
+	 * \param prc list of processor with which it should communicate
+	 *        [1,1,6,7,8]
+	 *
+	 * \param sz the array contain the size of the message for each processor
+	 *        (zeros must not be presents) [100,100,50,48,70]
+	 *
+	 * \param ptr array that contain the pointers to the message to send
+	 *
+	 * \param msg_alloc This is a call-back with the purpose of allocate space
+	 *        for the incoming message and give back a valid pointer, supposing that this call-back has been triggered by
+	 *        the processor of id 5 that want to communicate with me a message of size 100 byte the call-back will have
+	 *        the following 6 parameters
+	 *        in the call-back are in order:
+	 *        * message size required to receive the message [100]
+	 *        * total message size to receive from all the processors (NBX does not provide this information)
+	 *        * the total number of processor want to communicate with you (NBX does not provide this information)
+	 *        * processor id [5]
+	 *        * ri request id (it is an id that goes from 0 to total_p, and is incremented
+	 *           every time message_alloc is called)
+	 *        * void pointer, parameter for additional data to pass to the call-back
+	 *
+	 * \param ptr_arg data passed to the call-back function specified
+	 *
+	 * \param opt options, NONE (ignored in this moment)
+	 *
+	 */
+	void sendrecvMultipleMessagesNBXAsync(size_t n_send , size_t sz[],
+			                         size_t prc[] , void * ptr[],
+			                         size_t n_recv, size_t prc_recv[] ,
+			                         size_t sz_recv[] ,void * (* msg_alloc)(size_t,size_t,size_t,size_t,size_t, size_t,void *),
+			                         void * ptr_arg, long int opt=NONE)
+	{
+		if (NBX_prc_qcnt >= NQUEUE)
+		{
+			std::cout << __FILE__ << ":" << __LINE__ << " error you can queue at most " << NQUEUE << " asychronous communication functions " << std::endl;
+			return;
+		}
+
+		// Allocate the buffers
+
+		for (size_t i = 0 ; i < n_send ; i++)
+		{send(prc[i],SEND_SPARSE + NBX_cnt*131072,ptr[i],sz[i]);}
+
+		for (size_t i = 0 ; i < n_recv ; i++)
+		{
+			void * ptr_recv = msg_alloc(sz_recv[i],0,0,prc_recv[i],i,SEND_SPARSE + NBX_cnt*131072,ptr_arg);
+
+			recv(prc_recv[i],SEND_SPARSE + NBX_cnt*131072,ptr_recv,sz_recv[i]);
+		}
+
+		NBX_active[NBX_prc_qcnt] = NBX_Type::NBX_KNOWN;
+		if (NBX_prc_qcnt == 0)
+		{NBX_prc_cnt_base = NBX_cnt;}
+		NBX_prc_qcnt++;
 	}
 
 	openfpm::vector<size_t> sz_recv_tmp;
@@ -767,6 +1115,86 @@ public:
 		NBX_cnt = (NBX_cnt + 1) % 2048;
 	}
 
+	/*! \brief Send and receive multiple messages asynchronous version
+	 *
+	 * It send multiple messages to a set of processors the and receive
+	 * multiple messages from another set of processors, all the processor must call this
+	 * function. In this particular case the receiver know from which processor is going
+	 * to receive, but does not know the size.
+	 *
+	 *
+	 * suppose the following situation the calling processor want to communicate
+	 * * 2 messages of size 100 byte to processor 1
+	 * * 1 message of size 50 byte to processor 6
+	 * * 1 message of size 48 byte to processor 7
+	 * * 1 message of size 70 byte to processor 8
+	 *
+	 * \param n_send number of send for this processor [4]
+	 *
+	 * \param prc list of processor with which it should communicate
+	 *        [1,1,6,7,8]
+	 *
+	 * \param sz the array contain the size of the message for each processor
+	 *        (zeros must not be presents) [100,100,50,48,70]
+	 *
+	 * \param ptr array that contain the pointers to the message to send
+	 *
+	 * \param msg_alloc This is a call-back with the purpose of allocate space
+	 *        for the incoming message and give back a valid pointer, supposing that this call-back has been triggered by
+	 *        the processor of id 5 that want to communicate with me a message of size 100 byte the call-back will have
+	 *        the following 6 parameters
+	 *        in the call-back are in order:
+	 *        * message size required to receive the message [100]
+	 *        * total message size to receive from all the processors (NBX does not provide this information)
+	 *        * the total number of processor want to communicate with you (NBX does not provide this information)
+	 *        * processor id [5]
+	 *        * ri request id (it is an id that goes from 0 to total_p, and is incremented
+	 *           every time message_alloc is called)
+	 *        * void pointer, parameter for additional data to pass to the call-back
+	 *
+	 * \param ptr_arg data passed to the call-back function specified
+	 *
+	 * \param opt options, NONE (ignored in this moment)
+	 *
+	 */
+	void sendrecvMultipleMessagesNBXAsync(size_t n_send , size_t sz[], size_t prc[] ,
+									 void * ptr[], size_t n_recv, size_t prc_recv[] ,
+									 void * (* msg_alloc)(size_t,size_t,size_t,size_t,size_t,size_t,void *),
+									 void * ptr_arg, long int opt=NONE)
+	{
+		if (NBX_prc_qcnt >= NQUEUE)
+		{
+			std::cout << __FILE__ << ":" << __LINE__ << " error you can queue at most " << NQUEUE << " asychronous communication functions " << std::endl;
+			return;
+		}
+
+		sz_recv_tmp.resize(n_recv);
+
+		// First we understand the receive size for each processor
+
+		for (size_t i = 0 ; i < n_send ; i++)
+		{send(prc[i],SEND_SPARSE + NBX_cnt*131072,&sz[i],sizeof(size_t));}
+
+		for (size_t i = 0 ; i < n_recv ; i++)
+		{recv(prc_recv[i],SEND_SPARSE + NBX_cnt*131072,&sz_recv_tmp.get(i),sizeof(size_t));}
+
+		////// Save all the status variables
+
+		NBX_prc_n_send[NBX_prc_qcnt] = n_send;
+		NBX_prc_prc[NBX_prc_qcnt] = prc;
+		NBX_prc_ptr[NBX_prc_qcnt] = ptr;
+		NBX_prc_sz[NBX_prc_qcnt] = sz;
+		NBX_prc_n_recv[NBX_prc_qcnt] = n_recv;
+		NBX_prc_prc_recv[NBX_prc_qcnt] = prc_recv;
+		NBX_prc_msg_alloc[NBX_prc_qcnt] = msg_alloc;
+		NBX_prc_ptr_arg[NBX_prc_qcnt] = ptr_arg;
+
+		NBX_active[NBX_prc_qcnt] = NBX_Type::NBX_KNOWN_PRC;
+		if (NBX_prc_qcnt == 0)
+		{NBX_prc_cnt_base = NBX_cnt;}
+		NBX_prc_qcnt++;
+	}
+
 	/*! \brief Send and receive multiple messages
 	 *
 	 * It send multiple messages to a set of processors the and receive
@@ -812,101 +1240,37 @@ public:
 			                         void * (* msg_alloc)(size_t,size_t,size_t,size_t,size_t,size_t,void *),
 			                         void * ptr_arg, long int opt = NONE)
 	{
-		if (stat.size() != 0 || req.size() != 0)
-			std::cerr << "Error: " << __FILE__ << ":" << __LINE__ << " this function must be called when no other requests are in progress. Please remember that if you use function like max(),sum(),send(),recv() check that you did not miss to call the function execute() \n";
-
-
-		stat.clear();
-		req.clear();
-		// Do MPI_Issend
-
-		for (size_t i = 0 ; i < n_send ; i++)
+		if (NBX_prc_qcnt != 0)
 		{
-			if (sz[i] != 0)
-			{
-				req.add();
-
-#ifdef SE_CLASS2
-				check_valid(ptr[i],sz[i]);
-#endif
-
-				tot_sent += sz[i];
-				MPI_SAFE_CALL(MPI_Issend(ptr[i], sz[i], MPI_BYTE, prc[i], SEND_SPARSE + NBX_cnt*131072 + i, MPI_COMM_WORLD,&req.last()));
-				log.logSend(prc[i]);
-			}
+			std::cout << __FILE__ << ":" << __LINE__ << " error there are some asynchronous call running you have to complete them before go back to synchronous" << std::endl;
+			return;
 		}
 
-		size_t rid = 0;
+		queue_all_sends(n_send,sz,prc,ptr);
+
+		this->NBX_prc_ptr_arg[NBX_prc_qcnt] = ptr_arg;
+		this->NBX_prc_msg_alloc[NBX_prc_qcnt] = msg_alloc;
+
+		rid[NBX_prc_qcnt] = 0;
 		int flag = false;
 
-		bool reached_bar_req = false;
+		NBX_prc_reached_bar_req[NBX_prc_qcnt] = false;
+		NBX_active[NBX_prc_qcnt] = NBX_Type::NBX_UNKNOWN;
+		NBX_prc_cnt_base = NBX_cnt;
 
 		log.start(10);
 
 		// Wait that all the send are acknowledge
 		do
 		{
-
-			// flag that notify that this processor reach the barrier
-			// Barrier request
-
-			MPI_Status stat_t;
-			int stat = false;
-			MPI_SAFE_CALL(MPI_Iprobe(MPI_ANY_SOURCE,MPI_ANY_TAG/*SEND_SPARSE + NBX_cnt*/,MPI_COMM_WORLD,&stat,&stat_t));
-
-			// If I have an incoming message and is related to this NBX communication
-			if (stat == true)
-			{
-				int msize;
-
-				// Get the message tag and size
-				MPI_SAFE_CALL(MPI_Get_count(&stat_t,MPI_BYTE,&msize));
-
-				// Ok we check if the TAG come from one of our send TAG
-				if (stat_t.MPI_TAG >= (int)(SEND_SPARSE + NBX_cnt*131072) && stat_t.MPI_TAG < (int)(SEND_SPARSE + (NBX_cnt + 1)*131072))
-				{
-					// Get the pointer to receive the message
-					void * ptr = msg_alloc(msize,0,0,stat_t.MPI_SOURCE,rid,stat_t.MPI_TAG,ptr_arg);
-
-					// Log the receiving request
-					log.logRecv(stat_t);
-
-					rid++;
-
-					// Check the pointer
-#ifdef SE_CLASS2
-					check_valid(ptr,msize);
-#endif
-					tot_recv += msize;
-					MPI_SAFE_CALL(MPI_Recv(ptr,msize,MPI_BYTE,stat_t.MPI_SOURCE,stat_t.MPI_TAG,MPI_COMM_WORLD,&stat_t));
-
-#ifdef SE_CLASS2
-					check_valid(ptr,msize);
-#endif
-				}
-			}
-
-			// Check the status of all the MPI_issend and call the barrier if finished
-
-			if (reached_bar_req == false)
-			{
-				int flag = false;
-				if (req.size() != 0)
-				{MPI_SAFE_CALL(MPI_Testall(req.size(),&req.get(0),&flag,MPI_STATUSES_IGNORE));}
-				else
-					flag = true;
-
-				// If all send has been completed
-				if (flag == true)
-				{MPI_SAFE_CALL(MPI_Ibarrier(MPI_COMM_WORLD,&bar_req));reached_bar_req = true;}
-			}
+			progressCommunication();
 
 			// Check if all processor reached the async barrier
-			if (reached_bar_req)
+			if (NBX_prc_reached_bar_req[NBX_prc_qcnt])
 			{MPI_SAFE_CALL(MPI_Test(&bar_req,&flag,&bar_stat))};
 
 			// produce a report if communication get stuck
-			log.NBXreport(NBX_cnt,req,reached_bar_req,bar_stat);
+			log.NBXreport(NBX_cnt,req,NBX_prc_reached_bar_req[NBX_prc_qcnt],bar_stat);
 
 		} while (flag == false);
 
@@ -918,6 +1282,149 @@ public:
 
 		// Circular counter
 		NBX_cnt = (NBX_cnt + 1) % 2048;
+	}
+
+	/*! \brief Send and receive multiple messages Asynchronous version
+	 *
+	 * This is the Asynchronous version of Send and receive NBX. This call return immediately, use
+	 * sendrecvMultipleMessagesNBXWait to synchronize. Optionally you can use the function progress_communication
+	 * to move on the communication
+	 *
+	 * It send multiple messages to a set of processors the and receive
+	 * multiple messages from another set of processors, all the processor must call this
+	 * function
+	 *
+	 * suppose the following situation the calling processor want to communicate
+	 * * 2 messages of size 100 byte to processor 1
+	 * * 1 message of size 50 byte to processor 6
+	 * * 1 message of size 48 byte to processor 7
+	 * * 1 message of size 70 byte to processor 8
+	 *
+	 * \param n_send number of send for this processor [4]
+	 *
+	 * \param prc list of processor with which it should communicate
+	 *        [1,1,6,7,8]
+	 *
+	 * \param sz the array contain the size of the message for each processor
+	 *        (zeros must not be presents) [100,100,50,48,70]
+	 *
+	 * \param ptr array that contain the pointers to the message to send
+	 *
+	 * \param msg_alloc This is a call-back with the purpose of allocate space
+	 *        for the incoming message and give back a valid pointer, supposing that this call-back has been triggered by
+	 *        the processor of id 5 that want to communicate with me a message of size 100 byte the call-back will have
+	 *        the following 6 parameters
+	 *        in the call-back are in order:
+	 *        * message size required to receive the message [100]
+	 *        * total message size to receive from all the processors (NBX does not provide this information)
+	 *        * the total number of processor want to communicate with you (NBX does not provide this information)
+	 *        * processor id [5]
+	 *        * ri request id (it is an id that goes from 0 to total_p, and is incremented
+	 *           every time message_alloc is called)
+	 *        * void pointer, parameter for additional data to pass to the call-back
+	 *
+	 * \param ptr_arg data passed to the call-back function specified
+	 *
+	 * \param opt options, NONE (ignored in this moment)
+	 *
+	 */
+	void sendrecvMultipleMessagesNBXAsync(size_t n_send , size_t sz[],
+			                         size_t prc[] , void * ptr[],
+			                         void * (* msg_alloc)(size_t,size_t,size_t,size_t,size_t,size_t,void *),
+			                         void * ptr_arg, long int opt = NONE)
+	{
+		queue_all_sends(n_send,sz,prc,ptr);
+
+		this->NBX_prc_ptr_arg[NBX_prc_qcnt] = ptr_arg;
+		this->NBX_prc_msg_alloc[NBX_prc_qcnt] = msg_alloc;
+
+		rid[NBX_prc_qcnt] = 0;
+
+		NBX_prc_reached_bar_req[NBX_prc_qcnt] = false;
+		NBX_active[NBX_prc_qcnt] = NBX_Type::NBX_UNKNOWN;
+
+		log.start(10);
+		if (NBX_prc_qcnt == 0)
+		{NBX_prc_cnt_base = NBX_cnt;}
+		NBX_prc_qcnt++;
+
+		return;
+	}
+
+	/*! \brief Send and receive multiple messages wait NBX communication to complete
+	 *
+	 *
+	 */
+	void sendrecvMultipleMessagesNBXWait()
+	{
+		for (unsigned int j = 0 ; j < NQUEUE ; j++)
+		{
+			if (NBX_active[j] == NBX_Type::NBX_UNACTIVE)
+			{continue;}
+
+			if (NBX_active[j] == NBX_Type::NBX_KNOWN_PRC)
+			{
+				execute();
+
+				// Circular counter
+				NBX_cnt = (NBX_cnt + 1) % 2048;
+
+				// Allocate the buffers
+
+				for (size_t i = 0 ; i < NBX_prc_n_send[j] ; i++)
+				{send(NBX_prc_prc[j][i],SEND_SPARSE + NBX_cnt*131072,NBX_prc_ptr[j][i],NBX_prc_sz[j][i]);}
+
+				for (size_t i = 0 ; i < NBX_prc_n_recv[j] ; i++)
+				{
+					void * ptr_recv = NBX_prc_msg_alloc[j](sz_recv_tmp.get(i),0,0,NBX_prc_prc_recv[j][i],i,0,this->NBX_prc_ptr_arg[j]);
+
+					recv(NBX_prc_prc_recv[j][i],SEND_SPARSE + NBX_cnt*131072,ptr_recv,sz_recv_tmp.get(i));
+				}
+
+				NBX_active[j] = NBX_Type::NBX_KNOWN;
+			}
+
+			if (NBX_active[j] == NBX_Type::NBX_KNOWN)
+			{
+				execute();
+
+				// Circular counter
+				NBX_cnt = (NBX_cnt + 1) % 2048;
+				NBX_active[j] = NBX_Type::NBX_UNACTIVE;
+
+				continue;
+			}
+
+			int flag = false;
+
+			// Wait that all the send are acknowledge
+			do
+			{
+				progressCommunication();
+
+				// Check if all processor reached the async barrier
+				if (NBX_prc_reached_bar_req[j])
+				{MPI_SAFE_CALL(MPI_Test(&bar_req,&flag,&bar_stat))};
+
+				// produce a report if communication get stuck
+				log.NBXreport(NBX_cnt,req,NBX_prc_reached_bar_req[j],bar_stat);
+
+			} while (flag == false);
+
+			// Remove the executed request
+
+			req.clear();
+			stat.clear();
+			log.clear();
+
+			// Circular counter
+			NBX_cnt = (NBX_cnt + 1) % 2048;
+			NBX_active[j] = NBX_Type::NBX_UNACTIVE;
+
+		}
+
+		NBX_prc_qcnt = 0;
+		return;
 	}
 
 	/*! \brief Send data to a processor
@@ -1133,7 +1640,8 @@ public:
 	 */
 	void clear()
 	{
-		recv_buf.clear();
+		for (size_t i = 0 ; i < NQUEUE ; i++)
+		{recv_buf[i].clear();}
 	}
 };
 

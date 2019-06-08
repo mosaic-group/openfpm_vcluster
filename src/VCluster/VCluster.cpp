@@ -29,6 +29,9 @@ std::string program_name;
 
 CudaMemory mem_tmp;
 
+CudaMemory exp_tmp;
+CudaMemory exp_tmp2;
+
 #endif
 
 // Segmentation fault signal handler

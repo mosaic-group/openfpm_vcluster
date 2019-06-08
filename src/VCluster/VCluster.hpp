@@ -16,6 +16,10 @@
 
 #ifdef CUDA_GPU
 extern CudaMemory mem_tmp;
+
+extern CudaMemory exp_tmp;
+extern CudaMemory exp_tmp2;
+
 #endif
 
 void bt_sighandler(int sig, siginfo_t * info, void * ctx);
@@ -42,6 +46,69 @@ void bt_sighandler(int sig, siginfo_t * info, void * ctx);
 template<typename InternalMemory = HeapMemory>
 class Vcluster: public Vcluster_base<InternalMemory>
 {
+	// Internal memory
+	ExtPreAlloc<HeapMemory> * mem[NQUEUE];
+
+	// Buffer that store the received bytes
+	openfpm::vector<size_t> sz_recv_byte[NQUEUE];
+
+	// The sending buffer used by semantic calls
+	openfpm::vector<const void *> send_buf;
+	openfpm::vector<size_t> send_sz_byte;
+	openfpm::vector<size_t> prc_send_;
+
+	unsigned int NBX_prc_scnt = 0;
+	unsigned int NBX_prc_pcnt = 0;
+
+	///////////////////////
+
+	// Internal Heap memory
+	HeapMemory * pmem[NQUEUE];
+
+	/*! \brief Base info
+	 *
+	 * \param recv_buf receive buffers
+	 * \param prc processors involved
+	 * \param size of the received data
+	 *
+	 */
+	template<typename Memory>
+	struct base_info
+	{
+		//! Receive buffer
+		openfpm::vector_fr<BMemory<Memory>> * recv_buf;
+		//! receiving processor list
+		openfpm::vector<size_t> * prc;
+		//! size of each message
+		openfpm::vector<size_t> * sz;
+		//! tags
+		openfpm::vector<size_t> * tags;
+
+		//! options
+		size_t opt;
+
+		//! default constructor
+		base_info()
+		{}
+
+		//! constructor
+		base_info(openfpm::vector_fr<BMemory<Memory>> * recv_buf, openfpm::vector<size_t> & prc, openfpm::vector<size_t> & sz, openfpm::vector<size_t> & tags,size_t opt)
+		:recv_buf(recv_buf),prc(&prc),sz(&sz),tags(&tags),opt(opt)
+		{}
+
+		void set(openfpm::vector_fr<BMemory<Memory>> * recv_buf, openfpm::vector<size_t> & prc, openfpm::vector<size_t> & sz, openfpm::vector<size_t> & tags,size_t opt)
+		{
+			this->recv_buf = recv_buf;
+			this->prc = &prc;
+			this->sz = &sz;
+			this->tags = &tags;
+			this->opt = opt;
+		}
+	};
+
+	// Internal temporaty buffer
+	base_info<InternalMemory> NBX_prc_bi[NQUEUE];
+
 	typedef Vcluster_base<InternalMemory> self_base;
 
 	template<typename T>
@@ -89,14 +156,15 @@ class Vcluster: public Vcluster_base<InternalMemory>
 	 * \param opt Options using RECEIVE_KNOWN enable patters with less latencies, in case of RECEIVE_KNOWN
 	 *
 	 */
-	template<typename op, typename T, typename S, template <typename> class layout_base> void prepare_send_buffer(openfpm::vector<T> & send,
-			                                                               S & recv,
-																		   openfpm::vector<size_t> & prc_send,
-																		   openfpm::vector<size_t> & prc_recv,
-																		   openfpm::vector<size_t> & sz_recv,
-																		   size_t opt)
+	template<typename op, typename T, typename S, template <typename> class layout_base>
+	void prepare_send_buffer(openfpm::vector<T> & send,
+			                 S & recv,
+							 openfpm::vector<size_t> & prc_send,
+						     openfpm::vector<size_t> & prc_recv,
+							 openfpm::vector<size_t> & sz_recv,
+							 size_t opt)
 	{
-		openfpm::vector<size_t> sz_recv_byte(sz_recv.size());
+		sz_recv_byte[NBX_prc_scnt].resize(sz_recv.size());
 
 		// Reset the receive buffer
 		reset_recv_buf();
@@ -109,9 +177,9 @@ class Vcluster: public Vcluster_base<InternalMemory>
 	#endif
 
 		// Prepare the sending buffer
-		openfpm::vector<const void *> send_buf;
-		openfpm::vector<size_t> send_sz_byte;
-		openfpm::vector<size_t> prc_send_;
+		send_buf.resize(0);
+		send_sz_byte.resize(0);
+		prc_send_.resize(0);
 
 		size_t tot_size = 0;
 
@@ -126,10 +194,40 @@ class Vcluster: public Vcluster_base<InternalMemory>
 
 		pack_unpack_cond_with_prp_inte_lin<T>::construct_prc(prc_send,prc_send_);
 
-		HeapMemory pmem;
+		//////// A question can raise on why we use HeapMemory instead of more generally InternalMemory for pmem
+		////////
+		//////// First we have consider that this HeapMemory is used to pack complex objects like a vector/container
+		//////// of objects where the object contain pointers (is not a POD object).
+		//////// In case the object is a POD pmem it is defined but never used. On a general base we can easily change
+		//////// the code to use the general InternalMemory instead of HeapMemory, so that if we have a container defined
+		//////// on cuda memory, we can serialize on Cuda directly. Unfortunately this concept crash on the requirement
+		//////// that you need kernels/device code able to serialize containers of non POD object like a vector of vector
+		//////// or more complex stuff. At the moment this is not the case, and probably unlikely to happen, most probably
+		//////// code like this is CPU only. So it does not sound practical go beyond HeapMemory and impose container with
+		//////// accelerated serializers for non-POD objects. (Relaxing the constrain saying in case
+		//////// accelerated serializers for non-POD objects are not implemented create a stub that print error messages, still
+		//////// does not sound very practical, at least not for now because of lack of cases)
+		//////// Also to note that because pmem is used only in complex serialization, this
+		//////// does not effect GPU RDMA in case of the containers of primitives with ready device pointer to send and when the
+		//////// MPI_GPU_DIRECT option is used.
+		////////
+		//////// Another point to notice is that if we have kernels able to serialize containers of non-POD object
+		//////// or complex containers on accelerator we can use the approach of grid_dist_id in which semantic Send and Receive
+		//////// are not used. Serialization is operated inside the grid_dist_id structure, and the serialized buffer
+		//////// are sent using low level sends primitives. Same concept for the de-serialization, and so this function is
+		//////// not even called. grid_dist_id require some flexibility that the semantic send and receive are not able to give.
+		////////
+		//////// And so ... here is also another trade-off, at the moment there is not much will to potentially complicate
+		//////// even more the semantic send and receive. They already have to handle a lot of cases. if you need more flexibility
+		//////// go one step below use the serialization functions of the data-structures directly and use low level send
+		//////// and receive to send these buffers. Semantic send and receive are not for you.
+		////////
+		////////
 
-		ExtPreAlloc<HeapMemory> & mem = *(new ExtPreAlloc<HeapMemory>(tot_size,pmem));
-		mem.incRef();
+		pmem[NBX_prc_scnt] = new HeapMemory;
+
+		mem[NBX_prc_scnt] = new ExtPreAlloc<HeapMemory>(tot_size,*pmem[NBX_prc_scnt]);
+		mem[NBX_prc_scnt]->incRef();
 
 		for (size_t i = 0; i < send.size() ; i++)
 		{
@@ -137,11 +235,11 @@ class Vcluster: public Vcluster_base<InternalMemory>
 
 			Pack_stat sts;
 
-			pack_unpack_cond_with_prp<has_max_prop<T, has_value_type<T>::value>::value, op, T, S, layout_base>::packing(mem, send.get(i), sts, send_buf,opt);
+			pack_unpack_cond_with_prp<has_max_prop<T, has_value_type<T>::value>::value, op, T, S, layout_base>::packing(*mem[NBX_prc_scnt], send.get(i), sts, send_buf,opt);
 		}
 
 		// receive information
-		base_info<InternalMemory> bi(&this->recv_buf,prc_recv,sz_recv_byte,this->tags,opt);
+		NBX_prc_bi[NBX_prc_scnt].set(&this->recv_buf[NBX_prc_scnt],prc_recv,sz_recv_byte[NBX_prc_scnt],this->tags[NBX_prc_scnt],opt);
 
 		// Send and recv multiple messages
 		if (opt & RECEIVE_KNOWN)
@@ -153,33 +251,27 @@ class Vcluster: public Vcluster_base<InternalMemory>
 				if (has_pack_gen<typename T::value_type>::value == false && is_vector<T>::value == true)
 				{
 					for (size_t i = 0 ; i < sz_recv.size() ; i++)
-						sz_recv_byte.get(i) = sz_recv.get(i) * sizeof(typename T::value_type);
+					{sz_recv_byte[NBX_prc_scnt].get(i) = sz_recv.get(i) * sizeof(typename T::value_type);}
 				}
 				else
 				{std::cout << __FILE__ << ":" << __LINE__ << " Error " << demangle(typeid(T).name()) << " the type does not work with the option or NO_CHANGE_ELEMENTS" << std::endl;}
 
-				self_base::sendrecvMultipleMessagesNBX(prc_send.size(),(size_t *)send_sz_byte.getPointer(),(size_t *)prc_send.getPointer(),(void **)send_buf.getPointer(),
-											prc_recv.size(),(size_t *)prc_recv.getPointer(),(size_t *)sz_recv_byte.getPointer(),msg_alloc_known,(void *)&bi);
+				self_base::sendrecvMultipleMessagesNBXAsync(prc_send.size(),(size_t *)send_sz_byte.getPointer(),(size_t *)prc_send.getPointer(),(void **)send_buf.getPointer(),
+											prc_recv.size(),(size_t *)prc_recv.getPointer(),(size_t *)sz_recv_byte[NBX_prc_scnt].getPointer(),msg_alloc_known,(void *)&NBX_prc_bi);
 			}
 			else
 			{
-				self_base::sendrecvMultipleMessagesNBX(prc_send.size(),(size_t *)send_sz_byte.getPointer(),(size_t *)prc_send.getPointer(),(void **)send_buf.getPointer(),
-											prc_recv.size(),(size_t *)prc_recv.getPointer(),msg_alloc_known,(void *)&bi);
-				sz_recv_byte = self_base::sz_recv_tmp;
+				self_base::sendrecvMultipleMessagesNBXAsync(prc_send.size(),(size_t *)send_sz_byte.getPointer(),(size_t *)prc_send.getPointer(),(void **)send_buf.getPointer(),
+											prc_recv.size(),(size_t *)prc_recv.getPointer(),msg_alloc_known,(void *)&NBX_prc_bi);
+				sz_recv_byte[NBX_prc_scnt] = self_base::sz_recv_tmp;
 			}
 		}
 		else
 		{
-			self_base::tags.clear();
+			self_base::tags[NBX_prc_scnt].clear();
 			prc_recv.clear();
-			self_base::sendrecvMultipleMessagesNBX(prc_send_.size(),(size_t *)send_sz_byte.getPointer(),(size_t *)prc_send_.getPointer(),(void **)send_buf.getPointer(),msg_alloc,(void *)&bi);
+			self_base::sendrecvMultipleMessagesNBXAsync(prc_send_.size(),(size_t *)send_sz_byte.getPointer(),(size_t *)prc_send_.getPointer(),(void **)send_buf.getPointer(),msg_alloc,(void *)&NBX_prc_bi[NBX_prc_scnt]);
 		}
-
-		// Reorder the buffer
-		reorder_buffer(prc_recv,self_base::tags,sz_recv_byte);
-
-		mem.decRef();
-		delete &mem;
 	}
 
 
@@ -189,39 +281,11 @@ class Vcluster: public Vcluster_base<InternalMemory>
 	 */
 	void reset_recv_buf()
 	{
-		for (size_t i = 0 ; i < self_base::recv_buf.size() ; i++)
-		{self_base::recv_buf.get(i).resize(0);}
+		for (size_t i = 0 ; i < self_base::recv_buf[NBX_prc_scnt].size() ; i++)
+		{self_base::recv_buf[NBX_prc_scnt].get(i).resize(0);}
 
-		self_base::recv_buf.resize(0);
+		self_base::recv_buf[NBX_prc_scnt].resize(0);
 	}
-
-	/*! \brief Base info
-	 *
-	 * \param recv_buf receive buffers
-	 * \param prc processors involved
-	 * \param size of the received data
-	 *
-	 */
-	template<typename Memory>
-	struct base_info
-	{
-		//! Receive buffer
-		openfpm::vector_fr<BMemory<Memory>> * recv_buf;
-		//! receiving processor list
-		openfpm::vector<size_t> & prc;
-		//! size of each message
-		openfpm::vector<size_t> & sz;
-		//! tags
-		openfpm::vector<size_t> &tags;
-
-		//! options
-		size_t opt;
-
-		//! constructor
-		base_info(openfpm::vector_fr<BMemory<Memory>> * recv_buf, openfpm::vector<size_t> & prc, openfpm::vector<size_t> & sz, openfpm::vector<size_t> & tags,size_t opt)
-		:recv_buf(recv_buf),prc(prc),sz(sz),tags(tags),opt(opt)
-		{}
-	};
 
 	/*! \brief Call-back to allocate buffer to receive data
 	 *
@@ -251,9 +315,9 @@ class Vcluster: public Vcluster_base<InternalMemory>
 		rinfo.recv_buf->get(ri).resize(msg_i);
 
 		// Receive info
-		rinfo.prc.add(i);
-		rinfo.sz.add(msg_i);
-		rinfo.tags.add(tag);
+		rinfo.prc->add(i);
+		rinfo.sz->add(msg_i);
+		rinfo.tags->add(tag);
 
 		// return the pointer
 
@@ -323,9 +387,9 @@ class Vcluster: public Vcluster_base<InternalMemory>
 										 size_t opt)
 	{
 		if (sz != NULL)
-		{sz->resize(self_base::recv_buf.size());}
+		{sz->resize(self_base::recv_buf[NBX_prc_pcnt].size());}
 
-		pack_unpack_cond_with_prp<has_max_prop<T, has_value_type<T>::value>::value,op, T, S, layout_base, prp... >::unpacking(recv, self_base::recv_buf, sz, sz_byte, op_param,opt);
+		pack_unpack_cond_with_prp<has_max_prop<T, has_value_type<T>::value>::value,op, T, S, layout_base, prp... >::unpacking(recv, self_base::recv_buf[NBX_prc_pcnt], sz, sz_byte, op_param,opt);
 	}
 
 	public:
@@ -434,10 +498,10 @@ class Vcluster: public Vcluster_base<InternalMemory>
 			// remain buffer with size 0
 			openfpm::vector<size_t> send_req;
 
-			self_base::tags.clear();
+			self_base::tags[NBX_prc_scnt].clear();
 
 			// receive information
-			base_info<InternalMemory> bi(&this->recv_buf,prc,sz,this->tags,0);
+			base_info<InternalMemory> bi(&this->recv_buf[NBX_prc_scnt],prc,sz,this->tags[NBX_prc_scnt],0);
 
 			// Send and recv multiple messages
 			self_base::sendrecvMultipleMessagesNBX(send_req.size(),NULL,NULL,NULL,msg_alloc,&bi);
@@ -449,7 +513,7 @@ class Vcluster: public Vcluster_base<InternalMemory>
 			op_ssend_recv_add<void> opa;
 
 			// Reorder the buffer
-			reorder_buffer(prc,self_base::tags,sz);
+			reorder_buffer(prc,self_base::tags[NBX_prc_scnt],sz);
 
 			index_gen<ind_prop_to_pack>::template process_recv<op_ssend_recv_add<void>,T,S,layout_base>(*this,recv,&sz,NULL,opa,0);
 
@@ -488,10 +552,10 @@ class Vcluster: public Vcluster_base<InternalMemory>
 
 			pack_unpack_cond_with_prp_inte_lin<T>::construct_prc(send_prc,send_prc_);
 
-			self_base::tags.clear();
+			self_base::tags[NBX_prc_scnt].clear();
 
 			// receive information
-			base_info<InternalMemory> bi(NULL,prc,sz,self_base::tags,0);
+			base_info<InternalMemory> bi(NULL,prc,sz,self_base::tags[NBX_prc_scnt],0);
 
 			// Send and recv multiple messages
 			self_base::sendrecvMultipleMessagesNBX(send_prc_.size(),(size_t *)sz.getPointer(),(size_t *)send_prc_.getPointer(),(void **)send_buf.getPointer(),msg_alloc,(void *)&bi,NONE);
@@ -529,7 +593,8 @@ class Vcluster: public Vcluster_base<InternalMemory>
 	 * \return true if the function completed succefully
 	 *
 	 */
-	template<typename T, typename S, template <typename> class layout_base=memory_traits_lin> bool SScatter(T & send, S & recv, openfpm::vector<size_t> & prc, openfpm::vector<size_t> & sz, size_t root)
+	template<typename T, typename S, template <typename> class layout_base=memory_traits_lin>
+	bool SScatter(T & send, S & recv, openfpm::vector<size_t> & prc, openfpm::vector<size_t> & sz, size_t root)
 	{
 		// Reset the receive buffer
 		reset_recv_buf();
@@ -553,10 +618,10 @@ class Vcluster: public Vcluster_base<InternalMemory>
 				ptr += sz.get(i);
 			}
 
-			self_base::tags.clear();
+			self_base::tags[NBX_prc_scnt].clear();
 
 			// receive information
-			base_info<InternalMemory> bi(&this->recv_buf,prc,sz,this->tags,0);
+			base_info<InternalMemory> bi(&this->recv_buf[NBX_prc_scnt],prc,sz,this->tags[NBX_prc_scnt],0);
 
 			// Send and recv multiple messages
 			self_base::sendrecvMultipleMessagesNBX(prc.size(),(size_t *)sz_byte.getPointer(),(size_t *)prc.getPointer(),(void **)send_buf.getPointer(),msg_alloc,(void *)&bi);
@@ -574,10 +639,10 @@ class Vcluster: public Vcluster_base<InternalMemory>
 			// The non-root receive
 			openfpm::vector<size_t> send_req;
 
-			self_base::tags.clear();
+			self_base::tags[NBX_prc_scnt].clear();
 
 			// receive information
-			base_info<InternalMemory> bi(&this->recv_buf,prc,sz,this->tags,0);
+			base_info<InternalMemory> bi(&this->recv_buf[NBX_prc_scnt],prc,sz,this->tags[NBX_prc_scnt],0);
 
 			// Send and recv multiple messages
 			self_base::sendrecvMultipleMessagesNBX(send_req.size(),NULL,NULL,NULL,msg_alloc,&bi);
@@ -630,7 +695,7 @@ class Vcluster: public Vcluster_base<InternalMemory>
 
 		openfpm::vector<recv_buff_reorder> rcv;
 
-		rcv.resize(self_base::recv_buf.size());
+		rcv.resize(self_base::recv_buf[NBX_prc_pcnt].size());
 
 		for (size_t i = 0 ; i < rcv.size() ; i++)
 		{
@@ -657,7 +722,7 @@ class Vcluster: public Vcluster_base<InternalMemory>
 		// Now we reorder rcv
 		for (size_t i = 0 ; i < rcv.size() ; i++)
 		{
-			recv_ord.get(i).swap(self_base::recv_buf.get(rcv.get(i).pos));
+			recv_ord.get(i).swap(self_base::recv_buf[NBX_prc_pcnt].get(rcv.get(i).pos));
 			prc_ord.get(i) = rcv.get(i).proc;
 			sz_recv_ord.get(i) = sz_recv.get(rcv.get(i).pos);
 		}
@@ -666,7 +731,7 @@ class Vcluster: public Vcluster_base<InternalMemory>
 		// Now we swap back to recv_buf in an ordered way
 		for (size_t i = 0 ; i < rcv.size() ; i++)
 		{
-			self_base::recv_buf.get(i).swap(recv_ord.get(i));
+			self_base::recv_buf[NBX_prc_pcnt].get(i).swap(recv_ord.get(i));
 		}
 
 		prc.swap(prc_ord);
@@ -714,6 +779,15 @@ class Vcluster: public Vcluster_base<InternalMemory>
 	{
 		prepare_send_buffer<op_ssend_recv_add<void>,T,S,layout_base>(send,recv,prc_send,prc_recv,sz_recv,opt);
 
+		self_base::sendrecvMultipleMessagesNBXWait();
+
+		// Reorder the buffer
+		reorder_buffer(prc_recv,self_base::tags[NBX_prc_scnt],sz_recv_byte[NBX_prc_scnt]);
+
+		mem[NBX_prc_scnt]->decRef();
+		delete mem[NBX_prc_scnt];
+		delete pmem[NBX_prc_scnt];
+
 		// we generate the list of the properties to pack
 		typedef typename ::generate_indexes<int, has_max_prop<T, has_value_type<T>::value>::number, MetaFuncOrd>::result ind_prop_to_pack;
 
@@ -724,8 +798,54 @@ class Vcluster: public Vcluster_base<InternalMemory>
 		return true;
 	}
 
-
 	/*! \brief Semantic Send and receive, send the data to processors and receive from the other processors
+	 *  asynchronous version
+	 *
+	 * \see progressCommunication to progress communications SSendRecvWait for synchronizing
+	 *
+	 * Semantic communication differ from the normal one. They in general
+	 * follow the following model.
+	 *
+	 * Recv(T,S,...,op=add);
+	 *
+	 * "SendRecv" indicate the communication pattern, or how the information flow
+	 * T is the object to send, S is the object that will receive the data.
+	 * In order to work S must implement the interface S.add(T).
+	 *
+	 * ### Example scatter a vector of structures, to other processors
+	 * \snippet VCluster_semantic_unit_tests.hpp dsde with complex objects1
+	 *
+	 * \tparam T type of sending object
+	 * \tparam S type of receiving object
+	 *
+	 * \param send Object to send
+	 * \param recv Object to receive
+	 * \param prc_send destination processors
+	 * \param prc_recv list of the receiving processors
+	 * \param sz_recv number of elements added
+	 * \param opt options
+	 *
+	 * \return true if the function completed succefully
+	 *
+	 */
+	template<typename T,
+	         typename S,
+			 template <typename> class layout_base = memory_traits_lin>
+	bool SSendRecvAsync(openfpm::vector<T> & send,
+			       S & recv,
+				   openfpm::vector<size_t> & prc_send,
+				   openfpm::vector<size_t> & prc_recv,
+				   openfpm::vector<size_t> & sz_recv,
+				   size_t opt = NONE)
+	{
+		prepare_send_buffer<op_ssend_recv_add<void>,T,S,layout_base>(send,recv,prc_send,prc_recv,sz_recv,opt);
+
+		NBX_prc_scnt++;
+
+		return true;
+	}
+
+	/*! \brief Semantic Send and receive, send the data to processors and receive from the other processors (with properties)
 	 *
 	 * Semantic communication differ from the normal one. They in general
 	 * follow the following model.
@@ -753,27 +873,83 @@ class Vcluster: public Vcluster_base<InternalMemory>
 	 * \return true if the function completed successful
 	 *
 	 */
-	template<typename T, typename S, template <typename> class layout_base, int ... prp> bool SSendRecvP(openfpm::vector<T> & send,
+	template<typename T, typename S, template <typename> class layout_base, int ... prp>
+	bool SSendRecvP(openfpm::vector<T> & send,
 			                                                      S & recv,
 																  openfpm::vector<size_t> & prc_send,
 																  openfpm::vector<size_t> & prc_recv,
 																  openfpm::vector<size_t> & sz_recv,
-																  openfpm::vector<size_t> & sz_recv_byte,
+																  openfpm::vector<size_t> & sz_recv_byte_out,
 																  size_t opt = NONE)
 	{
 		prepare_send_buffer<op_ssend_recv_add<void>,T,S,layout_base>(send,recv,prc_send,prc_recv,sz_recv,opt);
+
+		self_base::sendrecvMultipleMessagesNBXWait();
+
+		// Reorder the buffer
+		reorder_buffer(prc_recv,self_base::tags[NBX_prc_scnt],sz_recv_byte[NBX_prc_scnt]);
+
+		mem[NBX_prc_scnt]->decRef();
+		delete mem[NBX_prc_scnt];
+		delete pmem[NBX_prc_scnt];
 
 		// operation object
 		op_ssend_recv_add<void> opa;
 
 		// process the received information
-		process_receive_buffer_with_prp<op_ssend_recv_add<void>,T,S,layout_base,prp...>(recv,&sz_recv,&sz_recv_byte,opa,opt);
+		process_receive_buffer_with_prp<op_ssend_recv_add<void>,T,S,layout_base,prp...>(recv,&sz_recv,&sz_recv_byte_out,opa,opt);
 
 		return true;
 	}
 
+	/*! \brief Semantic Send and receive, send the data to processors and receive from the other processors (with properties)
+	 *         asynchronous version
+	 *
+	 * \see progressCommunication to progress communications SSendRecvWait for synchronizing
+	 *
+	 * Semantic communication differ from the normal one. They in general
+	 * follow the following model.
+	 *
+	 * SSendRecv(T,S,...,op=add);
+	 *
+	 * "SendRecv" indicate the communication pattern, or how the information flow
+	 * T is the object to send, S is the object that will receive the data.
+	 * In order to work S must implement the interface S.add<prp...>(T).
+	 *
+	 * ### Example scatter a vector of structures, to other processors
+	 * \snippet VCluster_semantic_unit_tests.hpp Scatter the data from master
+	 *
+	 * \tparam T type of sending object
+	 * \tparam S type of receiving object
+	 * \tparam prp properties for merging
+	 *
+	 * \param send Object to send
+	 * \param recv Object to receive
+	 * \param prc_send destination processors
+	 * \param prc_recv processors from which we received
+	 * \param sz_recv number of elements added per processor
+	 * \param sz_recv_byte message received from each processor in byte
+	 *
+	 * \return true if the function completed successful
+	 *
+	 */
+	template<typename T, typename S, template <typename> class layout_base, int ... prp>
+	bool SSendRecvPAsync(openfpm::vector<T> & send,
+			                                                      S & recv,
+																  openfpm::vector<size_t> & prc_send,
+																  openfpm::vector<size_t> & prc_recv,
+																  openfpm::vector<size_t> & sz_recv,
+																  openfpm::vector<size_t> & sz_recv_byte_out,
+																  size_t opt = NONE)
+	{
+		prepare_send_buffer<op_ssend_recv_add<void>,T,S,layout_base>(send,recv,prc_send,prc_recv,sz_recv,opt);
 
-	/*! \brief Semantic Send and receive, send the data to processors and receive from the other processors
+		NBX_prc_scnt++;
+
+		return true;
+	}
+
+	/*! \brief Semantic Send and receive, send the data to processors and receive from the other processors (with properties)
 	 *
 	 * Semantic communication differ from the normal one. They in general
 	 * follow the following model.
@@ -810,11 +986,65 @@ class Vcluster: public Vcluster_base<InternalMemory>
 	{
 		prepare_send_buffer<op_ssend_recv_add<void>,T,S,layout_base>(send,recv,prc_send,prc_recv,sz_recv,opt);
 
+		self_base::sendrecvMultipleMessagesNBXWait();
+
+		// Reorder the buffer
+		reorder_buffer(prc_recv,self_base::tags[NBX_prc_scnt],sz_recv_byte[NBX_prc_scnt]);
+
+		mem[NBX_prc_scnt]->decRef();
+		delete mem[NBX_prc_scnt];
+		delete pmem[NBX_prc_scnt];
+
 		// operation object
 		op_ssend_recv_add<void> opa;
 
 		// process the received information
 		process_receive_buffer_with_prp<op_ssend_recv_add<void>,T,S,layout_base,prp...>(recv,&sz_recv,NULL,opa,opt);
+
+		return true;
+	}
+
+	/*! \brief Semantic Send and receive, send the data to processors and receive from the other processors (with properties)
+	 *         asynchronous version
+	 *
+	 * \see progressCommunication to progress communications SSendRecvWait for synchronizing
+	 *
+	 * Semantic communication differ from the normal one. They in general
+	 * follow the following model.
+	 *
+	 * SSendRecv(T,S,...,op=add);
+	 *
+	 * "SendRecv" indicate the communication pattern, or how the information flow
+	 * T is the object to send, S is the object that will receive the data.
+	 * In order to work S must implement the interface S.add<prp...>(T).
+	 *
+	 * ### Example scatter a vector of structures, to other processors
+	 * \snippet VCluster_semantic_unit_tests.hpp Scatter the data from master
+	 *
+	 * \tparam T type of sending object
+	 * \tparam S type of receiving object
+	 * \tparam prp properties for merging
+	 *
+	 * \param send Object to send
+	 * \param recv Object to receive
+	 * \param prc_send destination processors
+	 * \param prc_recv list of the processors from which we receive
+	 * \param sz_recv number of elements added per processors
+	 *
+	 * \return true if the function completed succefully
+	 *
+	 */
+	template<typename T, typename S, template <typename> class layout_base, int ... prp>
+	bool SSendRecvPAsync(openfpm::vector<T> & send,
+			        S & recv,
+					openfpm::vector<size_t> & prc_send,
+			    	openfpm::vector<size_t> & prc_recv,
+					openfpm::vector<size_t> & sz_recv,
+					size_t opt = NONE)
+	{
+		prepare_send_buffer<op_ssend_recv_add<void>,T,S,layout_base>(send,recv,prc_send,prc_recv,sz_recv,opt);
+
+		NBX_prc_scnt++;
 
 		return true;
 	}
@@ -870,8 +1100,233 @@ class Vcluster: public Vcluster_base<InternalMemory>
 	{
 		prepare_send_buffer<op,T,S,layout_base>(send,recv,prc_send,prc_recv,recv_sz,opt);
 
+		self_base::sendrecvMultipleMessagesNBXWait();
+
+		// Reorder the buffer
+		reorder_buffer(prc_recv,self_base::tags[NBX_prc_scnt],sz_recv_byte[NBX_prc_scnt]);
+
+		mem[NBX_prc_scnt]->decRef();
+		delete mem[NBX_prc_scnt];
+		delete pmem[NBX_prc_scnt];
+
 		// process the received information
 		process_receive_buffer_with_prp<op,T,S,layout_base,prp...>(recv,NULL,NULL,op_param,opt);
+
+		return true;
+	}
+
+	/*! \brief Semantic Send and receive, send the data to processors and receive from the other processors asynchronous version
+	 *
+	 * \see progressCommunication to incrementally progress the communication  SSendRecvP_opWait to synchronize
+	 *
+	 * Semantic communication differ from the normal one. They in general
+	 * follow the following model.
+	 *
+	 * SSendRecv(T,S,...,op=add);
+	 *
+	 * "SendRecv" indicate the communication pattern, or how the information flow
+	 * T is the object to send, S is the object that will receive the data.
+	 * In order to work S must implement the interface S.add<prp...>(T).
+	 *
+	 * ### Example scatter a vector of structures, to other processors
+	 * \snippet VCluster_semantic_unit_tests.hpp Scatter the data from master
+	 *
+	 * \tparam op type of operation
+	 * \tparam T type of sending object
+	 * \tparam S type of receiving object
+	 * \tparam prp properties for merging
+	 *
+	 * \param send Object to send
+	 * \param recv Object to receive
+	 * \param prc_send destination processors
+	 * \param op_param operation object (operation to do im merging the information)
+	 * \param recv_sz size of each receiving buffer. This parameters are output
+	 *        with RECEIVE_KNOWN you must feed this parameter
+	 * \param prc_recv from which processor we receive messages
+	 *        with RECEIVE_KNOWN you must feed this parameter
+	 * \param opt options default is NONE, another is RECEIVE_KNOWN. In this case each
+	 *        processor is assumed to know from which processor receive, and the size of
+	 *        the message. in such case prc_recv and sz_recv are not anymore parameters
+	 *        but must be input.
+	 *
+	 *
+	 * \return true if the function completed successful
+	 *
+	 */
+	template<typename op,
+	         typename T,
+			 typename S,
+			 template <typename> class layout_base,
+			 int ... prp>
+	bool SSendRecvP_opAsync(openfpm::vector<T> & send,
+			           S & recv,
+					   openfpm::vector<size_t> & prc_send,
+					   op & op_param,
+					   openfpm::vector<size_t> & prc_recv,
+					   openfpm::vector<size_t> & recv_sz,
+				 	   size_t opt = NONE)
+	{
+		prepare_send_buffer<op,T,S,layout_base>(send,recv,prc_send,prc_recv,recv_sz,opt);
+
+		NBX_prc_scnt++;
+
+		return true;
+	}
+
+	/*! \brief Synchronize with SSendRecv
+	 *
+	 * \note arguments are discussed in SSendRecvAsync
+	 *
+	 */
+	template<typename T,
+	         typename S,
+			 template <typename> class layout_base = memory_traits_lin>
+	bool SSendRecvWait(openfpm::vector<T> & send,
+		       S & recv,
+			   openfpm::vector<size_t> & prc_send,
+			   openfpm::vector<size_t> & prc_recv,
+			   openfpm::vector<size_t> & sz_recv,
+			   size_t opt = NONE)
+	{
+		self_base::sendrecvMultipleMessagesNBXWait();
+
+		// Reorder the buffer
+		reorder_buffer(prc_recv,self_base::tags[NBX_prc_pcnt],sz_recv_byte[NBX_prc_pcnt]);
+
+		mem[NBX_prc_pcnt]->decRef();
+		delete mem[NBX_prc_pcnt];
+		delete pmem[NBX_prc_pcnt];
+
+		// we generate the list of the properties to pack
+		typedef typename ::generate_indexes<int, has_max_prop<T, has_value_type<T>::value>::number, MetaFuncOrd>::result ind_prop_to_pack;
+
+		op_ssend_recv_add<void> opa;
+
+		index_gen<ind_prop_to_pack>::template process_recv<op_ssend_recv_add<void>,T,S,layout_base>(*this,recv,&sz_recv,NULL,opa,opt);
+
+		NBX_prc_pcnt++;
+		if (NBX_prc_scnt == NBX_prc_pcnt)
+		{
+			NBX_prc_scnt = 0;
+			NBX_prc_pcnt = 0;
+		}
+
+		return true;
+	}
+
+	/*! \brief Synchronize with SSendRecvP
+	 *
+	 * \note arguments are discussed in SSendRecvPAsync
+	 *
+	 */
+	template<typename T, typename S, template <typename> class layout_base, int ... prp>
+	bool SSendRecvPWait(openfpm::vector<T> & send,
+			                                                      S & recv,
+																  openfpm::vector<size_t> & prc_send,
+																  openfpm::vector<size_t> & prc_recv,
+																  openfpm::vector<size_t> & sz_recv,
+																  openfpm::vector<size_t> & sz_recv_byte_out,
+																  size_t opt = NONE)
+	{
+		self_base::sendrecvMultipleMessagesNBXWait();
+
+		// Reorder the buffer
+		reorder_buffer(prc_recv,self_base::tags[NBX_prc_pcnt],sz_recv_byte[NBX_prc_pcnt]);
+
+		mem[NBX_prc_pcnt]->decRef();
+		delete mem[NBX_prc_pcnt];
+		delete pmem[NBX_prc_pcnt];
+
+		// operation object
+		op_ssend_recv_add<void> opa;
+
+		// process the received information
+		process_receive_buffer_with_prp<op_ssend_recv_add<void>,T,S,layout_base,prp...>(recv,&sz_recv,&sz_recv_byte_out,opa,opt);
+
+		NBX_prc_pcnt++;
+		if (NBX_prc_scnt == NBX_prc_pcnt)
+		{
+			NBX_prc_scnt = 0;
+			NBX_prc_pcnt = 0;
+		}
+
+		return true;
+	}
+
+	/*! \brief Synchronize with SSendRecvP
+	 *
+	 * \note arguments are discussed in SSendRecvPAsync
+	 *
+	 */
+	template<typename T, typename S, template <typename> class layout_base, int ... prp>
+	bool SSendRecvPWait(openfpm::vector<T> & send,
+			        S & recv,
+					openfpm::vector<size_t> & prc_send,
+			    	openfpm::vector<size_t> & prc_recv,
+					openfpm::vector<size_t> & sz_recv,
+					size_t opt = NONE)
+	{
+		self_base::sendrecvMultipleMessagesNBXWait();
+
+		// Reorder the buffer
+		reorder_buffer(prc_recv,self_base::tags[NBX_prc_pcnt],sz_recv_byte[NBX_prc_pcnt]);
+
+		mem[NBX_prc_pcnt]->decRef();
+		delete mem[NBX_prc_pcnt];
+		delete pmem[NBX_prc_pcnt];
+
+		// operation object
+		op_ssend_recv_add<void> opa;
+
+		// process the received information
+		process_receive_buffer_with_prp<op_ssend_recv_add<void>,T,S,layout_base,prp...>(recv,&sz_recv,NULL,opa,opt);
+
+		NBX_prc_pcnt++;
+		if (NBX_prc_scnt == NBX_prc_pcnt)
+		{
+			NBX_prc_scnt = 0;
+			NBX_prc_pcnt = 0;
+		}
+
+		return true;
+	}
+
+	/*! \brief Synchronize with SSendRecvP_op
+	 *
+	 * \note arguments are discussed in SSendRecvP_opAsync
+	 *
+	 */
+	template<typename op,
+	         typename T,
+			 typename S,
+			 template <typename> class layout_base,
+			 int ... prp>
+	bool SSendRecvP_opWait(openfpm::vector<T> & send,
+			           S & recv,
+					   openfpm::vector<size_t> & prc_send,
+					   op & op_param,
+					   openfpm::vector<size_t> & prc_recv,
+					   openfpm::vector<size_t> & recv_sz,
+				 	   size_t opt = NONE)
+	{
+		self_base::sendrecvMultipleMessagesNBXWait();
+
+		// Reorder the buffer
+		reorder_buffer(prc_recv,self_base::tags[NBX_prc_pcnt],sz_recv_byte[NBX_prc_pcnt]);
+
+		mem[NBX_prc_pcnt]->decRef();
+		delete mem[NBX_prc_pcnt];
+		delete pmem[NBX_prc_pcnt];
+
+		// process the received information
+		process_receive_buffer_with_prp<op,T,S,layout_base,prp...>(recv,NULL,NULL,op_param,opt);
+
+		NBX_prc_pcnt++;
+		if (NBX_prc_scnt == NBX_prc_pcnt)
+		{
+			NBX_prc_scnt = 0;
+			NBX_prc_pcnt = 0;
+		}
 
 		return true;
 	}
@@ -996,6 +1451,10 @@ static inline void openfpm_init(int *argc, char ***argv)
 	// Initialize temporal memory
 	mem_tmp.incRef();
 
+	exp_tmp.incRef();
+	exp_tmp2.incRef();
+
+
 #endif
 }
 
@@ -1021,6 +1480,11 @@ static inline void openfpm_finalize()
 	// Release memory
 	mem_tmp.destroy();
 	mem_tmp.decRef();
+
+	exp_tmp.destroy();
+	exp_tmp.decRef();
+	exp_tmp2.destroy();
+	exp_tmp2.decRef();
 
 #endif
 }
