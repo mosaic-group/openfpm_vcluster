@@ -577,7 +577,7 @@ public:
 		{
 			unsigned int i = (stat_t.MPI_TAG - SEND_SPARSE) / 131072 - NBX_prc_cnt_base;
 
-			if (i >= NQUEUE || NBX_active[i] == NBX_Type::NBX_UNACTIVE || NBX_active[i] == NBX_Type::NBX_KNOWN)
+			if (i >= NQUEUE || NBX_active[i] == NBX_Type::NBX_UNACTIVE || NBX_active[i] == NBX_Type::NBX_KNOWN  || NBX_active[i] == NBX_Type::NBX_KNOWN_PRC)
 			{return;}
 
 			int msize;
