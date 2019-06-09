@@ -24,7 +24,7 @@ mkdir openfpm_vcluster/src/config
 git clone git@git.mpi-cbg.de:/openfpm/openfpm_devices.git openfpm_devices
 git clone git@git.mpi-cbg.de:/openfpm/openfpm_data.git openfpm_data
 cd openfpm_data
-git checkout master
+git checkout sparse_cl
 cd ..
 cd openfpm_devices
 git checkout master
