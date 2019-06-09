@@ -38,7 +38,7 @@ if [ ! -d $HOME/openfpm_dependencies/openfpm_vcluster/LIBHILBERT ]; then
         ./install_LIBHILBERT.sh $HOME/openfpm_dependencies/openfpm_vcluster/ 4
 fi
 
-if [ x"$hostname" == x"cifarm-mac-node.mpi-cbg.de" ]; then
+if [ x"$hostname" == x"cifarm-mac-node" ]; then
 	echo "Killing ghost"
 	kill 73440 87662 87661 73439 51687 51686
 fi
