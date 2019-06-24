@@ -567,6 +567,15 @@ class Vcluster: public Vcluster_base<InternalMemory>
 		return true;
 	}
 
+	/*! \brief Just a call to mpi_barrier
+	 *
+	 *
+	 */
+	void barrier()
+	{
+		MPI_Barrier(MPI_COMM_WORLD);
+	}
+
 	/*! \brief Semantic Scatter, scatter the data from one processor to the other node
 	 *
 	 * Semantic communication differ from the normal one. They in general
