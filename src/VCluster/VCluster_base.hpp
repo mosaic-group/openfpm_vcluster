@@ -230,7 +230,7 @@ class Vcluster_base
 	void queue_all_sends(size_t n_send , size_t sz[],
             			 size_t prc[], void * ptr[])
 	{
-		if (stat.size() != 0 || req.size() != 0 && NBX_prc_qcnt == 0)
+		if (stat.size() != 0 || (req.size() != 0 && NBX_prc_qcnt == 0))
 		{std::cerr << "Error: " << __FILE__ << ":" << __LINE__ << " this function must be called when no other requests are in progress. Please remember that if you use function like max(),sum(),send(),recv() check that you did not miss to call the function execute() \n";}
 
 
