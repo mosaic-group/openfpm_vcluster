@@ -3,10 +3,38 @@ cmake_minimum_required(VERSION 3.8 FATAL_ERROR)
 ########################### Executables
 
 if (CUDA_FOUND)
-	set(CUDA_SOURCES ../../openfpm_devices/src/memory/CudaMemory.cu VCluster/cuda/VCluster_semantic_unit_cuda_tests.cu VCluster/cuda/VCluster_unit_tests.cu )
+	if ( HIP_ENABLE )
+		set(CUDA_SOURCES ../../openfpm_devices/src/memory/CudaMemory_hipified.cpp VCluster/cuda/VCluster_semantic_unit_cuda_tests_hipified.cpp VCluster/cuda/VCluster_unit_tests_hipified.cpp )
+	else()
+		set(CUDA_SOURCES ../../openfpm_devices/src/memory/CudaMemory.cu VCluster/cuda/VCluster_semantic_unit_cuda_tests.cu VCluster/cuda/VCluster_unit_tests.cu )
+	endif()
 endif()
 
-add_executable(vcluster_test main.cpp VCluster/VCluster.cpp  ../../openfpm_devices/src/memory/HeapMemory.cpp ../../openfpm_devices/src/memory/PtrMemory.cpp ../../openfpm_devices/src/Memleak_check.cpp VCluster/VCluster_unit_tests.cpp VCluster/VCluster_semantic_unit_tests.cpp ${CUDA_SOURCES})
+add_library(vcluster STATIC VCluster/VCluster.cpp)
+add_library(vcluster_dl SHARED VCluster/VCluster.cpp)
+
+if ( HIP_ENABLE AND HIP_FOUND )
+
+        set(CMAKE_CXX_COMPILER ${HIP_HIPCC_EXECUTABLE})
+
+	hip_add_executable(vcluster_test main.cpp VCluster/VCluster.cpp  ../../openfpm_devices/src/memory/HeapMemory.cpp ../../openfpm_devices/src/memory/PtrMemory.cpp ../../openfpm_devices/src/Memleak_check.cpp VCluster/VCluster_unit_tests.cpp VCluster/VCluster_semantic_unit_tests.cpp ${CUDA_SOURCES})
+
+        set(CMAKE_SHARED_LIBRARY_CXX_FLAGS " ")
+	set_property(TARGET vcluster PROPERTY POSITION_INDEPENDENT_CODE OFF)
+	set_property(TARGET vcluster PROPERTY COMPILE_FLAGS "-Xcompiler -fPIC")
+	set_property(TARGET vcluster PROPERTY NO_SONAME ON)
+	set_property(TARGET vcluster_dl PROPERTY POSITION_INDEPENDENT_CODE OFF)
+	set_property(TARGET vcluster_dl PROPERTY COMPILE_FLAGS "-Xcompiler -fPIC")
+	set_property(TARGET vcluster_dl PROPERTY NO_SONAME ON)
+
+	target_include_directories (vcluster_test PUBLIC ${MPI_C_INCLUDE_DIRS})
+
+else()
+
+	add_executable(vcluster_test main.cpp VCluster/VCluster.cpp  ../../openfpm_devices/src/memory/HeapMemory.cpp ../../openfpm_devices/src/memory/PtrMemory.cpp ../../openfpm_devices/src/Memleak_check.cpp VCluster/VCluster_unit_tests.cpp VCluster/VCluster_semantic_unit_tests.cpp ${CUDA_SOURCES})
+
+endif()
+
 
 if ( CMAKE_COMPILER_IS_GNUCC )
     target_compile_options(vcluster_test PRIVATE "-Wno-deprecated-declarations")
@@ -14,8 +42,6 @@ if ( CMAKE_COMPILER_IS_GNUCC )
         target_compile_options(vcluster_test PRIVATE $<$<COMPILE_LANGUAGE:CXX>: -fprofile-arcs -ftest-coverage>)
     endif()
 endif()
-
-add_library(vcluster STATIC VCluster/VCluster.cpp)
 
 ###########################
 
@@ -44,6 +70,14 @@ target_include_directories (vcluster PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/../../op
 target_include_directories (vcluster PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/../../openfpm_devices/src/)
 target_include_directories (vcluster PUBLIC ${Boost_INCLUDE_DIRS})
 
+target_include_directories (vcluster_dl PUBLIC ${CUDA_INCLUDE_DIRS})
+target_include_directories (vcluster_dl PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+target_include_directories (vcluster_dl PUBLIC ${PETSC_INCLUDES})
+target_include_directories (vcluster_dl PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/config)
+target_include_directories (vcluster_dl PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/../../openfpm_data/src/)
+target_include_directories (vcluster_dl PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/../../openfpm_devices/src/)
+target_include_directories (vcluster_dl PUBLIC ${Boost_INCLUDE_DIRS})
+
 target_link_libraries(vcluster_test ${Boost_LIBRARIES})
 target_link_libraries(vcluster_test ${PETSC_LIBRARIES})
 
@@ -57,7 +91,7 @@ endif()
 target_compile_features(vcluster_test PUBLIC cxx_std_11)
 target_link_libraries(vcluster_test ${MPI_C_LIBRARIES})
 
-install(TARGETS vcluster DESTINATION openfpm_vcluster/lib)
+install(TARGETS vcluster vcluster_dl DESTINATION openfpm_vcluster/lib)
 install(FILES MPI_wrapper/MPI_IallreduceW.hpp 
 	      MPI_wrapper/MPI_IrecvW.hpp 
 	      MPI_wrapper/MPI_IBcastW.hpp  

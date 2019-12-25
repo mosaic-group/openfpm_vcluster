@@ -47,8 +47,8 @@ BOOST_AUTO_TEST_CASE (Vcluster_semantic_gather)
 		openfpm::vector<size_t> v1;
 		v1.resize(vcl.getProcessUnitID());
 
-		for(size_t i = 0 ; i < vcl.getProcessUnitID() ; i++)
-		{v1.get(i) = 5;}
+		for(size_t j = 0 ; j < vcl.getProcessUnitID() ; j++)
+		{v1.get(j) = 5;}
 
 		openfpm::vector<size_t> v2;
 
@@ -510,11 +510,11 @@ BOOST_AUTO_TEST_CASE (Vcluster_semantic_struct_gather)
 		openfpm::vector<Aexample> v1;
 		v1.resize(vcl.getProcessUnitID());
 
-		for(size_t i = 0 ; i < vcl.getProcessUnitID() ; i++)
+		for(size_t j = 0 ; j < vcl.getProcessUnitID() ; j++)
 		{
-			v1.get(i).a = 5;
-			v1.get(i).b = 10.0;
-			v1.get(i).c = 11.0;
+			v1.get(j).a = 5;
+			v1.get(j).b = 10.0;
+			v1.get(j).c = 11.0;
 		}
 
 		openfpm::vector<Aexample> v2;
@@ -568,8 +568,8 @@ BOOST_AUTO_TEST_CASE (Vcluster_semantic_scatter)
 		openfpm::vector<size_t> v1;
 		v1.resize(n_elements);
 
-		for(size_t i = 0 ; i < n_elements ; i++)
-		{v1.get(i) = 5;}
+		for(size_t j = 0 ; j < n_elements ; j++)
+		{v1.get(j) = 5;}
 
 		//! [Scatter the data from master]
 
@@ -579,10 +579,10 @@ BOOST_AUTO_TEST_CASE (Vcluster_semantic_scatter)
 		openfpm::vector<size_t> sz;
 
 		// Scatter pattern
-		for (size_t i = 0 ; i < vcl.getProcessingUnits() ; i++)
+		for (size_t j = 0 ; j < vcl.getProcessingUnits() ; j++)
 		{
-			sz.add(i % SSCATTER_MAX);
-			prc.add(i);
+			sz.add(j % SSCATTER_MAX);
+			prc.add(j);
 		}
 
 		vcl.SScatter(v1,v2,prc,sz,(i%vcl.getProcessingUnits()));
@@ -592,8 +592,8 @@ BOOST_AUTO_TEST_CASE (Vcluster_semantic_scatter)
 		BOOST_REQUIRE_EQUAL(v2.size(),vcl.getProcessUnitID() % SSCATTER_MAX);
 
 		bool is_five = true;
-		for (size_t i = 0 ; i < v2.size() ; i++)
-			is_five &= (v2.get(i) == 5);
+		for (size_t j = 0 ; j < v2.size() ; j++)
+		{is_five &= (v2.get(j) == 5);}
 
 		BOOST_REQUIRE_EQUAL(is_five,true);
 	}
@@ -618,8 +618,8 @@ BOOST_AUTO_TEST_CASE (Vcluster_semantic_struct_scatter)
 		openfpm::vector<size_t> v1;
 		v1.resize(n_elements);
 
-		for(size_t i = 0 ; i < n_elements ; i++)
-			v1.get(i) = 5;
+		for(size_t j = 0 ; j < n_elements ; j++)
+		{v1.get(j) = 5;}
 
 		openfpm::vector<size_t> v2;
 
@@ -627,10 +627,10 @@ BOOST_AUTO_TEST_CASE (Vcluster_semantic_struct_scatter)
 		openfpm::vector<size_t> sz;
 
 		// Scatter pattern
-		for (size_t i = 0 ; i < vcl.getProcessingUnits() ; i++)
+		for (size_t j = 0 ; j < vcl.getProcessingUnits() ; j++)
 		{
-			sz.add(i % SSCATTER_MAX);
-			prc.add(i);
+			sz.add(j % SSCATTER_MAX);
+			prc.add(j);
 		}
 
 		vcl.SScatter(v1,v2,prc,sz,(i%vcl.getProcessingUnits()));
@@ -640,8 +640,8 @@ BOOST_AUTO_TEST_CASE (Vcluster_semantic_struct_scatter)
 			BOOST_REQUIRE_EQUAL(v2.size(),vcl.getProcessUnitID() % SSCATTER_MAX);
 
 			bool is_five = true;
-			for (size_t i = 0 ; i < v2.size() ; i++)
-				is_five &= (v2.get(i) == 5);
+			for (size_t j = 0 ; j < v2.size() ; j++)
+			{is_five &= (v2.get(j) == 5);}
 
 			BOOST_REQUIRE_EQUAL(is_five,true);
 		}
@@ -1853,11 +1853,11 @@ void Vcluster_semantic_sendrecv_6_impl()
 
 		v1.resize(vcl.getProcessingUnits());
 
-		for(size_t i = 0 ; i < v1.size() ; i++)
+		for(size_t j = 0 ; j < v1.size() ; j++)
 		{
-			v1.get(i) = g1;
+			v1.get(j) = g1;
 
-			prc_send.add((i + vcl.getProcessUnitID()) % vcl.getProcessingUnits());
+			prc_send.add((j + vcl.getProcessUnitID()) % vcl.getProcessingUnits());
 		}
 
 		scomm_unknown<impl>(vcl,v1,v3,prc_send,prc_recv3,sz_recv3);
@@ -1867,11 +1867,11 @@ void Vcluster_semantic_sendrecv_6_impl()
 		bool match = true;
 		typedef Point_test<float> p;
 
-		for (size_t i = 0 ; i < v3.size() ; i++)
+		for (size_t k = 0 ; k < v3.size() ; k++)
 		{
-			for (size_t j = 0 ; j < v3.get(i).size(); j++)
+			for (size_t j = 0 ; j < v3.get(k).size(); j++)
 			{
-				grid_cpu<2,Point_test<float>> g2 = v3.get(i);
+				grid_cpu<2,Point_test<float>> g2 = v3.get(k);
 
 				auto it = g2.getIterator();
 

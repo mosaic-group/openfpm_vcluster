@@ -17,8 +17,15 @@
 #ifdef CUDA_GPU
 extern CudaMemory mem_tmp;
 
+#ifndef MAX_NUMER_OF_PROPERTIES
+#define MAX_NUMER_OF_PROPERTIES 20
+#endif
+
 extern CudaMemory exp_tmp;
-extern CudaMemory exp_tmp2;
+extern CudaMemory exp_tmp2[MAX_NUMER_OF_PROPERTIES];
+
+extern CudaMemory rem_tmp;
+extern CudaMemory rem_tmp2[MAX_NUMER_OF_PROPERTIES];
 
 #endif
 
@@ -254,7 +261,11 @@ class Vcluster: public Vcluster_base<InternalMemory>
 					{sz_recv_byte[NBX_prc_scnt].get(i) = sz_recv.get(i) * sizeof(typename T::value_type);}
 				}
 				else
-				{std::cout << __FILE__ << ":" << __LINE__ << " Error " << demangle(typeid(T).name()) << " the type does not work with the option or NO_CHANGE_ELEMENTS" << std::endl;}
+				{
+#ifndef DISABLE_ALL_RTTI
+					std::cout << __FILE__ << ":" << __LINE__ << " Error " << demangle(typeid(T).name()) << " the type does not work with the option or NO_CHANGE_ELEMENTS" << std::endl;
+#endif
+				}
 
 				self_base::sendrecvMultipleMessagesNBXAsync(prc_send.size(),(size_t *)send_sz_byte.getPointer(),(size_t *)prc_send.getPointer(),(void **)send_buf.getPointer(),
 											prc_recv.size(),(size_t *)prc_recv.getPointer(),(size_t *)sz_recv_byte[NBX_prc_scnt].getPointer(),msg_alloc_known,(void *)&NBX_prc_bi);
@@ -1447,8 +1458,8 @@ static inline void openfpm_init(int *argc, char ***argv)
 
 	sigaction(SIGSEGV, &sa, NULL);
 
-	if (*argc != 0)
-		program_name = std::string(*argv[0]);
+	if (argc != NULL && *argc != 0)
+	{program_name = std::string(*argv[0]);}
 
 	// Initialize math pre-computation tables
 	openfpm::math::init_getFactorization();
@@ -1461,7 +1472,11 @@ static inline void openfpm_init(int *argc, char ***argv)
 	mem_tmp.incRef();
 
 	exp_tmp.incRef();
-	exp_tmp2.incRef();
+
+	for (int i = 0 ; i < MAX_NUMER_OF_PROPERTIES ; i++)
+	{
+		exp_tmp2[i].incRef();
+	}
 
 
 #endif
@@ -1492,8 +1507,12 @@ static inline void openfpm_finalize()
 
 	exp_tmp.destroy();
 	exp_tmp.decRef();
-	exp_tmp2.destroy();
-	exp_tmp2.decRef();
+
+	for (int i = 0 ; i < MAX_NUMER_OF_PROPERTIES ; i++)
+	{
+		exp_tmp2[i].destroy();
+		exp_tmp2[i].decRef();
+	}
 
 #endif
 }

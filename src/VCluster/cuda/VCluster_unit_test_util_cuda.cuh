@@ -8,6 +8,8 @@
 #ifndef VCLUSTER_UNIT_TEST_UTIL_CUDA_CUH_
 #define VCLUSTER_UNIT_TEST_UTIL_CUDA_CUH_
 
+#include "VCluster/VCluster.hpp"
+#include <boost/test/unit_test.hpp>
 
 template<typename T,typename Memory, template <typename> class layout_base>  void test_single_all_broadcast_primitives(Vcluster<> & vcl)
 {
