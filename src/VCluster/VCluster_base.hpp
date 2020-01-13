@@ -28,7 +28,7 @@
 #if defined(CUDA_GPU) && defined(__NVCC__)
 #include "util/cuda/moderngpu/launch_box.hxx"
 #endif
-#include "util/cuda/ofp_context.hxx"
+#include "util/cuda/ofp_context.cuh"
 
 #ifdef HAVE_PETSC
 #include <petscvec.h>

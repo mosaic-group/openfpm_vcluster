@@ -1,3 +1,7 @@
+
+#include <hip/hip_runtime.h>
+#include "config.h"
+
 #include <sstream>
 #define BOOST_TEST_DYN_LINK
 #include <boost/test/unit_test.hpp>

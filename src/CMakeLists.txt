@@ -2,13 +2,10 @@ cmake_minimum_required(VERSION 3.8 FATAL_ERROR)
 
 ########################### Executables
 
-if (CUDA_FOUND)
-	if ( HIP_ENABLE )
-		set(CUDA_SOURCES ../../openfpm_devices/src/memory/CudaMemory_hipified.cpp VCluster/cuda/VCluster_semantic_unit_cuda_tests_hipified.cpp VCluster/cuda/VCluster_unit_tests_hipified.cpp )
-	else()
-		set(CUDA_SOURCES ../../openfpm_devices/src/memory/CudaMemory.cu VCluster/cuda/VCluster_semantic_unit_cuda_tests.cu VCluster/cuda/VCluster_unit_tests.cu )
-	endif()
+if (CUDA_FOUND OR HIP_ENABLE)
+	set(CUDA_SOURCES ../../openfpm_devices/src/memory/CudaMemory.cu VCluster/cuda/VCluster_semantic_unit_cuda_tests.cu VCluster/cuda/VCluster_unit_tests.cu )
 endif()
+
 
 add_library(vcluster STATIC VCluster/VCluster.cpp)
 add_library(vcluster_dl SHARED VCluster/VCluster.cpp)
@@ -23,12 +20,14 @@ if ( HIP_ENABLE AND HIP_FOUND )
 	set_property(TARGET vcluster PROPERTY POSITION_INDEPENDENT_CODE OFF)
 	set_property(TARGET vcluster PROPERTY COMPILE_FLAGS "-Xcompiler -fPIC")
 	set_property(TARGET vcluster PROPERTY NO_SONAME ON)
-	set_property(TARGET vcluster_dl PROPERTY POSITION_INDEPENDENT_CODE OFF)
+	set_property(TARGET vcluster_dl PROPERTY POSITION_INDEPENDENT_CODE ON)
 	set_property(TARGET vcluster_dl PROPERTY COMPILE_FLAGS "-Xcompiler -fPIC")
 	set_property(TARGET vcluster_dl PROPERTY NO_SONAME ON)
 
-	target_include_directories (vcluster_test PUBLIC ${MPI_C_INCLUDE_DIRS})
-
+        #target_include_directories (vcluster PUBLIC ${MPI_C_INCLUDE_DIRS}) # Well ........ it does not work, work around line below
+        set_property(TARGET vcluster PROPERTY COMPILE_FLAGS "-I${MPI_C_INCLUDE_DIRS}")
+	set_property(TARGET vcluster_dl PROPERTY COMPILE_FLAGS "-I${MPI_C_INCLUDE_DIRS}")
+	set_property(TARGET vcluster_test PROPERTY COMPILE_FLAGS "-I${MPI_C_INCLUDE_DIRS}")
 else()
 
 	add_executable(vcluster_test main.cpp VCluster/VCluster.cpp  ../../openfpm_devices/src/memory/HeapMemory.cpp ../../openfpm_devices/src/memory/PtrMemory.cpp ../../openfpm_devices/src/Memleak_check.cpp VCluster/VCluster_unit_tests.cpp VCluster/VCluster_semantic_unit_tests.cpp ${CUDA_SOURCES})
@@ -51,6 +50,12 @@ if(CUDA_FOUND)
         if (TEST_COVERAGE)
                 target_compile_options(mem PRIVATE $<$<COMPILE_LANGUAGE:CUDA>: -Xcompiler "-fprofile-arcs -ftest-coverage">)
         endif()
+endif()
+
+
+if (HIP_ENABLE)
+        SET(CMAKE_EXE_LINKER_FLAGS  "--amdgpu-target=${AMD_ARCH_COMPILE}")
+	SET(CMAKE_SHARED_LINKER_FLAGS  "--amdgpu-target=${AMD_ARCH_COMPILE}")
 endif()
 
 target_include_directories (vcluster_test PUBLIC ${CUDA_INCLUDE_DIRS})
