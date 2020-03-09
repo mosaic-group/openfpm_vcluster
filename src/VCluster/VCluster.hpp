@@ -929,6 +929,31 @@ static inline void openfpm_finalize()
 #endif
 }
 
+static void get_comm_ranks(MPI_Comm comm, openfpm::vector<unsigned int> & world_ranks)
+{
+	MPI_Group grp, world_grp;
+
+	MPI_Comm_group(MPI_COMM_WORLD, &world_grp);
+	MPI_Comm_group(comm, &grp);
+
+	int grp_size;
+
+	MPI_Group_size(grp, &grp_size);
+
+	openfpm::vector<unsigned int> local_ranks;
+
+	local_ranks.resize(grp_size);
+	world_ranks.resize(grp_size);
+
+	for (int i = 0; i < grp_size; i++)
+	{local_ranks.get(i) = i;}
+
+	MPI_Group_translate_ranks(grp, grp_size, (int *)local_ranks.getPointer(), world_grp, (int *)world_ranks.getPointer());
+
+	MPI_Group_free(&grp);
+	MPI_Group_free(&world_grp);
+}
+
 
 /*! \brief Initialize a global instance of Runtime Virtual Cluster Machine
  *
@@ -947,23 +972,105 @@ static inline void init_global_v_cluster_private(int *argc, char ***argv, init_o
 		if (flag == false)
 		{MPI_Init(argc,argv);}
 
-		MPI_Comm com_compute;
+		MPI_Comm comm_compute;
+		MPI_Comm comm_steer;
+		MPI_Comm comm_vis;
 
 		int rank;
 		MPI_Comm_rank(MPI_COMM_WORLD,&rank);
 
-		if (rank == 0)
-		{MPI_Comm_split(MPI_COMM_WORLD, MPI_UNDEFINED,rank, &com_compute);}
-		else
-		{MPI_Comm_split(MPI_COMM_WORLD,0,rank, &com_compute);}
+		MPI_Comm nodeComm;
+		MPI_Comm_split_type( MPI_COMM_WORLD, MPI_COMM_TYPE_SHARED, rank,
+							 MPI_INFO_NULL, &nodeComm );
 
-		if (rank != 0 )
+		openfpm::vector<unsigned int> world_ranks;
+		get_comm_ranks(nodeComm,world_ranks);
+
+		int nodeRank;
+		int len;
+		MPI_Comm_rank(nodeComm,&nodeRank);
+
+		bool is_scenery_process = false;
+
+		if (rank != 0)
+		{
+			if (nodeRank == 0)
+			{
+				char name[MPI_MAX_PROCESSOR_NAME];
+
+				// Scenery process
+				MPI_Get_processor_name(name, &len);
+
+				std::cout << "Node: " << name << " scenery process: " << rank << std::endl;
+
+				is_scenery_process = true;
+			}
+			else
+			{
+				for (int i = 0 ; i < world_ranks.size() ; i++)
+				{
+					if (world_ranks.get(i) == 0 && (nodeRank == 1 || nodeRank == 2))
+					{
+						char name[MPI_MAX_PROCESSOR_NAME];
+
+						// Scenery process
+						MPI_Get_processor_name(name, &len);
+
+						//
+						std::cout << "Senary on node 0 " << name << "   " << nodeRank << "  " << rank << std::endl;
+
+						is_scenery_process = true;
+					}
+				}
+			}
+		}
+
+		if (is_scenery_process == true)
+		{
+			MPI_Comm_split(MPI_COMM_WORLD,0,rank, &comm_vis);
+		}
+		else
+		{
+			MPI_Comm_split(MPI_COMM_WORLD,1,rank, &comm_steer);
+		}
+
+
+		if (rank == 0 || is_scenery_process == true)
+		{MPI_Comm_split(MPI_COMM_WORLD, MPI_UNDEFINED,rank, &comm_compute);}
+		else
+		{MPI_Comm_split(MPI_COMM_WORLD,0,rank, &comm_compute);}
+
+
+		if (rank != 0 && is_scenery_process == false)
 		{
 			if (global_v_cluster_private_heap == NULL)
-			{global_v_cluster_private_heap = new Vcluster<>(argc,argv,com_compute);}
+			{global_v_cluster_private_heap = new Vcluster<>(argc,argv,comm_compute);}
 
                 	if (global_v_cluster_private_cuda == NULL)
-                	{global_v_cluster_private_cuda = new Vcluster<CudaMemory>(argc,argv,com_compute);}
+                	{global_v_cluster_private_cuda = new Vcluster<CudaMemory>(argc,argv,comm_compute);}
+		}
+		else if (is_scenery_process == true)
+		{
+			int flag = false;
+			MPI_Request bar_req;
+			MPI_Ibarrier(MPI_COMM_WORLD,&bar_req);
+			//! barrier status
+			MPI_Status bar_stat;
+
+			while(flag == false)
+			{
+				char name[MPI_MAX_PROCESSOR_NAME];
+
+				// Scenery process
+				MPI_Get_processor_name(name, &len);
+
+				std::cout << "I am rank "  << rank << " running on: " << name << std::endl;
+				sleep(1);
+				MPI_SAFE_CALL(MPI_Test(&bar_req,&flag,&bar_stat));
+			}
+
+			openfpm_finalize();
+			exit(0);
 		}
 		else
 		{
