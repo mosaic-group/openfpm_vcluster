@@ -990,20 +990,21 @@ static inline void init_global_v_cluster_private(int *argc, char ***argv, init_o
 		int len;
 		MPI_Comm_rank(nodeComm,&nodeRank);
 
-		bool is_scenery_process = false;
+		bool is_vis_process = false;
 
 		if (rank != 0)
 		{
 			if (nodeRank == 0)
 			{
+			    // The lowest ranked process on a given node (except head node); the rendering process of that node
 				char name[MPI_MAX_PROCESSOR_NAME];
 
-				// Scenery process
+				// Vis process
 				MPI_Get_processor_name(name, &len);
 
-				std::cout << "Node: " << name << " scenery process: " << rank << std::endl;
+				std::cout << "Node: " << name << " vis process: " << rank << std::endl;
 
-				is_scenery_process = true;
+				is_vis_process = true;
 			}
 			else
 			{
@@ -1013,35 +1014,38 @@ static inline void init_global_v_cluster_private(int *argc, char ***argv, init_o
 					{
 						char name[MPI_MAX_PROCESSOR_NAME];
 
-						// Scenery process
+						// Vis process
 						MPI_Get_processor_name(name, &len);
 
-						//
-						std::cout << "Senary on node 0 " << name << "   " << nodeRank << "  " << rank << std::endl;
+						std::cout << "Vis process on node 0 " << name << "   " << nodeRank << "  " << rank << std::endl;
 
-						is_scenery_process = true;
+						is_vis_process = true;
 					}
 				}
 			}
 		}
 
-		if (is_scenery_process == true)
+		if (is_vis_process == true)
 		{
+		    //All visualization processes are part of the vis communicator, but not part of the steering communicator
 			MPI_Comm_split(MPI_COMM_WORLD,0,rank, &comm_vis);
-		}
+            MPI_Comm_split(MPI_COMM_WORLD, MPI_UNDEFINED, rank, &comm_steer);
+        }
 		else
 		{
-			MPI_Comm_split(MPI_COMM_WORLD,1,rank, &comm_steer);
-		}
+            //All non-visualization processes are part of the steering communicator, but not part of the vis communicator
+            MPI_Comm_split(MPI_COMM_WORLD,0,rank, &comm_steer);
+            MPI_Comm_split(MPI_COMM_WORLD, MPI_UNDEFINED, rank, &comm_vis);
+        }
 
 
-		if (rank == 0 || is_scenery_process == true)
+		if (rank == 0 || is_vis_process == true)
 		{MPI_Comm_split(MPI_COMM_WORLD, MPI_UNDEFINED,rank, &comm_compute);}
 		else
 		{MPI_Comm_split(MPI_COMM_WORLD,0,rank, &comm_compute);}
 
 
-		if (rank != 0 && is_scenery_process == false)
+		if (rank != 0 && is_vis_process == false)
 		{
 			if (global_v_cluster_private_heap == NULL)
 			{global_v_cluster_private_heap = new Vcluster<>(argc,argv,comm_compute);}
@@ -1049,7 +1053,7 @@ static inline void init_global_v_cluster_private(int *argc, char ***argv, init_o
                 	if (global_v_cluster_private_cuda == NULL)
                 	{global_v_cluster_private_cuda = new Vcluster<CudaMemory>(argc,argv,comm_compute);}
 		}
-		else if (is_scenery_process == true)
+		else if (is_vis_process == true)
 		{
 			int flag = false;
 			MPI_Request bar_req;
@@ -1061,7 +1065,7 @@ static inline void init_global_v_cluster_private(int *argc, char ***argv, init_o
 			{
 				char name[MPI_MAX_PROCESSOR_NAME];
 
-				// Scenery process
+				// Vis process
 				MPI_Get_processor_name(name, &len);
 
 				std::cout << "I am rank "  << rank << " running on: " << name << std::endl;
