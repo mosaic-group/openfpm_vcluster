@@ -13,6 +13,7 @@
 #include "VCluster_base.hpp"
 #include "VCluster_meta_function.hpp"
 #include "util/math_util_complex.hpp"
+#include "InVis.hpp"
 
 #ifdef CUDA_GPU
 extern CudaMemory mem_tmp;
@@ -970,7 +971,11 @@ static inline void init_global_v_cluster_private(int *argc, char ***argv, init_o
 		MPI_Initialized(&flag);
 
 		if (flag == false)
-		{MPI_Init(argc,argv);}
+		{
+            int threadLevel;
+            MPI_Init_thread(argc, argv, MPI_THREAD_MULTIPLE, &threadLevel);
+            std::cout << "MPI initialized with thread level " << threadLevel << ". The desired level was " << MPI_THREAD_MULTIPLE << std::endl;
+		}
 
 		MPI_Comm comm_compute;
 		MPI_Comm comm_steer;
@@ -1025,18 +1030,23 @@ static inline void init_global_v_cluster_private(int *argc, char ***argv, init_o
 			}
 		}
 
+		int colorVis;
+		int colorSteer;
 		if (is_vis_process == true)
 		{
 		    //All visualization processes are part of the vis communicator, but not part of the steering communicator
-			MPI_Comm_split(MPI_COMM_WORLD,0,rank, &comm_vis);
-            MPI_Comm_split(MPI_COMM_WORLD, MPI_UNDEFINED, rank, &comm_steer);
+		    colorVis = 0;
+		    colorSteer = MPI_UNDEFINED;
         }
 		else
 		{
             //All non-visualization processes are part of the steering communicator, but not part of the vis communicator
-            MPI_Comm_split(MPI_COMM_WORLD,0,rank, &comm_steer);
-            MPI_Comm_split(MPI_COMM_WORLD, MPI_UNDEFINED, rank, &comm_vis);
+            colorVis = MPI_UNDEFINED;
+            colorSteer = 0;
         }
+
+        MPI_Comm_split(MPI_COMM_WORLD, colorSteer, rank, &comm_steer);
+        MPI_Comm_split(MPI_COMM_WORLD, colorVis, rank, &comm_vis);
 
 
 		if (rank == 0 || is_vis_process == true)
@@ -1055,21 +1065,54 @@ static inline void init_global_v_cluster_private(int *argc, char ***argv, init_o
 		}
 		else if (is_vis_process == true)
 		{
-			int flag = false;
+            int flag = false;
 			MPI_Request bar_req;
 			MPI_Ibarrier(MPI_COMM_WORLD,&bar_req);
 			//! barrier status
 			MPI_Status bar_stat;
 
-			while(flag == false)
+			//How many simulation processes are running on this node?
+			int numSimProcesses;
+			int nodeCommSize;
+			MPI_Comm_size(nodeComm, &nodeCommSize);
+
+			if(nodeRank != 0)
+            {
+			    //This process' rank on its node is not 0. So it is on the head node
+			    numSimProcesses = nodeCommSize - 3; //OpenFPM Head + Vis Head + Vis Renderer
+            }
+			else
+            {
+			    numSimProcesses = nodeCommSize - 1; //All process apart from Vis Renderer are simulation processes
+            }
+            char name[MPI_MAX_PROCESSOR_NAME];
+            MPI_Get_processor_name(name, &len);
+
+            std::cout<<"Node size is " << nodeCommSize << " and no. of sim processes on node " << name << " are: " << numSimProcesses << std::endl;
+
+            while(flag == false)
 			{
-				char name[MPI_MAX_PROCESSOR_NAME];
 
-				// Vis process
-				MPI_Get_processor_name(name, &len);
+				int visRank;
+                MPI_Comm_rank(comm_vis, &visRank);
 
-				std::cout << "I am rank "  << rank << " running on: " << name << std::endl;
-				sleep(1);
+                sleep(1);
+
+                if(visRank == 0)
+                {
+                    // The head process of the visualization system
+//                    sleep(10);
+                    InVis *visSystem = new InVis(700, numSimProcesses, comm_vis, true);
+                    visSystem->manageVisHead();
+                }
+                else
+                {
+                    // A rendering process of the the visualization system
+//                    sleep(10);
+                    InVis *visSystem = new InVis(700, numSimProcesses, comm_vis, false);
+                    visSystem->manageVisRenderer();
+                }
+
 				MPI_SAFE_CALL(MPI_Test(&bar_req,&flag,&bar_stat));
 			}
 
