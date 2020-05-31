@@ -28,6 +28,8 @@ if ( HIP_ENABLE AND HIP_FOUND )
         set_property(TARGET vcluster PROPERTY COMPILE_FLAGS "-I${MPI_C_INCLUDE_DIRS}")
 	set_property(TARGET vcluster_dl PROPERTY COMPILE_FLAGS "-I${MPI_C_INCLUDE_DIRS}")
 	set_property(TARGET vcluster_test PROPERTY COMPILE_FLAGS "-I${MPI_C_INCLUDE_DIRS}")
+
+	target_compile_definitions(vcluster_test PUBLIC BOOST_GPU_ENABLED="__device__ __host__")
 else()
 
 	add_executable(vcluster_test main.cpp VCluster/VCluster.cpp  ../../openfpm_devices/src/memory/HeapMemory.cpp ../../openfpm_devices/src/memory/PtrMemory.cpp ../../openfpm_devices/src/Memleak_check.cpp VCluster/VCluster_unit_tests.cpp VCluster/VCluster_semantic_unit_tests.cpp ${CUDA_SOURCES})

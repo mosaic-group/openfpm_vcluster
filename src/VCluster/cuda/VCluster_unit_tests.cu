@@ -1,3 +1,5 @@
+
+#include <hip/hip_runtime.h>
 #include "config.h"
 
 #include <sstream>
