@@ -4,8 +4,8 @@
 
 workspace=$1
 hostname=$2
-nproc=$4
-branch=$5
+nproc=$3
+branch=$4
 
 echo "Directory: $workspace"
 echo "Machine: $hostname"
