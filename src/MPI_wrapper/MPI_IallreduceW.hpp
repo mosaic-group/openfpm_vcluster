@@ -21,7 +21,9 @@ template<typename T> class MPI_IallreduceW
 public:
 	static inline void reduce(T & buf,MPI_Op op, MPI_Request & req)
 	{
+#ifndef DISABLE_ALL_RTTI
 		std::cerr << "Error: " << __FILE__ << ":" << __LINE__ << " cannot recognize " << typeid(T).name() << "\n";
+#endif
 	}
 };
 
