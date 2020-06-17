@@ -360,7 +360,14 @@ public:
 		bar_req = MPI_Request();
 		bar_stat = MPI_Status();
 
-		context = new mgpu::ofp_context_t(mgpu::gpu_context_opt::no_print_props,shmrank);
+#ifdef EXTERNAL_SET_GPU
+                int dev;
+                cudaGetDevice(&dev);
+                context = new mgpu::ofp_context_t(mgpu::gpu_context_opt::no_print_props,dev);
+#else
+                context = new mgpu::ofp_context_t(mgpu::gpu_context_opt::no_print_props,shmrank);
+#endif
+
 
 #if defined(PRINT_RANK_TO_GPU) && defined(CUDA_GPU)
 
