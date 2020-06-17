@@ -29,6 +29,12 @@ std::string program_name;
 
 CudaMemory mem_tmp;
 
+CudaMemory rem_tmp;
+CudaMemory rem_tmp2[MAX_NUMER_OF_PROPERTIES];
+
+CudaMemory exp_tmp;
+CudaMemory exp_tmp2[MAX_NUMER_OF_PROPERTIES];
+
 #endif
 
 // Segmentation fault signal handler

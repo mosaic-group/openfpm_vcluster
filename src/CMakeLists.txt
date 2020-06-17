@@ -16,6 +16,7 @@ if ( CMAKE_COMPILER_IS_GNUCC )
 endif()
 
 add_library(vcluster STATIC VCluster/VCluster.cpp)
+add_library(vcluster_dl SHARED VCluster/VCluster.cpp)
 
 ###########################
 
@@ -44,6 +45,14 @@ target_include_directories (vcluster PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/../../op
 target_include_directories (vcluster PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/../../openfpm_devices/src/)
 target_include_directories (vcluster PUBLIC ${Boost_INCLUDE_DIRS})
 
+target_include_directories (vcluster_dl PUBLIC ${CUDA_INCLUDE_DIRS})
+target_include_directories (vcluster_dl PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+target_include_directories (vcluster_dl PUBLIC ${PETSC_INCLUDES})
+target_include_directories (vcluster_dl PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/config)
+target_include_directories (vcluster_dl PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/../../openfpm_data/src/)
+target_include_directories (vcluster_dl PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/../../openfpm_devices/src/)
+target_include_directories (vcluster_dl PUBLIC ${Boost_INCLUDE_DIRS})
+
 target_link_libraries(vcluster_test ${Boost_LIBRARIES})
 target_link_libraries(vcluster_test ${PETSC_LIBRARIES})
 
@@ -57,7 +66,7 @@ endif()
 target_compile_features(vcluster_test PUBLIC cxx_std_11)
 target_link_libraries(vcluster_test ${MPI_C_LIBRARIES})
 
-install(TARGETS vcluster DESTINATION openfpm_vcluster/lib)
+install(TARGETS vcluster vcluster_dl DESTINATION openfpm_vcluster/lib)
 install(FILES MPI_wrapper/MPI_IallreduceW.hpp 
 	      MPI_wrapper/MPI_IrecvW.hpp 
 	      MPI_wrapper/MPI_IBcastW.hpp  
