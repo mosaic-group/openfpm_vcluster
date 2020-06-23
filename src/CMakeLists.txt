@@ -6,7 +6,7 @@ if (CUDA_FOUND)
 	set(CUDA_SOURCES ../../openfpm_devices/src/memory/CudaMemory.cu VCluster/cuda/VCluster_semantic_unit_cuda_tests.cu VCluster/cuda/VCluster_unit_tests.cu )
 endif()
 
-add_executable(vcluster_test main.cpp VCluster/VCluster.cpp VCluster/InVis.cpp ../../openfpm_devices/src/memory/ShmAllocator_manager.cpp ../../openfpm_devices/src/memory/SemManager.cpp ../../openfpm_devices/src/memory/ShmAllocator.cpp ../../openfpm_devices/src/memory/ShmBuffer.cpp ../../openfpm_devices/src/memory/HeapMemory.cpp ../../openfpm_devices/src/memory/PtrMemory.cpp ../../openfpm_devices/src/Memleak_check.cpp VCluster/VCluster_unit_tests.cpp VCluster/VCluster_semantic_unit_tests.cpp ${CUDA_SOURCES})
+add_executable(vcluster_test main.cpp VCluster/VCluster.cpp VCluster/InVis.cpp VCluster/InVisVolume.cpp ../../openfpm_devices/src/memory/ShmAllocator_manager.cpp ../../openfpm_devices/src/memory/SemManager.cpp ../../openfpm_devices/src/memory/ShmAllocator.cpp ../../openfpm_devices/src/memory/ShmBuffer.cpp ../../openfpm_devices/src/memory/HeapMemory.cpp ../../openfpm_devices/src/memory/PtrMemory.cpp ../../openfpm_devices/src/Memleak_check.cpp VCluster/VCluster_unit_tests.cpp VCluster/VCluster_semantic_unit_tests.cpp ${CUDA_SOURCES})
 
 if ( CMAKE_COMPILER_IS_GNUCC )
     target_compile_options(vcluster_test PRIVATE "-Wno-deprecated-declarations")
@@ -15,7 +15,7 @@ if ( CMAKE_COMPILER_IS_GNUCC )
     endif()
 endif()
 
-add_library(vcluster STATIC VCluster/VCluster.cpp VCluster/InVis.cpp)
+add_library(vcluster STATIC VCluster/VCluster.cpp VCluster/InVis.cpp VCluster/InVisVolume.cpp)
 
 ###########################
 
@@ -78,6 +78,7 @@ install(FILES VCluster/VCluster_base.hpp
 	      VCluster/VCluster.hpp 
 	      VCluster/VCluster_meta_function.hpp
 		  VCluster/InVis.hpp
+		  VCluster/InVisVolume.hpp
 	      DESTINATION openfpm_vcluster/include/VCluster )
 
 install (FILES util/Vcluster_log.hpp
