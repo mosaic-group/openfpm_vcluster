@@ -41,6 +41,11 @@ public:
 	{
 		MPI_SAFE_CALL(MPI_Irecv(v.getPointer(), v.size() * sizeof(T),MPI_BYTE, proc, tag , ext_comm,&req));
 	}
+
+    static inline void recv(size_t proc , size_t tag ,openfpm::vector_ofp<T> & v, MPI_Request & req, MPI_Comm ext_comm)
+    {
+        MPI_SAFE_CALL(MPI_Irecv(v.getPointer(), v.size() * sizeof(T),MPI_BYTE, proc, tag , ext_comm,&req));
+    }
 };
 
 

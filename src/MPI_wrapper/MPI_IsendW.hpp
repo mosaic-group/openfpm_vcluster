@@ -37,6 +37,21 @@ public:
 	}
 };
 
+/*! \brief General send for a vector of any type
+ *
+ * \tparam any type
+ *
+ */
+
+template<typename T>
+class MPI_IsendW<T,HeapMemory,int>
+{
+public:
+    static inline void send(size_t proc , size_t tag ,openfpm::vector_ofp<T> & v, MPI_Request & req, MPI_Comm ext_comm)
+    {
+        MPI_Isend(v.getPointer(), v.size() * sizeof(T),MPI_BYTE, proc, tag , ext_comm,&req);
+    }
+};
 
 /*! \brief specialization for vector of integer
  *
