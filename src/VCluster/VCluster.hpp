@@ -13,7 +13,8 @@
 #include "VCluster_base.hpp"
 #include "VCluster_meta_function.hpp"
 #include "util/math_util_complex.hpp"
-#include "InVis.hpp"
+//#include "InVis.hpp"
+#include "InVisVolume.hpp"
 
 #ifdef CUDA_GPU
 extern CudaMemory mem_tmp;
@@ -1050,10 +1051,22 @@ static inline void init_global_v_cluster_private(int *argc, char ***argv, init_o
 
 
 		if (rank == 0 || is_vis_process == true)
-		{MPI_Comm_split(MPI_COMM_WORLD, MPI_UNDEFINED,rank, &comm_compute);}
+		{
+		    MPI_Comm_split(MPI_COMM_WORLD, MPI_UNDEFINED,rank, &comm_compute);
+		    MPI_Comm_split(MPI_COMM_WORLD, 0, 0, &PETSC_COMM_WORLD);
+		}
 		else
-		{MPI_Comm_split(MPI_COMM_WORLD,0,rank, &comm_compute);}
+		{
+		    MPI_Comm_split(MPI_COMM_WORLD,0,rank, &comm_compute);
+            MPI_Comm_split(MPI_COMM_WORLD, 1, 0, &PETSC_COMM_WORLD);
+        }
 
+#ifdef HAVE_PETSC
+
+//		PETSC_COMM_WORLD = comm_compute;
+        PetscInitialize(argc,argv,NULL,NULL);
+
+#endif
 
 		if (rank != 0 && is_vis_process == false)
 		{
@@ -1101,16 +1114,20 @@ static inline void init_global_v_cluster_private(int *argc, char ***argv, init_o
                 if(visRank == 0)
                 {
                     // The head process of the visualization system
-//                    sleep(10);
-                    InVis *visSystem = new InVis(700, numSimProcesses, comm_vis, true);
-                    visSystem->manageVisHead();
+                    while(true) {
+                        sleep(10);
+                    }
+//                    InVis *visSystem = new InVis(700, numSimProcesses, comm_vis, true);
+//                    visSystem->manageVisHead();
                 }
                 else
                 {
                     // A rendering process of the the visualization system
-//                    sleep(10);
-                    InVis *visSystem = new InVis(700, numSimProcesses, comm_vis, false);
-                    visSystem->manageVisRenderer();
+//                    while(true) {
+//                        sleep(10);
+//                    }
+                    InVisVolume *visSystem = new InVisVolume(700, numSimProcesses, comm_vis, false);
+                    visSystem->manageVolumeRenderer();
                 }
 
 				MPI_SAFE_CALL(MPI_Test(&bar_req,&flag,&bar_stat));
@@ -1140,6 +1157,11 @@ static inline void init_global_v_cluster_private(int *argc, char ***argv, init_o
 	}
 	else
 	{
+#ifdef HAVE_PETSC
+
+            PetscInitialize(argc,argv,NULL,NULL);
+
+#endif
         	if (global_v_cluster_private_heap == NULL)
         	{global_v_cluster_private_heap = new Vcluster<>(argc,argv);}
 
@@ -1196,12 +1218,6 @@ static inline bool is_openfpm_init()
  */
 static inline void openfpm_init(int *argc, char ***argv, init_options option = init_options::none )
 {
-#ifdef HAVE_PETSC
-
-	PetscInitialize(argc,argv,NULL,NULL);
-
-#endif
-
 	init_global_v_cluster_private(argc,argv,option);
 
 #ifdef SE_CLASS1
