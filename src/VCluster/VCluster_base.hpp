@@ -998,6 +998,40 @@ public:
 		return true;
 	}
 
+    /*! \brief Send data to a processor
+     *
+     * \warning In order to avoid deadlock every send must be coupled with a recv
+     *          in case you want to send data without knowledge from the other side
+     *          consider to use sendRecvMultipleMessages
+     *
+     * \warning operation is asynchronous execute must be called to ensure they are executed
+     *
+     * \see sendRecvMultipleMessages
+     *
+     * \param proc processor id
+     * \param tag id
+     * \param v buffer to send
+     *
+     * \return true if succeed false otherwise
+     *
+     */
+    template<typename T> bool send(size_t proc, size_t tag, openfpm::vector_ofp<T> & v)
+    {
+#ifdef SE_CLASS1
+        checkType<T>();
+#endif
+
+        // send over MPI
+
+        // Create one request
+        req.add();
+
+        // send
+        MPI_IsendW<T,HeapMemory,int>::send(proc,SEND_RECV_BASE + tag,v,req.last(),ext_comm);
+
+        return true;
+    }
+
 	/*! \brief Recv data from a processor
 	 *
 	 * \warning In order to avoid deadlock every recv must be coupled with a send
@@ -1061,6 +1095,40 @@ public:
             MPI_IrecvW<T>::recv(proc,SEND_RECV_BASE + tag,v,req.last(),ext_comm);
 
             return true;
+    }
+
+    /*! \brief Recv data from a processor
+     *
+     * \warning In order to avoid deadlock every recv must be coupled with a send
+     *          in case you want to send data without knowledge from the other side
+     *          consider to use sendrecvMultipleMessagesNBX
+     *
+     * \warning operation is asynchronous execute must be called to ensure they are executed
+     *
+     * \see sendrecvMultipleMessagesNBX
+     *
+     * \param proc processor id
+     * \param tag id
+     * \param v vector to send
+     *
+     * \return true if succeed false otherwise
+     *
+     */
+    template<typename T> bool recv(size_t proc, size_t tag, openfpm::vector_ofp<T> & v)
+    {
+#ifdef SE_CLASS1
+        checkType<T>();
+#endif
+
+        // recv over MPI
+
+        // Create one request
+        req.add();
+
+        // receive
+        MPI_IrecvW<T>::recv(proc,SEND_RECV_BASE + tag,v,req.last(),ext_comm);
+
+        return true;
     }
 
 	/*! \brief Gather the data from all processors
