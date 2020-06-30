@@ -998,38 +998,52 @@ static inline void init_global_v_cluster_private(int *argc, char ***argv, init_o
 
 		bool is_vis_process = false;
 
-		if (rank != 0)
-		{
-			if (nodeRank == 0)
-			{
-			    // The lowest ranked process on a given node (except head node); the rendering process of that node
-				char name[MPI_MAX_PROCESSOR_NAME];
+//		if (rank != 0)
+//		{
+//			if (nodeRank == 0)
+//			{
+//			    // The lowest ranked process on a given node (except head node); the rendering process of that node
+//				char name[MPI_MAX_PROCESSOR_NAME];
+//
+//				// Vis process
+//				MPI_Get_processor_name(name, &len);
+//
+//				std::cout << "Node: " << name << " vis process: " << rank << std::endl;
+//
+//				is_vis_process = true;
+//			}
+//			else
+//			{
+//				for (int i = 0 ; i < world_ranks.size() ; i++)
+//				{
+//					if (world_ranks.get(i) == 0 && (nodeRank == 1)) // TODO || nodeRank == 2
+//					{
+//						char name[MPI_MAX_PROCESSOR_NAME];
+//
+//						// Vis process
+//						MPI_Get_processor_name(name, &len);
+//
+//						std::cout << "Vis process on node 0 " << name << "   " << nodeRank << "  " << rank << std::endl;
+//
+//						is_vis_process = true;
+//					}
+//				}
+//			}
+//		}
 
-				// Vis process
-				MPI_Get_processor_name(name, &len);
+        if (nodeRank == 0)
+        {
+            // The lowest ranked process on a given node; the rendering process of that node
+            //TODO: change it back to above
+            char name[MPI_MAX_PROCESSOR_NAME];
 
-				std::cout << "Node: " << name << " vis process: " << rank << std::endl;
+            // Vis process
+            MPI_Get_processor_name(name, &len);
 
-				is_vis_process = true;
-			}
-			else
-			{
-				for (int i = 0 ; i < world_ranks.size() ; i++)
-				{
-					if (world_ranks.get(i) == 0 && (nodeRank == 1 || nodeRank == 2))
-					{
-						char name[MPI_MAX_PROCESSOR_NAME];
+            std::cout << "Node: " << name << " vis process: " << rank << std::endl;
 
-						// Vis process
-						MPI_Get_processor_name(name, &len);
-
-						std::cout << "Vis process on node 0 " << name << "   " << nodeRank << "  " << rank << std::endl;
-
-						is_vis_process = true;
-					}
-				}
-			}
-		}
+            is_vis_process = true;
+        }
 
 		int colorVis;
 		int colorSteer;
@@ -1068,13 +1082,13 @@ static inline void init_global_v_cluster_private(int *argc, char ***argv, init_o
 
 #endif
 
-		if (rank != 0 && is_vis_process == false)
+		if (is_vis_process == false) // TODO && rank!=0
 		{
 			if (global_v_cluster_private_heap == NULL)
-			{global_v_cluster_private_heap = new Vcluster<>(argc,argv,comm_compute);}
+			{global_v_cluster_private_heap = new Vcluster<>(argc,argv,comm_steer);} //TODO replace with comm_compute
 
-                	if (global_v_cluster_private_cuda == NULL)
-                	{global_v_cluster_private_cuda = new Vcluster<CudaMemory>(argc,argv,comm_compute);}
+            if (global_v_cluster_private_cuda == NULL)
+            {global_v_cluster_private_cuda = new Vcluster<CudaMemory>(argc,argv,comm_steer);} //TODO replace with comm_compute
 		}
 		else if (is_vis_process == true)
 		{
@@ -1092,7 +1106,7 @@ static inline void init_global_v_cluster_private(int *argc, char ***argv, init_o
 			if(nodeRank != 0)
             {
 			    //This process' rank on its node is not 0. So it is on the head node
-			    numSimProcesses = nodeCommSize - 3; //OpenFPM Head + Vis Head + Vis Renderer
+			    numSimProcesses = nodeCommSize - 1; // Vis Renderer //TODO + Vis Head + OpenFPM Head
             }
 			else
             {
@@ -1109,26 +1123,29 @@ static inline void init_global_v_cluster_private(int *argc, char ***argv, init_o
 				int visRank;
                 MPI_Comm_rank(comm_vis, &visRank);
 
-                sleep(1);
+//                sleep(1);
 
-                if(visRank == 0)
-                {
-                    // The head process of the visualization system
-                    while(true) {
-                        sleep(10);
-                    }
-//                    InVis *visSystem = new InVis(700, numSimProcesses, comm_vis, true);
-//                    visSystem->manageVisHead();
-                }
-                else
-                {
-                    // A rendering process of the the visualization system
+//                if(visRank == 0)
+//                {
+//                    // The head process of the visualization system
 //                    while(true) {
 //                        sleep(10);
 //                    }
-                    InVisVolume *visSystem = new InVisVolume(700, numSimProcesses, comm_vis, false);
-                    visSystem->manageVolumeRenderer();
-                }
+////                    InVis *visSystem = new InVis(700, numSimProcesses, comm_vis, true);
+////                    visSystem->manageVisHead();
+//                }
+//                else
+//                {
+//                    // A rendering process of the the visualization system
+////                    while(true) {
+////                        sleep(10);
+////                    }
+//                    InVisVolume *visSystem = new InVisVolume(700, numSimProcesses, comm_vis, false);
+//                    visSystem->manageVolumeRenderer();
+//                }
+
+                InVisVolume *visSystem = new InVisVolume(700, numSimProcesses, comm_vis, false);
+                visSystem->manageVolumeRenderer();
 
 				MPI_SAFE_CALL(MPI_Test(&bar_req,&flag,&bar_stat));
 			}

@@ -18,7 +18,7 @@
 
 #define USE_VULKAN true
 
-//MPI_Comm comm;
+MPI_Comm mpiComm;
 //int imgSize;
 
 InVisVolume::InVisVolume(int wSize, int cPartners, MPI_Comm vComm, bool isHead) {
@@ -26,7 +26,7 @@ InVisVolume::InVisVolume(int wSize, int cPartners, MPI_Comm vComm, bool isHead) 
     computePartners = cPartners;
     imageSize = windowSize*windowSize*7;
     visComm = vComm;
-//    comm = vComm;
+    mpiComm = vComm;
     MPI_Comm_size(visComm, &commSize);
     std::cout<<"VisComm size is "<<commSize <<std::endl;
 //    imgSize = imageSize;
@@ -187,8 +187,9 @@ void InVisVolume::getMemory() {
         long *metaData = (long*)pws.ptr;
 
         for(int j = 0; j < numMetaElements; j++) {
-            std::cout<<j+1<<"th element is "<<metaData[j]<<std::endl;
+            std::cout<<j+1<<"th element is "<<metaData[j]<<"\t";
         }
+        std::cout<<std::endl;
 
         int elementsInGBox = 15; // origin -> 3 + grid dimensions -> 6 + domain dimensions -> 6
         int numGrids = numMetaElements / elementsInGBox;
@@ -206,13 +207,6 @@ void InVisVolume::getMemory() {
 
         int it = 0;
         for(int j = 0; j < numGrids; j++) {
-            origins[j * 3] = (int)metaData[it];
-            it ++;
-            origins[j * 3 + 1] = (int)metaData[it];
-            it++;
-            origins[j * 3 + 2] = (int)metaData[it];
-            it++;
-
             gridDims[j * 6] = (int)metaData[it];
             it ++;
             gridDims[j * 6 + 1] = (int)metaData[it];
@@ -239,6 +233,13 @@ void InVisVolume::getMemory() {
             domainDims[j * 6 + 5] = (int)metaData[it];
             it++;
 
+            origins[j * 3] = (int)metaData[it];
+            it ++;
+            origins[j * 3 + 1] = (int)metaData[it];
+            it++;
+            origins[j * 3 + 2] = (int)metaData[it];
+            it++;
+
             gridBuffers[i].push_back(new ShmBuffer(pName, j+1, true));
             gridBuffers[i][j]->update_key(true);
 
@@ -250,7 +251,7 @@ void InVisVolume::getMemory() {
             std::cout<< "Grid " << j << " of computePartner " << i << " is of size " << gridSize << std::endl;
 
             jobject bb;
-            bb = env->NewDirectByteBuffer((void *)tmp.ptr, gridSize);
+            bb = env->NewDirectByteBuffer((void *)tmp.ptr, 2*gridSize);
             env->SetObjectArrayElement(bytebuffers, j, bb);
             int temp = (env)-> GetDirectBufferCapacity(bb);
             std::cout<<"Bytebuffer capacity was found to be " <<temp <<std::endl;
@@ -289,6 +290,49 @@ void InVisVolume::doRender() {
     env->CallVoidMethod(obj, mainMethod);
 }
 
+
+void distributeVDIs(JNIEnv *e, jobject clazzObject, jobject subVDI, jint sizePerProcess, jint commSize) {
+
+    void *ptr = e->GetDirectBufferAddress(subVDI);
+
+    void *recvBuf = malloc(sizePerProcess * commSize);
+    MPI_Alltoall(ptr, sizePerProcess, MPI_BYTE, recvBuf, sizePerProcess, MPI_BYTE, mpiComm);
+
+    jclass clazz = e->GetObjectClass(clazzObject);
+    jmethodID compositeMethod = e->GetMethodID(clazz, "compositeVDIs", "(Ljava/nio/ByteBuffer;I)V");
+
+    jobject bb = e->NewDirectByteBuffer(recvBuf, sizePerProcess * commSize);
+
+    e->CallVoidMethod(clazzObject, compositeMethod, bb, sizePerProcess);
+}
+
+void gatherCompositedVDIs(JNIEnv *e, jobject clazzObject, jobject compositedVDI, jint root, jint compositedVDILen, jint myRank, jint commSize) {
+
+    std::cout<<"In Gather function " <<std::endl;
+    void *ptr = e->GetDirectBufferAddress(compositedVDI);
+    std::cout<<"Data received as parameter is: " << (char *)ptr << std::endl;
+    void *recvBuf;
+    if (myRank == 0) {
+        recvBuf = malloc(compositedVDILen * commSize);
+    }
+    else {
+        recvBuf = NULL;
+    }
+
+    MPI_Gather(ptr, compositedVDILen, MPI_BYTE, recvBuf, compositedVDILen, MPI_BYTE, root, mpiComm);
+    //The data is here now
+
+    if(myRank == 0) {
+        //send or store the VDI
+        std::cout<<"cpp on rank " <<myRank << " data received is " << (char *)recvBuf <<std::endl;
+    }
+
+    jclass clazz = e->GetObjectClass(clazzObject);
+    jmethodID updateMethod = e->GetMethodID(clazz, "updateVolumes", "()V");
+
+    e->CallVoidMethod(clazzObject, updateMethod);
+}
+
 void InVisVolume::manageVolumeRenderer() {
     JNIEnv *env;
     jvm->GetEnv((void **)&env, JNI_VERSION_1_6);
@@ -297,6 +341,9 @@ void InVisVolume::manageVolumeRenderer() {
 
     jfieldID compPartnersField = env->GetFieldID(clazz, "computePartners", "I");
     env->SetIntField(obj, compPartnersField, computePartners);
+
+    jfieldID commSizeField = env->GetFieldID(clazz, "commSize", "I");
+    env->SetIntField(obj, commSizeField, commSize);
 
     int visRank;
     MPI_Comm_rank(visComm, &visRank);
@@ -316,7 +363,20 @@ void InVisVolume::manageVolumeRenderer() {
     }
     env->CallVoidMethod(obj, initArraysMethod);
 
-    //TODO Register native for sending VDI via MPI
+    JNINativeMethod methods[] { { (char *)"distributeVDIs", (char *)"(Ljava/nio/ByteBuffer;II)V", (void *)&distributeVDIs },
+            { (char *)"gatherCompositedVDIs", (char *)"(Ljava/nio/ByteBuffer;IIII)V", (void *)&gatherCompositedVDIs }
+    };  // mapping table
+
+    if(env->RegisterNatives(clazz, methods, 2) < 0) {                        // register it
+        if( env->ExceptionOccurred() ) {
+            env->ExceptionDescribe();
+        } else {
+            std::cerr << "ERROR: Could not register natives for InVisVolume!" <<std::endl;
+            //std::exit(EXIT_FAILURE);
+        }
+    } else {
+        std::cout<<"Natives registered for InVisVolume. The return value is: "<< env->RegisterNatives(clazz, methods, 1) <<std::endl;
+    }
 
     std::cout<<"starting thread: updatePosData"<<std::endl;
 
