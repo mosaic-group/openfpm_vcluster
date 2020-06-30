@@ -80,7 +80,7 @@ InVisVolume::InVisVolume(int wSize, int cPartners, MPI_Comm vComm, bool isHead) 
     }
 
     options[3].optionString = (char *)
-            "-Dscenery.Headless=false";
+            "-Dscenery.Headless=true";
 
     vm_args.version = JNI_VERSION_1_6;             // minimum Java version
     vm_args.nOptions = 4;                          // number of options
@@ -304,6 +304,10 @@ void distributeVDIs(JNIEnv *e, jobject clazzObject, jobject subVDI, jint sizePer
     jobject bb = e->NewDirectByteBuffer(recvBuf, sizePerProcess * commSize);
 
     e->CallVoidMethod(clazzObject, compositeMethod, bb, sizePerProcess);
+    if(e->ExceptionOccurred()) {
+        e->ExceptionDescribe();
+        e->ExceptionClear();
+    }
 }
 
 void gatherCompositedVDIs(JNIEnv *e, jobject clazzObject, jobject compositedVDI, jint root, jint compositedVDILen, jint myRank, jint commSize) {
@@ -327,10 +331,14 @@ void gatherCompositedVDIs(JNIEnv *e, jobject clazzObject, jobject compositedVDI,
         std::cout<<"cpp on rank " <<myRank << " data received is " << (char *)recvBuf <<std::endl;
     }
 
-    jclass clazz = e->GetObjectClass(clazzObject);
-    jmethodID updateMethod = e->GetMethodID(clazz, "updateVolumes", "()V");
-
-    e->CallVoidMethod(clazzObject, updateMethod);
+//    jclass clazz = e->GetObjectClass(clazzObject);
+//    jmethodID updateMethod = e->GetMethodID(clazz, "updateVolumes", "()V");
+//
+//    e->CallVoidMethod(clazzObject, updateMethod);
+//    if(e->ExceptionOccurred()) {
+//        e->ExceptionDescribe();
+//        e->ExceptionClear();
+//    }
 }
 
 void InVisVolume::manageVolumeRenderer() {
