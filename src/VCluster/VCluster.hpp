@@ -1123,7 +1123,9 @@ static inline void init_global_v_cluster_private(int *argc, char ***argv, init_o
 				int visRank;
                 MPI_Comm_rank(comm_vis, &visRank);
 
-//                sleep(1);
+//                while (true) {
+//                    sleep(100);
+//                }
 
 //                if(visRank == 0)
 //                {

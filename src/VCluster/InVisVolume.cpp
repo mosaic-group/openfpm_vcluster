@@ -54,11 +54,11 @@ InVisVolume::InVisVolume(int wSize, int cPartners, MPI_Comm vComm, bool isHead) 
         std::exit(EXIT_FAILURE);
     }
 
-    std::cout<<"classpath is "<<classPath<<std::endl;
+//    std::cout<<"classpath is "<<classPath<<std::endl;
 
 //    ================== prepare loading of Java VM ============================
     JavaVMInitArgs vm_args;                        // Initialization arguments
-    auto *options = new JavaVMOption[4];   // JVM invocation options
+    auto *options = new JavaVMOption[7];   // JVM invocation options
     options[0].optionString = (char *)classPath.c_str();
 
     if(USE_VULKAN) {
@@ -81,9 +81,16 @@ InVisVolume::InVisVolume(int wSize, int cPartners, MPI_Comm vComm, bool isHead) 
 
     options[3].optionString = (char *)
             "-Dscenery.Headless=true";
+    options[4].optionString = (char *)
+            "-Dscenery.Renderer.MaxVolumeCacheSize=16";
+    options[5].optionString = (char *)
+            "-Dscenery.VulkanRenderer.EnableValidations=false";
+    options[6].optionString = (char *)
+            "-Dscenery.VulkanRenderer.StrictValidation=false";
+
 
     vm_args.version = JNI_VERSION_1_6;             // minimum Java version
-    vm_args.nOptions = 4;                          // number of options
+    vm_args.nOptions = 7;                          // number of options
     vm_args.options = options;
     vm_args.ignoreUnrecognized = false;     // invalid options make the JVM init fail
     //=============== load and initialize Java VM and JNI interface =============
@@ -141,7 +148,7 @@ InVisVolume::InVisVolume(int wSize, int cPartners, MPI_Comm vComm, bool isHead) 
         }
     }
 
-    std::cout << "Object of class has been constructed" << std::endl;
+//    std::cout << "Object of class has been constructed" << std::endl;
 
     clazz = reinterpret_cast<jclass>(env->NewGlobalRef(localClass));
     obj = reinterpret_cast<jobject>(env->NewGlobalRef(localObj));
@@ -149,7 +156,7 @@ InVisVolume::InVisVolume(int wSize, int cPartners, MPI_Comm vComm, bool isHead) 
     env->DeleteLocalRef(localClass);
     env->DeleteLocalRef(localObj);
 
-    std::cout << "Global references have been created and local ones deleted" << std::endl;
+//    std::cout << "Global references have been created and local ones deleted" << std::endl;
 }
 
 void InVisVolume::getMemory() {
@@ -181,7 +188,7 @@ void InVisVolume::getMemory() {
         GBoxBuf->update_key(true);
         pws = GBoxBuf->attach();
 
-        size_t metaSize = 120;
+        size_t metaSize = pws.size - 512 - 32;
         int numMetaElements  = metaSize / sizeof(long);
         std::cout << "Got metadata for compute partner " << i << ". The size and no of elements are:" << metaSize << " and " << numMetaElements << std::endl;
         long *metaData = (long*)pws.ptr;
@@ -244,9 +251,9 @@ void InVisVolume::getMemory() {
             gridBuffers[i][j]->update_key(true);
 
             ptr_with_size tmp = gridBuffers[i][j]->attach();
-            int width = abs(gridDims[j*6] - gridDims[j*6 + 3]);
-            int height = abs(gridDims[j*6 + 1] - gridDims[j*6 + 4]);
-            int depth = abs(gridDims[j*6 + 2] - gridDims[j*6 + 5]);
+            int width = abs(gridDims[j*6] - gridDims[j*6 + 3]) + 1;
+            int height = abs(gridDims[j*6 + 1] - gridDims[j*6 + 4]) + 1;
+            int depth = abs(gridDims[j*6 + 2] - gridDims[j*6 + 5]) + 1;
             int gridSize = width * height * depth;
             std::cout<< "Grid " << j << " of computePartner " << i << " is of size " << gridSize << std::endl;
 
@@ -288,47 +295,69 @@ void InVisVolume::doRender() {
         }
     }
     env->CallVoidMethod(obj, mainMethod);
+    if(env->ExceptionOccurred()) {
+        env->ExceptionDescribe();
+        env->ExceptionClear();
+    }
 }
 
 
-void distributeVDIs(JNIEnv *e, jobject clazzObject, jobject subVDI, jint sizePerProcess, jint commSize) {
+void distributeVDIs(JNIEnv *e, jobject clazzObject, jobject subVDICol, jobject subVDIDepth, jint sizePerProcess, jint commSize) {
 
-    void *ptr = e->GetDirectBufferAddress(subVDI);
+    void *ptrCol = e->GetDirectBufferAddress(subVDICol);
+    void *ptrDepth = e->GetDirectBufferAddress(subVDIDepth);
 
-    void *recvBuf = malloc(sizePerProcess * commSize);
-    MPI_Alltoall(ptr, sizePerProcess, MPI_BYTE, recvBuf, sizePerProcess, MPI_BYTE, mpiComm);
+    void *recvBufCol = malloc(sizePerProcess * commSize);
+    void *recvBufDepth = malloc(sizePerProcess * commSize * 2);
+
+    MPI_Alltoall(ptrCol, sizePerProcess, MPI_BYTE, recvBufCol, sizePerProcess, MPI_BYTE, mpiComm);
+    MPI_Alltoall(ptrDepth, sizePerProcess*2, MPI_BYTE, recvBufDepth, sizePerProcess*2, MPI_BYTE, mpiComm);
 
     jclass clazz = e->GetObjectClass(clazzObject);
-    jmethodID compositeMethod = e->GetMethodID(clazz, "compositeVDIs", "(Ljava/nio/ByteBuffer;I)V");
+    jmethodID compositeMethod = e->GetMethodID(clazz, "compositeVDIs", "(Ljava/nio/ByteBuffer;Ljava/nio/ByteBuffer;I)V");
 
-    jobject bb = e->NewDirectByteBuffer(recvBuf, sizePerProcess * commSize);
+    jobject bbCol = e->NewDirectByteBuffer(recvBufCol, sizePerProcess * commSize);
+    jobject bbDepth = e->NewDirectByteBuffer(recvBufDepth, sizePerProcess * commSize * 2);
 
-    e->CallVoidMethod(clazzObject, compositeMethod, bb, sizePerProcess);
+    if(e->ExceptionOccurred()) {
+        e->ExceptionDescribe();
+        e->ExceptionClear();
+    }
+
+    std::cout<<"Finished distributing the VDIs. Calling the Composite method now!"<<std::endl;
+
+    e->CallVoidMethod(clazzObject, compositeMethod, bbCol, bbDepth, sizePerProcess);
     if(e->ExceptionOccurred()) {
         e->ExceptionDescribe();
         e->ExceptionClear();
     }
 }
 
-void gatherCompositedVDIs(JNIEnv *e, jobject clazzObject, jobject compositedVDI, jint root, jint compositedVDILen, jint myRank, jint commSize) {
+void gatherCompositedVDIs(JNIEnv *e, jobject clazzObject, jobject compositedVDIColor, jobject compositedVDIDepth, jint root, jint compositedVDILen, jint myRank, jint commSize) {
 
     std::cout<<"In Gather function " <<std::endl;
-    void *ptr = e->GetDirectBufferAddress(compositedVDI);
-    std::cout<<"Data received as parameter is: " << (char *)ptr << std::endl;
-    void *recvBuf;
+    void *ptrCol = e->GetDirectBufferAddress(compositedVDIColor);
+    void *ptrDepth = e->GetDirectBufferAddress(compositedVDIDepth);
+//    std::cout << "Data received as parameter is: " << (char *)ptrCol << std::endl;
+    void *recvBufCol;
+    void *recvBufDepth;
     if (myRank == 0) {
-        recvBuf = malloc(compositedVDILen * commSize);
+        recvBufCol = malloc(compositedVDILen * commSize);
+        recvBufDepth = malloc(compositedVDILen * commSize * 2);
     }
     else {
-        recvBuf = NULL;
+        recvBufCol = NULL;
+        recvBufDepth = NULL;
     }
 
-    MPI_Gather(ptr, compositedVDILen, MPI_BYTE, recvBuf, compositedVDILen, MPI_BYTE, root, mpiComm);
-    //The data is here now
+    MPI_Gather(ptrCol, compositedVDILen, MPI_BYTE, recvBufCol, compositedVDILen, MPI_BYTE, root, mpiComm);
+    MPI_Gather(ptrDepth, compositedVDILen*2, MPI_BYTE, recvBufDepth, compositedVDILen*2, MPI_BYTE, root, mpiComm);
+    //The data is here now!
 
     if(myRank == 0) {
-        //send or store the VDI
-        std::cout<<"cpp on rank " <<myRank << " data received is " << (char *)recvBuf <<std::endl;
+//        //send or store the VDI
+//        std::cout << "cpp on rank " << myRank << " color data received is " << (char *)recvBufCol << std::endl;
+//        std::cout << "cpp on rank " << myRank << " depth data received is " << (char *)recvBufDepth << std::endl;
     }
 
 //    jclass clazz = e->GetObjectClass(clazzObject);
@@ -371,8 +400,8 @@ void InVisVolume::manageVolumeRenderer() {
     }
     env->CallVoidMethod(obj, initArraysMethod);
 
-    JNINativeMethod methods[] { { (char *)"distributeVDIs", (char *)"(Ljava/nio/ByteBuffer;II)V", (void *)&distributeVDIs },
-            { (char *)"gatherCompositedVDIs", (char *)"(Ljava/nio/ByteBuffer;IIII)V", (void *)&gatherCompositedVDIs }
+    JNINativeMethod methods[] { { (char *)"distributeVDIs", (char *)"(Ljava/nio/ByteBuffer;Ljava/nio/ByteBuffer;II)V", (void *)&distributeVDIs },
+            { (char *)"gatherCompositedVDIs", (char *)"(Ljava/nio/ByteBuffer;Ljava/nio/ByteBuffer;IIII)V", (void *)&gatherCompositedVDIs }
     };  // mapping table
 
     if(env->RegisterNatives(clazz, methods, 2) < 0) {                        // register it
@@ -393,6 +422,8 @@ void InVisVolume::manageVolumeRenderer() {
     std::cout<<"calling function: doRender"<<std::endl;
 
     doRender();
+
+    std::cout<<"Finished with doRender!"<<std::endl;
 
     updatePosData.join();
 
