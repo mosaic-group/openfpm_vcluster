@@ -12,6 +12,7 @@
 #include <mpi.h>
 #include <dirent.h>
 #include <zconf.h>
+#include <fstream>
 
 #include "InVisVolume.hpp"
 #include "memory/ShmBuffer.hpp"
@@ -111,7 +112,7 @@ InVisVolume::InVisVolume(int wSize, int cPartners, MPI_Comm vComm, bool isHead) 
 
     std::string className;
     if(isHead) className = "graphics/scenery/insitu/Head";
-    else className = "graphics/scenery/insitu/InVisVolumeRenderer";
+    else className = "graphics/scenery/insitu/InVisSimpleVolumeRenderer";
 
     jclass localClass;
     localClass = env->FindClass(className.c_str());  // try to find the class
@@ -333,7 +334,7 @@ void distributeVDIs(JNIEnv *e, jobject clazzObject, jobject subVDICol, jobject s
     }
 }
 
-void gatherCompositedVDIs(JNIEnv *e, jobject clazzObject, jobject compositedVDIColor, jobject compositedVDIDepth, jint root, jint compositedVDILen, jint myRank, jint commSize) {
+void gatherCompositedVDIs(JNIEnv *e, jobject clazzObject, jobject compositedVDIColor, jobject compositedVDIDepth, jint root, jint compositedVDILen, jint myRank, jint commSize, jboolean saveFiles) {
 
     std::cout<<"In Gather function " <<std::endl;
     void *ptrCol = e->GetDirectBufferAddress(compositedVDIColor);
@@ -356,6 +357,26 @@ void gatherCompositedVDIs(JNIEnv *e, jobject clazzObject, jobject compositedVDIC
 
     if(myRank == 0) {
 //        //send or store the VDI
+        if(saveFiles) {
+            std::cout<<"Writing the final gathered VDI now"<<std::endl;
+            std::time_t t = std::time(0);
+            std::string filename = "Final_VDICol" + std::to_string(t) + ".raw";
+            std::ofstream b_stream(filename.c_str(),
+                                   std::fstream::out | std::fstream::binary);
+            std::string filenameDepth = "Final_VDIDepth" + std::to_string(t) + ".raw";
+            std::ofstream b_streamDepth(filenameDepth.c_str(),
+                                   std::fstream::out | std::fstream::binary);
+
+            if (b_stream && b_streamDepth)
+            {
+                b_stream.write(static_cast<const char *>(recvBufCol), compositedVDILen * commSize);
+                b_streamDepth.write(static_cast<const char *>(recvBufDepth), compositedVDILen * commSize * 2);
+
+                if (b_stream.good() && b_streamDepth.good()) {
+                    std::cout<<"Writing was successful"<<std::endl;
+                }
+            }
+        }
 //        std::cout << "cpp on rank " << myRank << " color data received is " << (char *)recvBufCol << std::endl;
 //        std::cout << "cpp on rank " << myRank << " depth data received is " << (char *)recvBufDepth << std::endl;
     }
@@ -401,7 +422,7 @@ void InVisVolume::manageVolumeRenderer() {
     env->CallVoidMethod(obj, initArraysMethod);
 
     JNINativeMethod methods[] { { (char *)"distributeVDIs", (char *)"(Ljava/nio/ByteBuffer;Ljava/nio/ByteBuffer;II)V", (void *)&distributeVDIs },
-            { (char *)"gatherCompositedVDIs", (char *)"(Ljava/nio/ByteBuffer;Ljava/nio/ByteBuffer;IIII)V", (void *)&gatherCompositedVDIs }
+            { (char *)"gatherCompositedVDIs", (char *)"(Ljava/nio/ByteBuffer;Ljava/nio/ByteBuffer;IIIIZ)V", (void *)&gatherCompositedVDIs }
     };  // mapping table
 
     if(env->RegisterNatives(clazz, methods, 2) < 0) {                        // register it
