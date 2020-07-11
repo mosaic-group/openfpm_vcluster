@@ -78,11 +78,11 @@ InVisVolume::InVisVolume(int wSize, int cPartners, MPI_Comm vComm, bool isHead) 
 
     if(isHead) {
         options[2].optionString = (char *)
-                "-Dorg.slf4j.simpleLogger.defaultLogLevel=info";
+                "-Dorg.slf4j.simpleLogger.defaultLogLevel=error";
     }
     else {
         options[2].optionString = (char *)
-                "-Dorg.slf4j.simpleLogger.defaultLogLevel=info";
+                "-Dorg.slf4j.simpleLogger.defaultLogLevel=error";
     }
 
     options[3].optionString = (char *)
@@ -382,7 +382,7 @@ void gatherCompositedVDIs(JNIEnv *e, jobject clazzObject, jobject compositedVDIC
             std::cout<<"Overall average so far is"<<average_time<<" and total VDIs generated so far are "<< count <<std::endl;
 
         }
-        if(count != 0 && count % 20 == 0) {
+        if(count != 0 && count % 60 == 0) {
             if(timeVDIwrite != 0) {
                 int time_elapsed = t - timeVDIwrite;
                 std::cout<<"Writing VDI now. Time since the last write was performed is: " << time_elapsed <<std::endl;
@@ -393,7 +393,7 @@ void gatherCompositedVDIs(JNIEnv *e, jobject clazzObject, jobject compositedVDIC
             std::string filename = "size:" + std::to_string(commSize) + "Final_VDICol" + std::to_string(count) + ".raw";
             std::ofstream b_stream(filename.c_str(),
                                    std::fstream::out | std::fstream::binary);
-            std::string filenameDepth = "Final_VDIDepth" + std::to_string(count) + ".raw";
+            std::string filenameDepth = "size:" + std::to_string(commSize) + "Final_VDIDepth" + std::to_string(count) + ".raw";
             std::ofstream b_streamDepth(filenameDepth.c_str(),
                                    std::fstream::out | std::fstream::binary);
 
