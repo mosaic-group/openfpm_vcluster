@@ -78,11 +78,11 @@ InVisVolume::InVisVolume(int wSize, int cPartners, MPI_Comm vComm, bool isHead) 
 
     if(isHead) {
         options[2].optionString = (char *)
-                "-Dorg.slf4j.simpleLogger.defaultLogLevel=error";
+                "-Dorg.slf4j.simpleLogger.defaultLogLevel=info";
     }
     else {
         options[2].optionString = (char *)
-                "-Dorg.slf4j.simpleLogger.defaultLogLevel=error";
+                "-Dorg.slf4j.simpleLogger.defaultLogLevel=info";
     }
 
     options[3].optionString = (char *)
@@ -90,7 +90,7 @@ InVisVolume::InVisVolume(int wSize, int cPartners, MPI_Comm vComm, bool isHead) 
     options[4].optionString = (char *)
             "-Dscenery.Renderer.MaxVolumeCacheSize=16";
     options[5].optionString = (char *)
-            "-Dscenery.VulkanRenderer.EnableValidations=false";
+            "-Dscenery.VulkanRenderer.EnableValidations=true";
     options[6].optionString = (char *)
             "-Dscenery.VulkanRenderer.StrictValidation=false";
 
@@ -308,22 +308,22 @@ void InVisVolume::doRender() {
 }
 
 
-void distributeVDIs(JNIEnv *e, jobject clazzObject, jobject subVDICol, jobject subVDIDepth, jint sizePerProcess, jint commSize) {
+void distributeVDIs(JNIEnv *e, jobject clazzObject, jobject subVDICol, jint sizePerProcess, jint commSize) {
 
     void *ptrCol = e->GetDirectBufferAddress(subVDICol);
-    void *ptrDepth = e->GetDirectBufferAddress(subVDIDepth);
+//    void *ptrDepth = e->GetDirectBufferAddress(subVDIDepth);
 
-    void *recvBufCol = malloc(sizePerProcess * commSize);
-    void *recvBufDepth = malloc(sizePerProcess * commSize * 2);
+    void *recvBufCol = malloc(sizePerProcess * commSize * 3);
+//    void *recvBufDepth = malloc(sizePerProcess * commSize * 2);
 
-    MPI_Alltoall(ptrCol, sizePerProcess, MPI_BYTE, recvBufCol, sizePerProcess, MPI_BYTE, mpiComm);
-    MPI_Alltoall(ptrDepth, sizePerProcess*2, MPI_BYTE, recvBufDepth, sizePerProcess*2, MPI_BYTE, mpiComm);
+    MPI_Alltoall(ptrCol, sizePerProcess*3, MPI_BYTE, recvBufCol, sizePerProcess*3, MPI_BYTE, mpiComm);
+//    MPI_Alltoall(ptrDepth, sizePerProcess*2, MPI_BYTE, recvBufDepth, sizePerProcess*2, MPI_BYTE, mpiComm);
 
     jclass clazz = e->GetObjectClass(clazzObject);
-    jmethodID compositeMethod = e->GetMethodID(clazz, "compositeVDIs", "(Ljava/nio/ByteBuffer;Ljava/nio/ByteBuffer;I)V");
+    jmethodID compositeMethod = e->GetMethodID(clazz, "compositeVDIs", "(Ljava/nio/ByteBuffer;I)V");
 
-    jobject bbCol = e->NewDirectByteBuffer(recvBufCol, sizePerProcess * commSize);
-    jobject bbDepth = e->NewDirectByteBuffer(recvBufDepth, sizePerProcess * commSize * 2);
+    jobject bbCol = e->NewDirectByteBuffer(recvBufCol, sizePerProcess * commSize * 3);
+//    jobject bbDepth = e->NewDirectByteBuffer(recvBufDepth, sizePerProcess * commSize * 2);
 
     if(e->ExceptionOccurred()) {
         e->ExceptionDescribe();
@@ -332,32 +332,32 @@ void distributeVDIs(JNIEnv *e, jobject clazzObject, jobject subVDICol, jobject s
 
     std::cout<<"Finished distributing the VDIs. Calling the Composite method now!"<<std::endl;
 
-    e->CallVoidMethod(clazzObject, compositeMethod, bbCol, bbDepth, sizePerProcess);
+    e->CallVoidMethod(clazzObject, compositeMethod, bbCol, sizePerProcess);
     if(e->ExceptionOccurred()) {
         e->ExceptionDescribe();
         e->ExceptionClear();
     }
 }
 
-void gatherCompositedVDIs(JNIEnv *e, jobject clazzObject, jobject compositedVDIColor, jobject compositedVDIDepth, jint root, jint compositedVDILen, jint myRank, jint commSize, jboolean saveFiles) {
+void gatherCompositedVDIs(JNIEnv *e, jobject clazzObject, jobject compositedVDIColor, jint root, jint compositedVDILen, jint myRank, jint commSize, jboolean saveFiles) {
 
     std::cout<<"In Gather function " <<std::endl;
     void *ptrCol = e->GetDirectBufferAddress(compositedVDIColor);
-    void *ptrDepth = e->GetDirectBufferAddress(compositedVDIDepth);
+//    void *ptrDepth = e->GetDirectBufferAddress(compositedVDIDepth);
 //    std::cout << "Data received as parameter is: " << (char *)ptrCol << std::endl;
     void *recvBufCol;
-    void *recvBufDepth;
+//    void *recvBufDepth;
     if (myRank == 0) {
-        recvBufCol = malloc(compositedVDILen * commSize);
-        recvBufDepth = malloc(compositedVDILen * commSize * 2);
+        recvBufCol = malloc(compositedVDILen * commSize * 3);
+//        recvBufDepth = malloc(compositedVDILen * commSize * 2);
     }
     else {
         recvBufCol = NULL;
-        recvBufDepth = NULL;
+//        recvBufDepth = NULL;
     }
 
-    MPI_Gather(ptrCol, compositedVDILen, MPI_BYTE, recvBufCol, compositedVDILen, MPI_BYTE, root, mpiComm);
-    MPI_Gather(ptrDepth, compositedVDILen*2, MPI_BYTE, recvBufDepth, compositedVDILen*2, MPI_BYTE, root, mpiComm);
+    MPI_Gather(ptrCol, compositedVDILen*3, MPI_BYTE, recvBufCol, compositedVDILen*3, MPI_BYTE, root, mpiComm);
+//    MPI_Gather(ptrDepth, compositedVDILen*2, MPI_BYTE, recvBufDepth, compositedVDILen*2, MPI_BYTE, root, mpiComm);
     //The data is here now!
 
     if(myRank == 0) {
@@ -374,15 +374,17 @@ void gatherCompositedVDIs(JNIEnv *e, jobject clazzObject, jobject compositedVDIC
             avg_recent += timetaken;
             count++;
         }
-        if(count != 0 && count % 20 == 0) {
+        if(count != 0 && count % 5 == 0) {
             double average_time = (double)totaltime/count;
-            avg_recent = (double)avg_recent/20.0;
-            std::cout<<"Average time for the last 20 VDIs was: "<<avg_recent<<std::endl;
+            avg_recent = (double)avg_recent/5.0;
+            std::cout<<"Average time for the last 5 VDIs was: "<<avg_recent<<std::endl;
             avg_recent = 0.0;
             std::cout<<"Overall average so far is"<<average_time<<" and total VDIs generated so far are "<< count <<std::endl;
 
         }
-        if(count != 0 && count % 60 == 0) {
+//        if(count != 0 && count % 10 == 0) {
+        if(saveFiles) {
+
             if(timeVDIwrite != 0) {
                 int time_elapsed = t - timeVDIwrite;
                 std::cout<<"Writing VDI now. Time since the last write was performed is: " << time_elapsed <<std::endl;
@@ -393,16 +395,16 @@ void gatherCompositedVDIs(JNIEnv *e, jobject clazzObject, jobject compositedVDIC
             std::string filename = "size:" + std::to_string(commSize) + "Final_VDICol" + std::to_string(count) + ".raw";
             std::ofstream b_stream(filename.c_str(),
                                    std::fstream::out | std::fstream::binary);
-            std::string filenameDepth = "size:" + std::to_string(commSize) + "Final_VDIDepth" + std::to_string(count) + ".raw";
-            std::ofstream b_streamDepth(filenameDepth.c_str(),
-                                   std::fstream::out | std::fstream::binary);
+//            std::string filenameDepth = "size:" + std::to_string(commSize) + "Final_VDIDepth" + std::to_string(count) + ".raw";
+//            std::ofstream b_streamDepth(filenameDepth.c_str(),
+//                                   std::fstream::out | std::fstream::binary);
 
-            if (b_stream && b_streamDepth)
+            if (b_stream)
             {
-                b_stream.write(static_cast<const char *>(recvBufCol), compositedVDILen * commSize);
-                b_streamDepth.write(static_cast<const char *>(recvBufDepth), compositedVDILen * commSize * 2);
+                b_stream.write(static_cast<const char *>(recvBufCol), compositedVDILen * commSize * 3);
+//                b_streamDepth.write(static_cast<const char *>(recvBufDepth), compositedVDILen * commSize * 2);
 
-                if (b_stream.good() && b_streamDepth.good()) {
+                if (b_stream.good()) {
                     std::cout<<"Writing was successful"<<std::endl;
                 }
             }
@@ -454,8 +456,8 @@ void InVisVolume::manageVolumeRenderer() {
     }
     env->CallVoidMethod(obj, initArraysMethod);
 
-    JNINativeMethod methods[] { { (char *)"distributeVDIs", (char *)"(Ljava/nio/ByteBuffer;Ljava/nio/ByteBuffer;II)V", (void *)&distributeVDIs },
-            { (char *)"gatherCompositedVDIs", (char *)"(Ljava/nio/ByteBuffer;Ljava/nio/ByteBuffer;IIIIZ)V", (void *)&gatherCompositedVDIs }
+    JNINativeMethod methods[] { { (char *)"distributeVDIs", (char *)"(Ljava/nio/ByteBuffer;II)V", (void *)&distributeVDIs },
+            { (char *)"gatherCompositedVDIs", (char *)"(Ljava/nio/ByteBuffer;IIIIZ)V", (void *)&gatherCompositedVDIs }
     };  // mapping table
 
     if(env->RegisterNatives(clazz, methods, 2) < 0) {                        // register it
