@@ -21,6 +21,11 @@
 
 MPI_Comm mpiComm;
 //int imgSize;
+double avg_recent = 0.0;
+int prevtime = 0;
+int count = 0;
+int totaltime = 0;
+int timeVDIwrite = 0;
 
 InVisVolume::InVisVolume(int wSize, int cPartners, MPI_Comm vComm, bool isHead) {
     windowSize = wSize;
@@ -112,7 +117,7 @@ InVisVolume::InVisVolume(int wSize, int cPartners, MPI_Comm vComm, bool isHead) 
 
     std::string className;
     if(isHead) className = "graphics/scenery/insitu/Head";
-    else className = "graphics/scenery/insitu/InVisSimpleVolumeRenderer";
+    else className = "graphics/scenery/insitu/InVisVolumeRenderer";
 
     jclass localClass;
     localClass = env->FindClass(className.c_str());  // try to find the class
@@ -357,13 +362,38 @@ void gatherCompositedVDIs(JNIEnv *e, jobject clazzObject, jobject compositedVDIC
 
     if(myRank == 0) {
 //        //send or store the VDI
-        if(saveFiles) {
+        std::time_t t = std::time(0);
+
+        int timetaken = 0;
+        if(prevtime == 0) {
+            //skip this step
+        }
+        else {
+            timetaken = t - prevtime;
+            totaltime += timetaken;
+            avg_recent += timetaken;
+            count++;
+        }
+        if(count != 0 && count % 20 == 0) {
+            double average_time = (double)totaltime/count;
+            avg_recent = (double)avg_recent/20.0;
+            std::cout<<"Average time for the last 20 VDIs was: "<<avg_recent<<std::endl;
+            avg_recent = 0.0;
+            std::cout<<"Overall average so far is"<<average_time<<" and total VDIs generated so far are "<< count <<std::endl;
+
+        }
+        if(count != 0 && count % 20 == 0) {
+            if(timeVDIwrite != 0) {
+                int time_elapsed = t - timeVDIwrite;
+                std::cout<<"Writing VDI now. Time since the last write was performed is: " << time_elapsed <<std::endl;
+                timeVDIwrite = t;
+            }
             std::cout<<"Writing the final gathered VDI now"<<std::endl;
-            std::time_t t = std::time(0);
-            std::string filename = "Final_VDICol" + std::to_string(t) + ".raw";
+
+            std::string filename = "Final_VDICol" + std::to_string(count) + ".raw";
             std::ofstream b_stream(filename.c_str(),
                                    std::fstream::out | std::fstream::binary);
-            std::string filenameDepth = "Final_VDIDepth" + std::to_string(t) + ".raw";
+            std::string filenameDepth = "Final_VDIDepth" + std::to_string(count) + ".raw";
             std::ofstream b_streamDepth(filenameDepth.c_str(),
                                    std::fstream::out | std::fstream::binary);
 
@@ -376,7 +406,10 @@ void gatherCompositedVDIs(JNIEnv *e, jobject clazzObject, jobject compositedVDIC
                     std::cout<<"Writing was successful"<<std::endl;
                 }
             }
+
         }
+        std::time_t t_out = std::time(0);
+        prevtime = t_out;
 //        std::cout << "cpp on rank " << myRank << " color data received is " << (char *)recvBufCol << std::endl;
 //        std::cout << "cpp on rank " << myRank << " depth data received is " << (char *)recvBufDepth << std::endl;
     }
