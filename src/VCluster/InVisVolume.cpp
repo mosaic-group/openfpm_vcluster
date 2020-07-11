@@ -390,7 +390,7 @@ void gatherCompositedVDIs(JNIEnv *e, jobject clazzObject, jobject compositedVDIC
             }
             std::cout<<"Writing the final gathered VDI now"<<std::endl;
 
-            std::string filename = "Final_VDICol" + std::to_string(count) + ".raw";
+            std::string filename = "size:" + std::to_string(commSize) + "Final_VDICol" + std::to_string(count) + ".raw";
             std::ofstream b_stream(filename.c_str(),
                                    std::fstream::out | std::fstream::binary);
             std::string filenameDepth = "Final_VDIDepth" + std::to_string(count) + ".raw";
