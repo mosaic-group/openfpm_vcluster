@@ -262,7 +262,9 @@ struct unpack_selector_with_prp_lin<true,T,S,layout_base,Memory>
 
 		// add the received particles to the vector
 		PtrMemory * ptr1 = new PtrMemory(recv_buf.get(i).getPointer(),recv_buf.get(i).size());
+		ptr1->incRef();
 
+		{
 		// create vector representation to a piece of memory already allocated
 		openfpm::vector<typename T::value_type,PtrMemory,typename layout_base<typename T::value_type>::type,layout_base,openfpm::grow_policy_identity> v2;
 
@@ -283,7 +285,10 @@ struct unpack_selector_with_prp_lin<true,T,S,layout_base,Memory>
 			sz_byte->get(i) = recv_buf.get(i).size();
 		if (sz != NULL)
 			sz->get(i) = recv_size_new - recv_size_old;
+		}
 
+		ptr1->decRef();
+		delete ptr1;
 		return 1;
 	}
 };
