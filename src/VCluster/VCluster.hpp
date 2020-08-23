@@ -13,8 +13,8 @@
 #include "VCluster_base.hpp"
 #include "VCluster_meta_function.hpp"
 #include "util/math_util_complex.hpp"
-//#include "InVis.hpp"
 #include "InVisVolume.hpp"
+#include "InVis.hpp"
 
 #ifdef CUDA_GPU
 extern CudaMemory mem_tmp;
@@ -979,6 +979,7 @@ static inline void init_global_v_cluster_private(int *argc, char ***argv, init_o
 		}
 
 		MPI_Comm comm_compute;
+		MPI_Comm comm_render;
 		MPI_Comm comm_steer;
 		MPI_Comm comm_vis;
 
@@ -998,82 +999,116 @@ static inline void init_global_v_cluster_private(int *argc, char ***argv, init_o
 
 		bool is_vis_process = false;
 
-//		if (rank != 0)
-//		{
-//			if (nodeRank == 0)
-//			{
-//			    // The lowest ranked process on a given node (except head node); the rendering process of that node
-//				char name[MPI_MAX_PROCESSOR_NAME];
-//
-//				// Vis process
-//				MPI_Get_processor_name(name, &len);
-//
-//				std::cout << "Node: " << name << " vis process: " << rank << std::endl;
-//
-//				is_vis_process = true;
-//			}
-//			else
-//			{
-//				for (int i = 0 ; i < world_ranks.size() ; i++)
-//				{
-//					if (world_ranks.get(i) == 0 && (nodeRank == 1)) // TODO || nodeRank == 2
-//					{
-//						char name[MPI_MAX_PROCESSOR_NAME];
-//
-//						// Vis process
-//						MPI_Get_processor_name(name, &len);
-//
-//						std::cout << "Vis process on node 0 " << name << "   " << nodeRank << "  " << rank << std::endl;
-//
-//						is_vis_process = true;
-//					}
-//				}
-//			}
-//		}
+		if (rank != 0)
+		{
+			if (nodeRank == 0)
+			{
+			    // The lowest ranked process on a given node (except head node); the rendering process of that node
+				char name[MPI_MAX_PROCESSOR_NAME];
 
-        if (nodeRank == 0)
-        {
-            // The lowest ranked process on a given node; the rendering process of that node
-            //TODO: change it back to above
-            char name[MPI_MAX_PROCESSOR_NAME];
+				// Vis process
+				MPI_Get_processor_name(name, &len);
 
-            // Vis process
-            MPI_Get_processor_name(name, &len);
+				std::cout << "Node: " << name << " vis process: " << rank << std::endl;
 
-            std::cout << "Node: " << name << " vis process: " << rank << std::endl;
+				is_vis_process = true;
+			}
+			else
+			{
+				for (int i = 0 ; i < world_ranks.size() ; i++)
+				{
+					if (world_ranks.get(i) == 0 && (nodeRank == 1))
+					{
+						char name[MPI_MAX_PROCESSOR_NAME];
 
-            is_vis_process = true;
-        }
+						// Vis process
+						MPI_Get_processor_name(name, &len);
+
+						std::cout << "Vis process on node 0 " << name << "   " << nodeRank << "  " << rank << std::endl;
+
+						is_vis_process = true;
+					}
+				}
+			}
+		}
+
+//        if (nodeRank == 0)
+//        {
+//            // The lowest ranked process on a given node; the rendering process of that node
+//            //TODO: change it back to above
+//            char name[MPI_MAX_PROCESSOR_NAME];
+//
+//            // Vis process
+//            MPI_Get_processor_name(name, &len);
+//
+//            std::cout << "Node: " << name << " vis process: " << rank << std::endl;
+//
+//            is_vis_process = true;
+//        }
 
 		int colorVis;
 		int colorSteer;
-		if (is_vis_process == true)
-		{
-		    //All visualization processes are part of the vis communicator, but not part of the steering communicator
-		    colorVis = 0;
-		    colorSteer = MPI_UNDEFINED;
-        }
-		else
-		{
-            //All non-visualization processes are part of the steering communicator, but not part of the vis communicator
-            colorVis = MPI_UNDEFINED;
+        int colorComp;
+        int colorRen;
+        int colorPETSC;
+
+        if(rank == 0)
+        {
+            //Rank 0 is part of both the vis communicator as well as the steering communicator
+            colorVis = 0;
             colorSteer = 0;
+            //Rank 0 is not part of the compute, PETSC or rendering communicators
+            colorComp = MPI_UNDEFINED;
+            colorRen = MPI_UNDEFINED;
+            colorPETSC = 0; // PETSC does not seem to work with MPI_UNDEFINED
+        } else if (is_vis_process == true)
+		{
+		    //All visualization processes are part of the vis and rendering communicators,
+		    // but not part of the steering, PETSC or compute communicators
+		    colorVis = 0;
+		    colorRen = 0;
+		    colorSteer = MPI_UNDEFINED;
+		    colorComp = MPI_UNDEFINED;
+		    colorPETSC = 0; // PETSC does not seem to work with MPI_UNDEFINED
+        } else
+		{
+            //All non-visualization processes are part of the steering and compute communicators,
+            // but not part of the vis or rendering communicators
+            colorSteer = 0;
+            colorComp = 0;
+            colorVis = MPI_UNDEFINED;
+            colorRen = MPI_UNDEFINED;
+            colorPETSC = 1;
         }
+
 
         MPI_Comm_split(MPI_COMM_WORLD, colorSteer, rank, &comm_steer);
         MPI_Comm_split(MPI_COMM_WORLD, colorVis, rank, &comm_vis);
+        MPI_Comm_split(MPI_COMM_WORLD, colorComp, rank, &comm_compute);
+        MPI_Comm_split(MPI_COMM_WORLD, colorPETSC, rank, &PETSC_COMM_WORLD);
+        MPI_Comm_split(MPI_COMM_WORLD, colorRen, rank, &comm_render);
 
 
-		if (rank == 0 || is_vis_process == true)
-		{
-		    MPI_Comm_split(MPI_COMM_WORLD, MPI_UNDEFINED,rank, &comm_compute);
-		    MPI_Comm_split(MPI_COMM_WORLD, 0, 0, &PETSC_COMM_WORLD);
-		}
-		else
-		{
-		    MPI_Comm_split(MPI_COMM_WORLD,0,rank, &comm_compute);
-            MPI_Comm_split(MPI_COMM_WORLD, 1, 0, &PETSC_COMM_WORLD);
-        }
+//		if (rank == 0 || is_vis_process == true)
+//		{
+//		    colorComp = MPI_UNDEFINED;
+//		    MPI_Comm_split(MPI_COMM_WORLD, MPI_UNDEFINED,rank, &comm_compute);
+//		    MPI_Comm_split(MPI_COMM_WORLD, 0, 0, &PETSC_COMM_WORLD);
+//		}
+//		else
+//		{
+//		    MPI_Comm_split(MPI_COMM_WORLD,0,rank, &comm_compute);
+//            MPI_Comm_split(MPI_COMM_WORLD, 1, 0, &PETSC_COMM_WORLD);
+//        }
+//
+//        if (rank == 0 || is_vis_process == false)
+//        {
+//            MPI_Comm_split(MPI_COMM_WORLD, MPI_UNDEFINED,rank, &comm_render);
+//        }
+//        else
+//        {
+//            MPI_Comm_split(MPI_COMM_WORLD,0,rank, &comm_render);
+//        }
 
 #ifdef HAVE_PETSC
 
@@ -1082,13 +1117,13 @@ static inline void init_global_v_cluster_private(int *argc, char ***argv, init_o
 
 #endif
 
-		if (is_vis_process == false) // TODO && rank!=0
+		if (is_vis_process == false && rank!=0)
 		{
 			if (global_v_cluster_private_heap == NULL)
-			{global_v_cluster_private_heap = new Vcluster<>(argc,argv,comm_steer);} //TODO replace with comm_compute
+			{global_v_cluster_private_heap = new Vcluster<>(argc,argv,comm_compute);}
 
             if (global_v_cluster_private_cuda == NULL)
-            {global_v_cluster_private_cuda = new Vcluster<CudaMemory>(argc,argv,comm_steer);} //TODO replace with comm_compute
+            {global_v_cluster_private_cuda = new Vcluster<CudaMemory>(argc,argv,comm_compute);}
 		}
 		else if (is_vis_process == true)
 		{
@@ -1106,7 +1141,7 @@ static inline void init_global_v_cluster_private(int *argc, char ***argv, init_o
 			if(nodeRank != 0)
             {
 			    //This process' rank on its node is not 0. So it is on the head node
-			    numSimProcesses = nodeCommSize - 1; // Vis Renderer //TODO + Vis Head + OpenFPM Head
+			    numSimProcesses = nodeCommSize - 2; // Vis Renderer + Master
             }
 			else
             {
@@ -1127,27 +1162,8 @@ static inline void init_global_v_cluster_private(int *argc, char ***argv, init_o
 //                    sleep(100);
 //                }
 
-//                if(visRank == 0)
-//                {
-//                    // The head process of the visualization system
-//                    while(true) {
-//                        sleep(10);
-//                    }
-////                    InVis *visSystem = new InVis(700, numSimProcesses, comm_vis, true);
-////                    visSystem->manageVisHead();
-//                }
-//                else
-//                {
-//                    // A rendering process of the the visualization system
-////                    while(true) {
-////                        sleep(10);
-////                    }
-//                    InVisVolume *visSystem = new InVisVolume(700, numSimProcesses, comm_vis, false);
-//                    visSystem->manageVolumeRenderer();
-//                }
-
-                InVisVolume *visSystem = new InVisVolume(700, numSimProcesses, comm_vis, false);
-                visSystem->manageVolumeRenderer();
+                InVis *visSystem = new InVis(numSimProcesses, comm_vis, comm_render);
+                visSystem->manageRenderer();
 
 				MPI_SAFE_CALL(MPI_Test(&bar_req,&flag,&bar_stat));
 			}
@@ -1155,7 +1171,7 @@ static inline void init_global_v_cluster_private(int *argc, char ***argv, init_o
 			openfpm_finalize();
 			exit(0);
 		}
-		else
+		else // Master process (rank == 0)
 		{
 			int flag = false;
 			MPI_Request bar_req;
