@@ -13,7 +13,6 @@
 #include <dirent.h>
 #include <fstream>
 
-
 #include "InVis.hpp"
 #include "memory/ShmBuffer.hpp"
 
@@ -27,17 +26,22 @@ int count = 0;
 int totaltime = 0;
 int timeVDIwrite = 0;
 
-InVis::InVis(int cPartners, MPI_Comm vComm, MPI_Comm rComm) {
+InVis::InVis(int cPartners, MPI_Comm vComm, MPI_Comm rComm, MPI_Comm sComm, bool isMaster) {
     windowSize = 700;
     computePartners = cPartners;
     imageSize = windowSize*windowSize*7; //RGBA + 4 bytes for depth
     visComm = vComm;
     renderComm = rComm;
+    steerComm = sComm;
     renComm = rComm;
-    MPI_Comm_size(renderComm, &rCommSize);
-    std::cout << "RenderComm size is " << rCommSize << std::endl;
-    MPI_Comm_size(visComm, &vCommSize);
-    std::cout << "VisComm size is " << vCommSize << std::endl;
+    if(renderComm != MPI_COMM_NULL) {
+        MPI_Comm_size(renderComm, &rCommSize);
+        std::cout << "RenderComm size is " << rCommSize << std::endl;
+    }
+    if(visComm != MPI_COMM_NULL) {
+        MPI_Comm_size(visComm, &vCommSize);
+        std::cout << "VisComm size is " << vCommSize << std::endl;
+    }
     imgSize = imageSize;
 
     for(int i = 0; i< computePartners; i++) {
@@ -63,16 +67,21 @@ InVis::InVis(int cPartners, MPI_Comm vComm, MPI_Comm rComm) {
         std::exit(EXIT_FAILURE);
     }
 
-    std::cout<<"classpath is "<<classPath<<std::endl;
-
-    // determine whether particle or grid data is to be rendered
-    vtype = getVisType();
-
-    std::cout<<"Got the data type "<<std::endl;
+//    std::cout<<"classpath is "<<classPath<<std::endl;
 
     std::string className;
-    if(vtype == vis_type::grid) className = "graphics/scenery/insitu/InVisSimpleVolumeRenderer";
-    else className = "graphics/scenery/insitu/InVisRenderer";
+
+    if(isMaster) {
+        className = "graphics/scenery/insitu/InSituMaster";
+    } else {
+        // determine whether particle or grid data is to be rendered
+        vtype = getVisType();
+
+        std::cout<<"Got the data type "<<std::endl;
+
+        if(vtype == vis_type::grid) className = "graphics/scenery/insitu/DistributedVolumeRenderer";
+        else className = "graphics/scenery/insitu/InVisRenderer";
+    }
 
     //================== prepare loading of Java VM ============================
     JavaVMInitArgs vm_args;                        // Initialization arguments
@@ -94,7 +103,7 @@ InVis::InVis(int cPartners, MPI_Comm vComm, MPI_Comm rComm) {
 //                "-Dscenery.ENABLE_VULKAN_RENDERDOC_CAPTURE=1";
 
     options[3].optionString = (char *)
-            "-Dscenery.Headless=false";
+            "-Dscenery.Headless=true";
 
     vm_args.version = JNI_VERSION_1_6;
     vm_args.nOptions = 4;
@@ -330,6 +339,13 @@ void InVis::updateCamera() {
     jvm->DetachCurrentThread();
 }
 
+void InVis::interactVis() {
+    std::cout<<"Waiting for broadcast message"<<std::endl;
+    int * a = static_cast<int *>(malloc(sizeof(int)));
+    MPI_Bcast((void *)a, 1, MPI_INT, 0, visComm);
+    std::cout<<"Received the broadcast message. It is: "<<*a<<std::endl;
+}
+
 void InVis::getGridMemory() {
     JNIEnv *env;
     jvm->AttachCurrentThread(reinterpret_cast<void **>(&env), NULL);
@@ -519,6 +535,24 @@ void gatherCompositedVDIs(JNIEnv *e, jobject clazzObject, jobject compositedVDIC
 
     if(myRank == 0) {
 //        //send or store the VDI
+        jclass clazz = e->GetObjectClass(clazzObject);
+        jmethodID streamMethod = e->GetMethodID(clazz, "streamImage", "(Ljava/nio/ByteBuffer;)V");
+
+        jobject bbImg = e->NewDirectByteBuffer(recvBufCol, compositedVDILen * commSize * 3);
+
+        if(e->ExceptionOccurred()) {
+            e->ExceptionDescribe();
+            e->ExceptionClear();
+        }
+
+        std::cout<<"Streaming the composited image out now"<<std::endl;
+
+        e->CallVoidMethod(clazzObject, streamMethod, bbImg);
+        if(e->ExceptionOccurred()) {
+            e->ExceptionDescribe();
+            e->ExceptionClear();
+        }
+
         std::time_t t = std::time(0);
 
         int timetaken = 0;
@@ -581,6 +615,14 @@ void gatherCompositedVDIs(JNIEnv *e, jobject clazzObject, jobject compositedVDIC
 //        e->ExceptionDescribe();
 //        e->ExceptionClear();
 //    }
+}
+
+void broadcastVisMsg() {
+    std::cout<<"Broadcasting vis message"<<std::endl;
+}
+
+void broadcastSteerMsg() {
+
 }
 
 void InVis::doRender() {
@@ -675,7 +717,8 @@ void InVis::manageRenderer() {
 
         JNINativeMethod methods[] { { (char *)"sendImage", (char *)"(Ljava/nio/ByteBuffer;)V", (void *)&sendImage } };  // mapping table
 
-        if(env->RegisterNatives(RendererClass, methods, 1) < 0) {                        // register it
+        int ret = env->RegisterNatives(RendererClass, methods, 1);
+        if(ret < 0) {                        // register it
             if( env->ExceptionOccurred() ) {
                 env->ExceptionDescribe();
             } else {
@@ -683,7 +726,7 @@ void InVis::manageRenderer() {
                 //std::exit(EXIT_FAILURE);
             }
         } else {
-            std::cout<<"Native registered for Renderer. The return value is: "<< env->RegisterNatives(RendererClass, methods, 1) <<std::endl;
+            std::cout<<"Native registered for Renderer. The return value is: "<< ret <<std::endl;
         }
     }
 
@@ -692,7 +735,8 @@ void InVis::manageRenderer() {
                                     { (char *)"gatherCompositedVDIs", (char *)"(Ljava/nio/ByteBuffer;IIIIZ)V", (void *)&gatherCompositedVDIs }
         };  // mapping table
 
-        if(env->RegisterNatives(clazz, methods, 2) < 0) {                        // register it
+        int ret = env->RegisterNatives(clazz, methods, 2);
+        if(ret < 0) {                        // register it
             if( env->ExceptionOccurred() ) {
                 env->ExceptionDescribe();
             } else {
@@ -700,7 +744,7 @@ void InVis::manageRenderer() {
                 //std::exit(EXIT_FAILURE);
             }
         } else {
-            std::cout<<"Natives registered for InVisVolume. The return value is: "<< env->RegisterNatives(clazz, methods, 2) <<std::endl;
+            std::cout<<"Natives registered for InVisVolume. The return value is: "<< ret <<std::endl;
         }
     }
 
@@ -722,9 +766,13 @@ void InVis::manageRenderer() {
     }
 
     else {
-        std::cout<<"starting thread: updatePosData"<<std::endl;
+        std::cout<<"starting thread: updateGridData"<<std::endl;
 
         std::thread updateGridData(&InVis::getGridMemory, this);
+
+//        std::cout<<"starting thread: interactVis"<<std::endl;
+//
+//        std::thread interact(&InVis::interactVis, this);
 
         std::cout<<"calling function: doRender"<<std::endl;
 
@@ -733,8 +781,46 @@ void InVis::manageRenderer() {
         std::cout<<"Finished with doRender!"<<std::endl;
 
         updateGridData.join();
+//        interact.join();
     }
 
 
     jvm->DestroyJavaVM();
+}
+
+void InVis::manageMaster() {
+    JNIEnv *env;
+    jvm->GetEnv((void **)&env, JNI_VERSION_1_6);
+
+    JNINativeMethod methods[] { { (char *)"transmitVisMsg", (char *)"(Ljava/nio/ByteBuffer;)V", (void *)&broadcastVisMsg },
+                                { (char *)"transmitSteerMsg", (char *)"(Ljava/nio/ByteBuffer;)V", (void *)&broadcastSteerMsg }
+    };  // mapping table
+
+    int ret = env->RegisterNatives(clazz, methods, 2);
+    if(ret < 0) {                        // register it
+        if( env->ExceptionOccurred() ) {
+            env->ExceptionDescribe();
+        } else {
+            std::cerr << "ERROR: Could not register natives for InSituMaster!" <<std::endl;
+            //std::exit(EXIT_FAILURE);
+        }
+    } else {
+        std::cout<<"Natives registered for InSituMaster. The return value is: "<< ret <<std::endl;
+    }
+
+    jmethodID listenMethod = env->GetMethodID(clazz, "listenForMessages", "()V");
+    if(listenMethod == nullptr) {
+        if (env->ExceptionOccurred()) {
+            env->ExceptionDescribe();
+        } else {
+            std::cout << "ERROR: function listenForMessages not found!";
+//            std::exit(EXIT_FAILURE);
+        }
+    }
+    env->CallVoidMethod(obj, listenMethod);
+    if(env->ExceptionOccurred()) {
+        env->ExceptionDescribe();
+        env->ExceptionClear();
+    }
+
 }

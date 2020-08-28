@@ -1162,7 +1162,7 @@ static inline void init_global_v_cluster_private(int *argc, char ***argv, init_o
 //                    sleep(100);
 //                }
 
-                InVis *visSystem = new InVis(numSimProcesses, comm_vis, comm_render);
+                InVis *visSystem = new InVis(numSimProcesses, comm_vis, comm_render, MPI_COMM_NULL, false);
                 visSystem->manageRenderer();
 
 				MPI_SAFE_CALL(MPI_Test(&bar_req,&flag,&bar_stat));
@@ -1179,12 +1179,17 @@ static inline void init_global_v_cluster_private(int *argc, char ***argv, init_o
 			//! barrier status
 			MPI_Status bar_stat;
 
-			while(flag == false)
-			{
-				std::cout << "I am node " << rank << std::endl;
-				sleep(1);
-				MPI_SAFE_CALL(MPI_Test(&bar_req,&flag,&bar_stat));
-			}
+//			int * a = static_cast<int *>(malloc(sizeof(int)));
+//			*a = 5;
+//			sleep(10);
+//
+//			std::cout<<"Sending the bcast"<<std::endl;
+//			MPI_Bcast((void *)a, 1, MPI_INT, 0, comm_vis);
+//			std::cout<<"Sent the bcast message "<<a<<std::endl;
+
+            InVis *visSystem = new InVis(-1, comm_vis, MPI_COMM_NULL, comm_steer, true);
+            visSystem->manageMaster();
+
 
 			openfpm_finalize();
 			exit(0);

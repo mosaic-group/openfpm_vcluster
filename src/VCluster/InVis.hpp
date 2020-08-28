@@ -34,6 +34,7 @@ class InVis
     jobject obj;
     MPI_Comm visComm;
     MPI_Comm renderComm;
+    MPI_Comm steerComm;
     int rCommSize;
     int vCommSize;
     vis_type vtype;
@@ -45,13 +46,15 @@ class InVis
     void getMemoryProps();
     void receiveImages();
     void updateCamera();
+    void interactVis();
     void getGridMemory();
     void doRender();
     static vis_type getVisType();
 
 public:
-    InVis(int cPartners, MPI_Comm vComm, MPI_Comm rcomm);
+    InVis(int cPartners, MPI_Comm vComm, MPI_Comm rcomm, MPI_Comm sComm, bool isMaster);
     void manageRenderer();
+    void manageMaster();
     };
 
 #endif //OPENFPM_PDATA_InVis_HPP
