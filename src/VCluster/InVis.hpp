@@ -22,8 +22,6 @@ static std::string particle_pos_shm_path = "/";
 static std::string particle_prop_shm_path = "/home";
 static std::string datatype_path = "/home/aryaman/datatype";
 
-#define GRID_SHM_FILE "/home/aryaman/temp0" //the pathname used for compute partner 0
-#define PARTICLE_SHM_FILE "/" //the pathname used for particle positions
 class InVis
 {
     int windowSize;
@@ -39,6 +37,7 @@ class InVis
     int vCommSize;
     vis_type vtype;
     std::vector<std::vector<ShmBuffer *>> gridBuffers;
+    bool vis_is_running;
 
 
     void updateMemory(jmethodID methodID, int memKey, bool pos);

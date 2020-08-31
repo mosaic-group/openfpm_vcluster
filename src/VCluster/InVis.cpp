@@ -18,7 +18,9 @@
 
 #define USE_VULKAN true
 
-MPI_Comm renComm;
+MPI_Comm renComm; // non class variable = renderComm
+MPI_Comm visualizationComm; // non class variable = visComm
+MPI_Comm steeringComm; // non class variable = steerComm
 int imgSize;
 double avg_recent = 0.0;
 int prevtime = 0;
@@ -27,6 +29,7 @@ int totaltime = 0;
 int timeVDIwrite = 0;
 
 InVis::InVis(int cPartners, MPI_Comm vComm, MPI_Comm rComm, MPI_Comm sComm, bool isMaster) {
+    vis_is_running = true;
     windowSize = 700;
     computePartners = cPartners;
     imageSize = windowSize*windowSize*7; //RGBA + 4 bytes for depth
@@ -34,6 +37,8 @@ InVis::InVis(int cPartners, MPI_Comm vComm, MPI_Comm rComm, MPI_Comm sComm, bool
     renderComm = rComm;
     steerComm = sComm;
     renComm = rComm;
+    visualizationComm = vComm;
+    steeringComm = sComm;
     if(renderComm != MPI_COMM_NULL) {
         MPI_Comm_size(renderComm, &rCommSize);
         std::cout << "RenderComm size is " << rCommSize << std::endl;
@@ -340,10 +345,40 @@ void InVis::updateCamera() {
 }
 
 void InVis::interactVis() {
-    std::cout<<"Waiting for broadcast message"<<std::endl;
-    int * a = static_cast<int *>(malloc(sizeof(int)));
-    MPI_Bcast((void *)a, 1, MPI_INT, 0, visComm);
-    std::cout<<"Received the broadcast message. It is: "<<*a<<std::endl;
+    JNIEnv *env;
+    jvm->AttachCurrentThread(reinterpret_cast<void **>(&env), NULL);
+
+    jmethodID updateVisMethod = env->GetMethodID(clazz, "updateVis", "(Ljava/nio/ByteBuffer;)V");
+    if(updateVisMethod == nullptr) {
+        if (env->ExceptionOccurred()) {
+            env->ExceptionDescribe();
+        } else {
+            std::cout << "ERROR: function updateVis not found!";
+//            std::exit(EXIT_FAILURE);
+        }
+    }
+
+    int * size = new int[1];
+    while(vis_is_running) {
+        std::cout<<"Waiting for broadcast message"<<std::endl;
+        MPI_Bcast((void *)size, 1, MPI_INT, 0, visComm);
+        std::cout<<"Received the size of the broadcast message. It is: "<<*size<<std::endl;
+
+        void * buffer = malloc(*size);
+        MPI_Bcast(buffer, *size, MPI_BYTE, 0, visComm);
+        std::cout<<"Received the broadcast message"<<std::endl;
+
+        jobject bbMessage = env->NewDirectByteBuffer(buffer, *size);
+
+        env->CallVoidMethod(obj, updateVisMethod, bbMessage);
+        if(env->ExceptionOccurred()) {
+            env->ExceptionDescribe();
+            env->ExceptionClear();
+        }
+        std::cout<<"Updated the camera!"<<std::endl;
+        env->DeleteLocalRef(bbMessage);
+        free(buffer);
+    }
 }
 
 void InVis::getGridMemory() {
@@ -617,11 +652,21 @@ void gatherCompositedVDIs(JNIEnv *e, jobject clazzObject, jobject compositedVDIC
 //    }
 }
 
-void broadcastVisMsg() {
+void broadcastVisMsg(JNIEnv *e, jobject clazzObject, jobject message_buffer, jint msg_size) {
     std::cout<<"Broadcasting vis message"<<std::endl;
+    void *message = e->GetDirectBufferAddress(message_buffer);
+
+    int * size_ptr = new int[1];
+    *size_ptr = msg_size;
+
+    // Broadcast the message size
+    MPI_Bcast((void *)size_ptr, 1, MPI_INT, 0, visualizationComm);
+    // Broadcast the message
+    MPI_Bcast(message, msg_size, MPI_BYTE, 0, visualizationComm);
+//    free(message);
 }
 
-void broadcastSteerMsg() {
+void broadcastSteerMsg(JNIEnv *e, jobject clazzObject, jobject message_buffer) {
 
 }
 
@@ -770,9 +815,9 @@ void InVis::manageRenderer() {
 
         std::thread updateGridData(&InVis::getGridMemory, this);
 
-//        std::cout<<"starting thread: interactVis"<<std::endl;
-//
-//        std::thread interact(&InVis::interactVis, this);
+        std::cout<<"starting thread: interactVis"<<std::endl;
+
+        std::thread interact(&InVis::interactVis, this);
 
         std::cout<<"calling function: doRender"<<std::endl;
 
@@ -792,8 +837,8 @@ void InVis::manageMaster() {
     JNIEnv *env;
     jvm->GetEnv((void **)&env, JNI_VERSION_1_6);
 
-    JNINativeMethod methods[] { { (char *)"transmitVisMsg", (char *)"(Ljava/nio/ByteBuffer;)V", (void *)&broadcastVisMsg },
-                                { (char *)"transmitSteerMsg", (char *)"(Ljava/nio/ByteBuffer;)V", (void *)&broadcastSteerMsg }
+    JNINativeMethod methods[] { { (char *)"transmitVisMsg", (char *)"(Ljava/nio/ByteBuffer;I)V", (void *)&broadcastVisMsg },
+                                { (char *)"transmitSteerMsg", (char *)"(Ljava/nio/ByteBuffer;I)V", (void *)&broadcastSteerMsg }
     };  // mapping table
 
     int ret = env->RegisterNatives(clazz, methods, 2);
