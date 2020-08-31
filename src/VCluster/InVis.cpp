@@ -25,9 +25,9 @@ MPI_Comm visualizationComm; // non class variable = visComm
 MPI_Comm steeringComm; // non class variable = steerComm
 int imgSize;
 double avg_recent = 0.0;
-int prevtime = 0;
+long prevtime = 0;
 int count = 0;
-int totaltime = 0;
+long totaltime = 0;
 int timeVDIwrite = 0;
 
 InVis::InVis(int cPartners, MPI_Comm vComm, MPI_Comm rComm, MPI_Comm sComm, bool isMaster) {
@@ -110,7 +110,7 @@ InVis::InVis(int cPartners, MPI_Comm vComm, MPI_Comm rComm, MPI_Comm sComm, bool
     }
     else {
         options[2].optionString = (char *)
-                "-Dorg.slf4j.simpleLogger.defaultLogLevel=warn";
+                "-Dscenery.LogLevel=warn";
     }
 //        options[3].optionString = (char *)
 //                "-Dscenery.ENABLE_VULKAN_RENDERDOC_CAPTURE=1";
@@ -589,28 +589,40 @@ void gatherCompositedVDIs(JNIEnv *e, jobject clazzObject, jobject compositedVDIC
             e->ExceptionClear();
         }
 
-        std::time_t t = std::time(0);
+        //do benchmarking
+        if(count % 100 == 0) {
+            std::time_t t = std::time(0);
 
-        int timetaken = 0;
-        if(prevtime == 0) {
-            //skip this step
-        }
-        else {
-            timetaken = t - prevtime;
-            totaltime += timetaken;
-            avg_recent += timetaken;
-            count++;
-        }
-        if(count != 0 && count % 5 == 0) {
-            double average_time = (double)totaltime/count;
-            avg_recent = (double)avg_recent/5.0;
-            std::cout<<"Average time for the last 5 VDIs was: "<<avg_recent<<std::endl;
-            avg_recent = 0.0;
-            std::cout<<"Overall average so far is"<<average_time<<" and total VDIs generated so far are "<< count <<std::endl;
+            long timetaken = 0; //for the last 100 VDIs/images
+
+            if(prevtime == 0) {
+                //skip this step
+            }
+            else {
+                timetaken = t - prevtime;
+                totaltime += timetaken;
+                avg_recent += (double)timetaken;
+                double average_time = (double)totaltime/(double)count;
+                avg_recent = (double)avg_recent/100.0;
+                std::cout<<"Average time for the last 100 VDIs/images was: "<<avg_recent<<std::endl;
+                avg_recent = 0.0;
+                std::cout<<"Overall average so far is"<<average_time<<" and total VDIs generated so far are "<< count <<std::endl;
+            }
+//
+//            std::cout<<"Time taken was: "<<timetaken<<std::endl;
+//            std::cout<<"Value of t is: "<<t<<std::endl;
+//            std::cout<<"Prev time was: "<<prevtime<<std::endl;
+
+            std::time_t t_out = std::time(0);
+            prevtime = t_out;
 
         }
+
+        count++;
 
         if(SAVE_FILES) {
+            std::time_t t = std::time(0);
+
             if(count != 0 && count % 10 == 0) {
 //        if(saveFiles) {
 
@@ -640,8 +652,6 @@ void gatherCompositedVDIs(JNIEnv *e, jobject clazzObject, jobject compositedVDIC
 
             }
         }
-        std::time_t t_out = std::time(0);
-        prevtime = t_out;
 //        std::cout << "cpp on rank " << myRank << " color data received is " << (char *)recvBufCol << std::endl;
 //        std::cout << "cpp on rank " << myRank << " depth data received is " << (char *)recvBufDepth << std::endl;
     }
@@ -654,6 +664,7 @@ void gatherCompositedVDIs(JNIEnv *e, jobject clazzObject, jobject compositedVDIC
 //        e->ExceptionDescribe();
 //        e->ExceptionClear();
 //    }
+
 }
 
 void broadcastVisMsg(JNIEnv *e, jobject clazzObject, jobject message_buffer, jint msg_size) {
