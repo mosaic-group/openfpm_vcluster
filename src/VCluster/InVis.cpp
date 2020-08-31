@@ -17,6 +17,8 @@
 #include "memory/ShmBuffer.hpp"
 
 #define USE_VULKAN true
+#define VERBOSE false
+#define SAVE_FILES false
 
 MPI_Comm renComm; // non class variable = renderComm
 MPI_Comm visualizationComm; // non class variable = visComm
@@ -102,8 +104,14 @@ InVis::InVis(int cPartners, MPI_Comm vComm, MPI_Comm rComm, MPI_Comm sComm, bool
                 "-Dscenery.Renderer=OpenGLRenderer";
     }
 
-    options[2].optionString = (char *)
+    if(VERBOSE) {
+        options[2].optionString = (char *)
             "-Dorg.slf4j.simpleLogger.defaultLogLevel=info";
+    }
+    else {
+        options[2].optionString = (char *)
+                "-Dorg.slf4j.simpleLogger.defaultLogLevel=warn";
+    }
 //        options[3].optionString = (char *)
 //                "-Dscenery.ENABLE_VULKAN_RENDERDOC_CAPTURE=1";
 
@@ -117,7 +125,7 @@ InVis::InVis(int cPartners, MPI_Comm vComm, MPI_Comm rComm, MPI_Comm sComm, bool
 
     JNIEnv *env;
     jint rc = JNI_CreateJavaVM(&jvm, (void **) &env, &vm_args);  // YES !!
-    std::cout<<"Hello world"<<std::endl;
+    if (VERBOSE) std::cout<<"Hello world"<<std::endl;
     delete options;
     if (rc != JNI_OK) {
         // TODO: error processing...
@@ -142,7 +150,7 @@ InVis::InVis(int cPartners, MPI_Comm vComm, MPI_Comm rComm, MPI_Comm sComm, bool
     }
 
     // if class found, continue
-    std::cout << "Class found " << className << std::endl;
+    if (VERBOSE) std::cout << "Class found " << className << std::endl;
     jmethodID ctor = env->GetMethodID(localClass, "<init>", "()V");  // find constructor
     if (ctor == nullptr) {
         if( env->ExceptionOccurred() ) {
@@ -165,7 +173,7 @@ InVis::InVis(int cPartners, MPI_Comm vComm, MPI_Comm rComm, MPI_Comm sComm, bool
         }
     }
 
-    std::cout << "Object of class has been constructed" << std::endl;
+    if (VERBOSE) std::cout << "Object of class has been constructed" << std::endl;
 
     clazz = reinterpret_cast<jclass>(env->NewGlobalRef(localClass));
     obj = reinterpret_cast<jobject>(env->NewGlobalRef(localObj));
@@ -173,7 +181,7 @@ InVis::InVis(int cPartners, MPI_Comm vComm, MPI_Comm rComm, MPI_Comm sComm, bool
     env->DeleteLocalRef(localClass);
     env->DeleteLocalRef(localObj);
 
-    std::cout << "Global references have been created and local ones deleted" << std::endl;
+    if (VERBOSE) std::cout << "Global references have been created and local ones deleted" << std::endl;
 }
 
 vis_type InVis::getVisType() {
@@ -214,10 +222,10 @@ void InVis::updateMemory(jmethodID methodID, int memKey, bool pos) {
         if (temp == -1) {
             std::cout<<"Bytebuffer capacity was found to be -1. Size of mem returned was " << pws.size <<". This is for memKey " << memKey << " and pName: " << pName << std::endl;
         }
-        std::cout<<"Java method updatepos/updateprops has been called by thread with memkey " << memKey <<"! with buffer size "<<temp<<std::endl;
+        if (VERBOSE) std::cout<<"Java method updatepos/updateprops has been called by thread with memkey " << memKey <<"! with buffer size "<<temp<<std::endl;
 
         env->CallVoidMethod(obj, methodID, byteBuffer, memKey);
-        std::cout<<"Back after updating pos/props"<<std::endl;
+        if (VERBOSE) std::cout<<"Back after updating pos/props"<<std::endl;
         buf->detach(false); //detach from the previous key
         env->DeleteLocalRef(byteBuffer);
     }
@@ -277,7 +285,7 @@ void InVis::getMemoryProps() {
 }
 
 void sendImage(JNIEnv *e, jobject clazz, jobject image) {
-    std::cout<< "In send image function" << std::endl;
+    if (VERBOSE) std::cout<< "In send image function" << std::endl;
     jbyte *buf;
     MPI_Request req;
     MPI_Status stat;
@@ -296,7 +304,7 @@ void InVis::receiveImages() {
     jobjectArray bytebuffers;
     jsize size = rCommSize - 1;
     bytebuffers = (env)->NewObjectArray(size, (env)->FindClass("java/nio/ByteBuffer"), 0);
-    std::cout << "Looking for function composite"<<std::endl;
+    if (VERBOSE) std::cout << "Looking for function composite"<<std::endl;
 
     jmethodID compositeMethod = (env)->GetMethodID(clazz, "composite", "([Ljava/nio/ByteBuffer;I)V");
     if(compositeMethod == nullptr) {
@@ -308,7 +316,7 @@ void InVis::receiveImages() {
         }
     }
 
-    std::cout << "Function composite has been found!"<<std::endl;
+    if (VERBOSE) std::cout << "Function composite has been found!"<<std::endl;
 
     while (true) {
         for(int i = 1; i < rCommSize; i++) {
@@ -322,7 +330,7 @@ void InVis::receiveImages() {
 //            std::cout<<"Bytebuffer containing color and depth is of size "<<temp<<std::endl;
             (env)->SetObjectArrayElement(bytebuffers, i-1, bb);
         }
-        std::cout << "Function composite will be called"<<std::endl;
+        if (VERBOSE) std::cout << "Function composite will be called"<<std::endl;
         (env)-> CallVoidMethod(obj, compositeMethod, bytebuffers, rCommSize);
     }
     jvm->DetachCurrentThread();
@@ -360,13 +368,13 @@ void InVis::interactVis() {
 
     int * size = new int[1];
     while(vis_is_running) {
-        std::cout<<"Waiting for broadcast message"<<std::endl;
+        if (VERBOSE) std::cout<<"Waiting for broadcast message"<<std::endl;
         MPI_Bcast((void *)size, 1, MPI_INT, 0, visComm);
-        std::cout<<"Received the size of the broadcast message. It is: "<<*size<<std::endl;
+        if (VERBOSE) std::cout<<"Received the size of the broadcast message. It is: "<<*size<<std::endl;
 
         void * buffer = malloc(*size);
         MPI_Bcast(buffer, *size, MPI_BYTE, 0, visComm);
-        std::cout<<"Received the broadcast message"<<std::endl;
+        if (VERBOSE) std::cout<<"Received the broadcast message"<<std::endl;
 
         jobject bbMessage = env->NewDirectByteBuffer(buffer, *size);
 
@@ -375,7 +383,7 @@ void InVis::interactVis() {
             env->ExceptionDescribe();
             env->ExceptionClear();
         }
-        std::cout<<"Updated the camera!"<<std::endl;
+        if (VERBOSE) std::cout<<"Updated the camera!"<<std::endl;
         env->DeleteLocalRef(bbMessage);
         free(buffer);
     }
@@ -399,26 +407,26 @@ void InVis::getGridMemory() {
 //    sleep(5);
     for(int i = 0; i < computePartners; i++) {
         // Read the metadata of the grids managed by computePartner i
-        std::cout<<"Attempting to read metadata managed by computePartner " << i << std::endl;
+        if (VERBOSE) std::cout<<"Attempting to read metadata managed by computePartner " << i << std::endl;
         ShmBuffer *GBoxBuf;
         std::string pName = grid_shm_path + std::to_string(i);
 
         GBoxBuf = new ShmBuffer(pName, 0, true);
         ptr_with_size pws{};
 
-        std::cout<<"Calling update key function"<<std::endl;
+        if (VERBOSE) std::cout<<"Calling update key function"<<std::endl;
         GBoxBuf->update_key(true);
         pws = GBoxBuf->attach();
 
         size_t metaSize = pws.size - 512 - 32;
         int numMetaElements  = metaSize / sizeof(long);
-        std::cout << "Got metadata for compute partner " << i << ". The size and no of elements are:" << metaSize << " and " << numMetaElements << std::endl;
+        if (VERBOSE) std::cout << "Got metadata for compute partner " << i << ". The size and no of elements are:" << metaSize << " and " << numMetaElements << std::endl;
         long *metaData = (long*)pws.ptr;
 
         for(int j = 0; j < numMetaElements; j++) {
-            std::cout<<j+1<<"th element is "<<metaData[j]<<"\t";
+            if (VERBOSE) std::cout<<j+1<<"th element is "<<metaData[j]<<"\t";
         }
-        std::cout<<std::endl;
+        if (VERBOSE) std::cout<<std::endl;
 
         int elementsInGBox = 15; // origin -> 3 + grid dimensions -> 6 + domain dimensions -> 6
         int numGrids = numMetaElements / elementsInGBox;
@@ -470,32 +478,25 @@ void InVis::getGridMemory() {
             it++;
 
             gridBuffers[i].push_back(new ShmBuffer(pName, j+1, true));
-            std::cout<<"1"<<std::endl;
             gridBuffers[i][j]->update_key(true);
-            std::cout<<"2"<<std::endl;
 
             ptr_with_size tmp = gridBuffers[i][j]->attach();
-            std::cout<<"2"<<std::endl;
 
             int width = abs(gridDims[j*6] - gridDims[j*6 + 3]) + 1;
-            std::cout<<"3"<<std::endl;
 
             int height = abs(gridDims[j*6 + 1] - gridDims[j*6 + 4]) + 1;
-            std::cout<<"4"<<std::endl;
 
             int depth = abs(gridDims[j*6 + 2] - gridDims[j*6 + 5]) + 1;
-            std::cout<<"5"<<std::endl;
 
             int gridSize = width * height * depth;
-            std::cout<<"6"<<std::endl;
 
-            std::cout<< "Grid " << j << " of computePartner " << i << " is of size " << gridSize << std::endl;
+            if (VERBOSE) std::cout<< "Grid " << j << " of computePartner " << i << " is of size " << gridSize << std::endl;
 
             jobject bb;
             bb = env->NewDirectByteBuffer((void *)tmp.ptr, 2*gridSize);
             env->SetObjectArrayElement(bytebuffers, j, bb);
             int temp = (env)-> GetDirectBufferCapacity(bb);
-            std::cout<<"Bytebuffer capacity was found to be " <<temp <<std::endl;
+            if (VERBOSE) std::cout<<"Bytebuffer capacity was found to be " <<temp <<std::endl;
 //            env->DeleteLocalRef(bb); TODO: uncomment
         }
 
@@ -503,7 +504,7 @@ void InVis::getGridMemory() {
         env->SetIntArrayRegion(jGridDims, 0, 6 * numGrids, gridDims);
         env->SetIntArrayRegion(jDomainDims, 0, 6 * numGrids, domainDims);
         // the meta arguments for the java function updateData are now ready
-        std::cout<<"the meta arguments for the java function updateData are now ready"<<std::endl;
+        if (VERBOSE) std::cout<<"the meta arguments for the java function updateData are now ready"<<std::endl;
 
         env->CallVoidMethod(obj, updateDataMethod, i, numGrids, bytebuffers, jOrigins, jGridDims, jDomainDims);
 
@@ -516,7 +517,7 @@ void InVis::getGridMemory() {
 }
 
 void distributeVDIs(JNIEnv *e, jobject clazzObject, jobject subVDICol, jint sizePerProcess, jint commSize) {
-    std::cout<<"In distribute VDIs function. Comm size is "<<commSize<<std::endl;
+    if (VERBOSE) std::cout<<"In distribute VDIs function. Comm size is "<<commSize<<std::endl;
 
     void *ptrCol = e->GetDirectBufferAddress(subVDICol);
 //    void *ptrDepth = e->GetDirectBufferAddress(subVDIDepth);
@@ -538,7 +539,7 @@ void distributeVDIs(JNIEnv *e, jobject clazzObject, jobject subVDICol, jint size
         e->ExceptionClear();
     }
 
-    std::cout<<"Finished distributing the VDIs. Calling the Composite method now!"<<std::endl;
+    if (VERBOSE) std::cout<<"Finished distributing the VDIs. Calling the Composite method now!"<<std::endl;
 
     e->CallVoidMethod(clazzObject, compositeMethod, bbCol, sizePerProcess);
     if(e->ExceptionOccurred()) {
@@ -549,7 +550,7 @@ void distributeVDIs(JNIEnv *e, jobject clazzObject, jobject subVDICol, jint size
 
 void gatherCompositedVDIs(JNIEnv *e, jobject clazzObject, jobject compositedVDIColor, jint root, jint compositedVDILen, jint myRank, jint commSize, jboolean saveFiles) {
 
-    std::cout<<"In Gather function " <<std::endl;
+    if (VERBOSE) std::cout<<"In Gather function " <<std::endl;
     void *ptrCol = e->GetDirectBufferAddress(compositedVDIColor);
 //    void *ptrDepth = e->GetDirectBufferAddress(compositedVDIDepth);
 //    std::cout << "Data received as parameter is: " << (char *)ptrCol << std::endl;
@@ -580,7 +581,7 @@ void gatherCompositedVDIs(JNIEnv *e, jobject clazzObject, jobject compositedVDIC
             e->ExceptionClear();
         }
 
-        std::cout<<"Streaming the composited image out now"<<std::endl;
+        if (VERBOSE) std::cout<<"Streaming the composited image out now"<<std::endl;
 
         e->CallVoidMethod(clazzObject, streamMethod, bbImg);
         if(e->ExceptionOccurred()) {
@@ -608,33 +609,36 @@ void gatherCompositedVDIs(JNIEnv *e, jobject clazzObject, jobject compositedVDIC
             std::cout<<"Overall average so far is"<<average_time<<" and total VDIs generated so far are "<< count <<std::endl;
 
         }
-        if(count != 0 && count % 10 == 0) {
+
+        if(SAVE_FILES) {
+            if(count != 0 && count % 10 == 0) {
 //        if(saveFiles) {
 
-            if(timeVDIwrite != 0) {
-                int time_elapsed = t - timeVDIwrite;
-                std::cout<<"Writing VDI now. Time since the last write was performed is: " << time_elapsed <<std::endl;
-                timeVDIwrite = t;
-            }
-            std::cout<<"Writing the final gathered VDI now"<<std::endl;
+                if(timeVDIwrite != 0) {
+                    int time_elapsed = t - timeVDIwrite;
+                    std::cout<<"Writing VDI now. Time since the last write was performed is: " << time_elapsed <<std::endl;
+                    timeVDIwrite = t;
+                }
+                std::cout<<"Writing the final gathered VDI now"<<std::endl;
 
-            std::string filename = "size:" + std::to_string(commSize) + "Final_VDICol" + std::to_string(count) + ".raw";
-            std::ofstream b_stream(filename.c_str(),
-                                   std::fstream::out | std::fstream::binary);
+                std::string filename = "size:" + std::to_string(commSize) + "Final_VDICol" + std::to_string(count) + ".raw";
+                std::ofstream b_stream(filename.c_str(),
+                                       std::fstream::out | std::fstream::binary);
 //            std::string filenameDepth = "size:" + std::to_string(rCommSize) + "Final_VDIDepth" + std::to_string(count) + ".raw";
 //            std::ofstream b_streamDepth(filenameDepth.c_str(),
 //                                   std::fstream::out | std::fstream::binary);
 
-            if (b_stream)
-            {
-                b_stream.write(static_cast<const char *>(recvBufCol), compositedVDILen * commSize * 3);
+                if (b_stream)
+                {
+                    b_stream.write(static_cast<const char *>(recvBufCol), compositedVDILen * commSize * 3);
 //                b_streamDepth.write(static_cast<const char *>(recvBufDepth), compositedVDILen * rCommSize * 2);
 
-                if (b_stream.good()) {
-                    std::cout<<"Writing was successful"<<std::endl;
+                    if (b_stream.good()) {
+                        std::cout<<"Writing was successful"<<std::endl;
+                    }
                 }
-            }
 
+            }
         }
         std::time_t t_out = std::time(0);
         prevtime = t_out;
@@ -653,7 +657,7 @@ void gatherCompositedVDIs(JNIEnv *e, jobject clazzObject, jobject compositedVDIC
 }
 
 void broadcastVisMsg(JNIEnv *e, jobject clazzObject, jobject message_buffer, jint msg_size) {
-    std::cout<<"Broadcasting vis message"<<std::endl;
+    if (VERBOSE) std::cout<<"Broadcasting vis message"<<std::endl;
     void *message = e->GetDirectBufferAddress(message_buffer);
 
     int * size_ptr = new int[1];
@@ -771,7 +775,7 @@ void InVis::manageRenderer() {
                 //std::exit(EXIT_FAILURE);
             }
         } else {
-            std::cout<<"Native registered for Renderer. The return value is: "<< ret <<std::endl;
+            if (VERBOSE) std::cout<<"Native registered for Renderer. The return value is: "<< ret <<std::endl;
         }
     }
 
@@ -789,20 +793,20 @@ void InVis::manageRenderer() {
                 //std::exit(EXIT_FAILURE);
             }
         } else {
-            std::cout<<"Natives registered for InVisVolume. The return value is: "<< ret <<std::endl;
+            if (VERBOSE) std::cout<<"Natives registered for InVisVolume. The return value is: "<< ret <<std::endl;
         }
     }
 
     if(vtype == vis_type::particles) {
-        std::cout<<"starting thread: updatePosData"<<std::endl;
+        if (VERBOSE) std::cout<<"starting thread: updatePosData"<<std::endl;
 
         std::thread updatePosData(&InVis::getMemoryPos, this);
 
-        std::cout<<"starting thread: updatePropsData"<<std::endl;
+        if (VERBOSE) std::cout<<"starting thread: updatePropsData"<<std::endl;
 
         std::thread updatePropsData(&InVis::getMemoryProps, this);
 
-        std::cout<<"calling function: doRender"<<std::endl;
+        if (VERBOSE) std::cout<<"calling function: doRender"<<std::endl;
 
         doRender();
 
@@ -811,19 +815,19 @@ void InVis::manageRenderer() {
     }
 
     else {
-        std::cout<<"starting thread: updateGridData"<<std::endl;
+        if (VERBOSE) std::cout<<"starting thread: updateGridData"<<std::endl;
 
         std::thread updateGridData(&InVis::getGridMemory, this);
 
-        std::cout<<"starting thread: interactVis"<<std::endl;
+        if (VERBOSE) std::cout<<"starting thread: interactVis"<<std::endl;
 
         std::thread interact(&InVis::interactVis, this);
 
-        std::cout<<"calling function: doRender"<<std::endl;
+        if (VERBOSE) std::cout<<"calling function: doRender"<<std::endl;
 
         doRender();
 
-        std::cout<<"Finished with doRender!"<<std::endl;
+        if (VERBOSE) std::cout<<"Finished with doRender!"<<std::endl;
 
         updateGridData.join();
 //        interact.join();
@@ -850,7 +854,7 @@ void InVis::manageMaster() {
             //std::exit(EXIT_FAILURE);
         }
     } else {
-        std::cout<<"Natives registered for InSituMaster. The return value is: "<< ret <<std::endl;
+        if (VERBOSE) std::cout<<"Natives registered for InSituMaster. The return value is: "<< ret <<std::endl;
     }
 
     jmethodID listenMethod = env->GetMethodID(clazz, "listenForMessages", "()V");
