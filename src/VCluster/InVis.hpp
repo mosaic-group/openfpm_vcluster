@@ -17,6 +17,21 @@ enum vis_type
     grid = 0x1,
 };
 
+enum scale_vis
+{
+    no_scaling = 0x0,
+    global = 0x1,
+    fixed = 0x3,
+};
+
+enum vector_visualize
+{
+    magnitude = 0x0,
+    x_ = 0x1,
+    y_ = 0x2,
+    z_ = 0x3
+};
+
 static std::string grid_shm_path = "/home/aryaman/temp";
 static std::string particle_pos_shm_path = "/";
 static std::string particle_prop_shm_path = "/home";
