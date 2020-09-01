@@ -12,12 +12,13 @@
 #include <mpi.h>
 #include <dirent.h>
 #include <fstream>
+#include <unistd.h>
 
 #include "InVis.hpp"
 #include "memory/ShmBuffer.hpp"
 
 #define USE_VULKAN true
-#define VERBOSE false
+#define VERBOSE true
 #define SAVE_FILES false
 
 MPI_Comm renComm; // non class variable = renderComm
@@ -29,6 +30,9 @@ long prevtime = 0;
 int count = 0;
 long totaltime = 0;
 int timeVDIwrite = 0;
+
+MPI_Request interact_req;
+int * size_interact;
 
 InVis::InVis(int cPartners, MPI_Comm vComm, MPI_Comm rComm, MPI_Comm sComm, bool isMaster) {
     vis_is_running = true;
@@ -569,9 +573,45 @@ void gatherCompositedVDIs(JNIEnv *e, jobject clazzObject, jobject compositedVDIC
 //    MPI_Gather(ptrDepth, compositedVDILen*2, MPI_BYTE, recvBufDepth, compositedVDILen*2, MPI_BYTE, root, mpiComm);
     //The data is here now!
 
+    jclass clazz = e->GetObjectClass(clazzObject);
+
+    jmethodID updateVisMethod = e->GetMethodID(clazz, "updateVis", "(Ljava/nio/ByteBuffer;)V");
+    if(updateVisMethod == nullptr) {
+        if (e->ExceptionOccurred()) {
+            e->ExceptionDescribe();
+        } else {
+            std::cout << "ERROR: function updateVis not found!";
+//            std::exit(EXIT_FAILURE);
+        }
+    }
+
+    int flag = 0;
+    if(VERBOSE) std::cout<<"Testing if bcast has been received"<<std::endl;
+    MPI_Test(&interact_req, &flag, MPI_STATUS_IGNORE);
+
+    if(flag == 1)
+    {
+        //Message has arrived
+        if (VERBOSE) std::cout<<"Received the size of the broadcast message. It is: "<<*size_interact<<std::endl;
+        void * buffer = malloc(*size_interact);
+        MPI_Bcast(buffer, *size_interact, MPI_BYTE, 0, visualizationComm);
+        if (VERBOSE) std::cout<<"Received the broadcast message"<<std::endl;
+
+        jobject bbMessage = e->NewDirectByteBuffer(buffer, *size_interact);
+
+        e->CallVoidMethod(clazzObject, updateVisMethod, bbMessage);
+        if(e->ExceptionOccurred()) {
+            e->ExceptionDescribe();
+            e->ExceptionClear();
+        }
+        if (VERBOSE) std::cout<<"Updated the camera!"<<std::endl;
+        e->DeleteLocalRef(bbMessage);
+        free(buffer);
+        MPI_Ibcast(size_interact, 1, MPI_INT, 0, visualizationComm, &interact_req);
+    }
+
     if(myRank == 0) {
 //        //send or store the VDI
-        jclass clazz = e->GetObjectClass(clazzObject);
         jmethodID streamMethod = e->GetMethodID(clazz, "streamImage", "(Ljava/nio/ByteBuffer;)V");
 
         jobject bbImg = e->NewDirectByteBuffer(recvBufCol, compositedVDILen * commSize * 3);
@@ -675,7 +715,17 @@ void broadcastVisMsg(JNIEnv *e, jobject clazzObject, jobject message_buffer, jin
     *size_ptr = msg_size;
 
     // Broadcast the message size
-    MPI_Bcast((void *)size_ptr, 1, MPI_INT, 0, visualizationComm);
+    MPI_Ibcast((void *)size_ptr, 1, MPI_INT, 0, visualizationComm, &interact_req);
+
+    int flag = 0;
+
+    MPI_Test(&interact_req, &flag, MPI_STATUS_IGNORE);
+
+    while(flag == 0)
+    {
+        usleep(10000);
+    }
+
     // Broadcast the message
     MPI_Bcast(message, msg_size, MPI_BYTE, 0, visualizationComm);
 //    free(message);
@@ -830,9 +880,14 @@ void InVis::manageRenderer() {
 
         std::thread updateGridData(&InVis::getGridMemory, this);
 
-        if (VERBOSE) std::cout<<"starting thread: interactVis"<<std::endl;
+        size_interact = new int[1];
 
-        std::thread interact(&InVis::interactVis, this);
+        //Start checking for interact messages
+        MPI_Ibcast(size_interact, 1, MPI_INT, 0, visComm, &interact_req);
+
+//        if (VERBOSE) std::cout<<"starting thread: interactVis"<<std::endl;
+//
+//        std::thread interact(&InVis::interactVis, this);
 
         if (VERBOSE) std::cout<<"calling function: doRender"<<std::endl;
 
