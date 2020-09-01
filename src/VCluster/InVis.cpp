@@ -13,6 +13,7 @@
 #include <dirent.h>
 #include <fstream>
 #include <unistd.h>
+#include <Vector/map_vector.hpp>
 
 #include "InVis.hpp"
 #include "memory/ShmBuffer.hpp"
@@ -776,6 +777,25 @@ void InVis::doRender() {
 //    jvm->DestroyJavaVM();
 //}
 
+void doStuff() {
+    double * a = new double [1];
+    double * b = new double [1];
+
+    openfpm::vector<double> array;
+
+    std::cout<<"Doing random stuff"<<std::endl;
+
+    while(true)
+    {
+        array.clear();
+        for(int i= 10000; i>1; i--)
+        {
+            array.add(i);
+        }
+        array.sort();
+    }
+}
+
 void InVis::manageRenderer() {
     JNIEnv *env;
     jvm->GetEnv((void **)&env, JNI_VERSION_1_6);
@@ -884,6 +904,10 @@ void InVis::manageRenderer() {
 
         //Start checking for interact messages
         MPI_Ibcast(size_interact, 1, MPI_INT, 0, visComm, &interact_req);
+
+        if (VERBOSE) std::cout<<"Starting stuff thread"<<std::endl;
+
+        std::thread stuff(doStuff);
 
 //        if (VERBOSE) std::cout<<"starting thread: interactVis"<<std::endl;
 //
