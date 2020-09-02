@@ -385,11 +385,11 @@ void InVis::interactVis() {
     }
 
     int size = 0;
-    void * buffer = malloc(size);
     while(vis_is_running) {
         if (VERBOSE) std::cout<<"Waiting for broadcast message"<<std::endl;
         MPI_Bcast((void *)&size, 1, MPI_INT, 0, visComm);
-        if (VERBOSE) std::cout<<"Received the size of the broadcast message. It is: "<<*size<<std::endl;
+        if (VERBOSE) std::cout<<"Received the size of the broadcast message. It is: "<<size<<std::endl;
+        void * buffer = malloc(size);
 
         MPI_Bcast(buffer, size, MPI_BYTE, 0, visComm);
         if (VERBOSE) std::cout<<"Received the broadcast message"<<std::endl;
@@ -402,9 +402,9 @@ void InVis::interactVis() {
             env->ExceptionClear();
         }
         if (VERBOSE) std::cout<<"Updated the camera!"<<std::endl;
+        free(buffer);
         env->DeleteLocalRef(bbMessage);
     }
-    free(buffer);
 }
 
 void InVis::getGridMemory() {
