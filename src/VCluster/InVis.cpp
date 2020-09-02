@@ -32,6 +32,14 @@ int count = 0;
 long totaltime = 0;
 int timeVDIwrite = 0;
 
+void * recvBufCol = nullptr;
+void * gather_recv = nullptr;
+
+jmethodID streamMethod = nullptr;
+jmethodID compositeMethod = nullptr;
+jmethodID updateVisMethod = nullptr;
+
+
 MPI_Request interact_req;
 int * size_interact;
 
@@ -187,6 +195,11 @@ InVis::InVis(int cPartners, MPI_Comm vComm, MPI_Comm rComm, MPI_Comm sComm, bool
     env->DeleteLocalRef(localObj);
 
     if (VERBOSE) std::cout << "Global references have been created and local ones deleted" << std::endl;
+}
+
+void remove_memory() { //TODO: call when in situ needs to terminate
+    free(recvBufCol);
+    free(gather_recv);
 }
 
 vis_type InVis::getVisType() {
@@ -527,14 +540,21 @@ void distributeVDIs(JNIEnv *e, jobject clazzObject, jobject subVDICol, jint size
     void *ptrCol = e->GetDirectBufferAddress(subVDICol);
 //    void *ptrDepth = e->GetDirectBufferAddress(subVDIDepth);
 
-    void *recvBufCol = malloc(sizePerProcess * commSize * 3);
+    if(recvBufCol == nullptr) {
+        std::cout<<"allocating in distributeVDIs"<<std::endl;
+        recvBufCol = malloc(sizePerProcess * commSize * 3);
+    }
+
 //    void *recvBufDepth = malloc(sizePerProcess * rCommSize * 2);
 
     MPI_Alltoall(ptrCol, sizePerProcess*3, MPI_BYTE, recvBufCol, sizePerProcess*3, MPI_BYTE, renComm);
 //    MPI_Alltoall(ptrDepth, sizePerProcess*2, MPI_BYTE, recvBufDepth, sizePerProcess*2, MPI_BYTE, mpiComm);
 
-    jclass clazz = e->GetObjectClass(clazzObject);
-    jmethodID compositeMethod = e->GetMethodID(clazz, "compositeVDIs", "(Ljava/nio/ByteBuffer;I)V");
+    if(compositeMethod == nullptr) {
+        jclass clazz = e->GetObjectClass(clazzObject);
+        compositeMethod = e->GetMethodID(clazz, "compositeVDIs", "(Ljava/nio/ByteBuffer;I)V");
+    }
+
 
     jobject bbCol = e->NewDirectByteBuffer(recvBufCol, sizePerProcess * commSize * 3);
 //    jobject bbDepth = e->NewDirectByteBuffer(recvBufDepth, sizePerProcess * rCommSize * 2);
@@ -559,32 +579,21 @@ void gatherCompositedVDIs(JNIEnv *e, jobject clazzObject, jobject compositedVDIC
     void *ptrCol = e->GetDirectBufferAddress(compositedVDIColor);
 //    void *ptrDepth = e->GetDirectBufferAddress(compositedVDIDepth);
 //    std::cout << "Data received as parameter is: " << (char *)ptrCol << std::endl;
-    void *recvBufCol;
 //    void *recvBufDepth;
     if (myRank == 0) {
-        recvBufCol = malloc(compositedVDILen * commSize * 3);
-//        recvBufDepth = malloc(compositedVDILen * rCommSize * 2);
+        if(gather_recv == nullptr) {
+            std::cout<<"allocatign in gather"<<std::endl;
+            gather_recv = malloc(compositedVDILen * commSize * 3);
+        }
     }
     else {
-        recvBufCol = NULL;
+        gather_recv = nullptr;
 //        recvBufDepth = NULL;
     }
 
-    MPI_Gather(ptrCol, compositedVDILen*3, MPI_BYTE, recvBufCol, compositedVDILen*3, MPI_BYTE, root, renComm);
+    MPI_Gather(ptrCol, compositedVDILen*3, MPI_BYTE, gather_recv, compositedVDILen * 3, MPI_BYTE, root, renComm);
 //    MPI_Gather(ptrDepth, compositedVDILen*2, MPI_BYTE, recvBufDepth, compositedVDILen*2, MPI_BYTE, root, mpiComm);
     //The data is here now!
-
-    jclass clazz = e->GetObjectClass(clazzObject);
-
-    jmethodID updateVisMethod = e->GetMethodID(clazz, "updateVis", "(Ljava/nio/ByteBuffer;)V");
-    if(updateVisMethod == nullptr) {
-        if (e->ExceptionOccurred()) {
-            e->ExceptionDescribe();
-        } else {
-            std::cout << "ERROR: function updateVis not found!";
-//            std::exit(EXIT_FAILURE);
-        }
-    }
 
     int flag = 0;
     if(VERBOSE) std::cout<<"Testing if bcast has been received"<<std::endl;
@@ -592,6 +601,18 @@ void gatherCompositedVDIs(JNIEnv *e, jobject clazzObject, jobject compositedVDIC
 
     if(flag == 1)
     {
+        if(updateVisMethod == nullptr) {
+            jclass clazz = e->GetObjectClass(clazzObject);
+            updateVisMethod = e->GetMethodID(clazz, "updateVis", "(Ljava/nio/ByteBuffer;)V");
+        }
+        if(updateVisMethod == nullptr) {
+            if (e->ExceptionOccurred()) {
+                e->ExceptionDescribe();
+            } else {
+                std::cout << "ERROR: function updateVis not found!";
+//            std::exit(EXIT_FAILURE);
+            }
+        }
         //Message has arrived
         if (VERBOSE) std::cout<<"Received the size of the broadcast message. It is: "<<*size_interact<<std::endl;
         void * buffer = malloc(*size_interact);
@@ -613,9 +634,12 @@ void gatherCompositedVDIs(JNIEnv *e, jobject clazzObject, jobject compositedVDIC
 
     if(myRank == 0) {
 //        //send or store the VDI
-        jmethodID streamMethod = e->GetMethodID(clazz, "streamImage", "(Ljava/nio/ByteBuffer;)V");
+        if(streamMethod == nullptr) {
+            jclass clazz = e->GetObjectClass(clazzObject);
+            streamMethod = e->GetMethodID(clazz, "streamImage", "(Ljava/nio/ByteBuffer;)V");
+        }
 
-        jobject bbImg = e->NewDirectByteBuffer(recvBufCol, compositedVDILen * commSize * 3);
+        jobject bbImg = e->NewDirectByteBuffer(gather_recv, compositedVDILen * commSize * 3);
 
         if(e->ExceptionOccurred()) {
             e->ExceptionDescribe();
@@ -683,7 +707,7 @@ void gatherCompositedVDIs(JNIEnv *e, jobject clazzObject, jobject compositedVDIC
 
                 if (b_stream)
                 {
-                    b_stream.write(static_cast<const char *>(recvBufCol), compositedVDILen * commSize * 3);
+                    b_stream.write(static_cast<const char *>(gather_recv), compositedVDILen * commSize * 3);
 //                b_streamDepth.write(static_cast<const char *>(recvBufDepth), compositedVDILen * rCommSize * 2);
 
                     if (b_stream.good()) {
@@ -693,7 +717,7 @@ void gatherCompositedVDIs(JNIEnv *e, jobject clazzObject, jobject compositedVDIC
 
             }
         }
-//        std::cout << "cpp on rank " << myRank << " color data received is " << (char *)recvBufCol << std::endl;
+//        std::cout << "cpp on rank " << myRank << " color data received is " << (char *)gather_recv << std::endl;
 //        std::cout << "cpp on rank " << myRank << " depth data received is " << (char *)recvBufDepth << std::endl;
     }
 
