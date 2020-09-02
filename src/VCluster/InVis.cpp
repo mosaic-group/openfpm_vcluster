@@ -19,7 +19,7 @@
 #include "memory/ShmBuffer.hpp"
 
 #define USE_VULKAN true
-#define VERBOSE false
+#define VERBOSE true
 #define SAVE_FILES false
 
 MPI_Comm renComm; // non class variable = renderComm
@@ -384,17 +384,17 @@ void InVis::interactVis() {
         }
     }
 
-    int * size = new int[1];
+    int size = 0;
+    void * buffer = malloc(size);
     while(vis_is_running) {
         if (VERBOSE) std::cout<<"Waiting for broadcast message"<<std::endl;
-        MPI_Bcast((void *)size, 1, MPI_INT, 0, visComm);
+        MPI_Bcast((void *)&size, 1, MPI_INT, 0, visComm);
         if (VERBOSE) std::cout<<"Received the size of the broadcast message. It is: "<<*size<<std::endl;
 
-        void * buffer = malloc(*size);
-        MPI_Bcast(buffer, *size, MPI_BYTE, 0, visComm);
+        MPI_Bcast(buffer, size, MPI_BYTE, 0, visComm);
         if (VERBOSE) std::cout<<"Received the broadcast message"<<std::endl;
 
-        jobject bbMessage = env->NewDirectByteBuffer(buffer, *size);
+        jobject bbMessage = env->NewDirectByteBuffer(buffer, size);
 
         env->CallVoidMethod(obj, updateVisMethod, bbMessage);
         if(env->ExceptionOccurred()) {
@@ -403,8 +403,8 @@ void InVis::interactVis() {
         }
         if (VERBOSE) std::cout<<"Updated the camera!"<<std::endl;
         env->DeleteLocalRef(bbMessage);
-        free(buffer);
     }
+    free(buffer);
 }
 
 void InVis::getGridMemory() {
@@ -595,42 +595,42 @@ void gatherCompositedVDIs(JNIEnv *e, jobject clazzObject, jobject compositedVDIC
 //    MPI_Gather(ptrDepth, compositedVDILen*2, MPI_BYTE, recvBufDepth, compositedVDILen*2, MPI_BYTE, root, mpiComm);
     //The data is here now!
 
-    int flag = 0;
-    if(VERBOSE) std::cout<<"Testing if bcast has been received"<<std::endl;
-    MPI_Test(&interact_req, &flag, MPI_STATUS_IGNORE);
-
-    if(flag == 1)
-    {
-        if(updateVisMethod == nullptr) {
-            jclass clazz = e->GetObjectClass(clazzObject);
-            updateVisMethod = e->GetMethodID(clazz, "updateVis", "(Ljava/nio/ByteBuffer;)V");
-        }
-        if(updateVisMethod == nullptr) {
-            if (e->ExceptionOccurred()) {
-                e->ExceptionDescribe();
-            } else {
-                std::cout << "ERROR: function updateVis not found!";
-//            std::exit(EXIT_FAILURE);
-            }
-        }
-        //Message has arrived
-        if (VERBOSE) std::cout<<"Received the size of the broadcast message. It is: "<<*size_interact<<std::endl;
-        void * buffer = malloc(*size_interact);
-        MPI_Bcast(buffer, *size_interact, MPI_BYTE, 0, visualizationComm);
-        if (VERBOSE) std::cout<<"Received the broadcast message"<<std::endl;
-
-        jobject bbMessage = e->NewDirectByteBuffer(buffer, *size_interact);
-
-        e->CallVoidMethod(clazzObject, updateVisMethod, bbMessage);
-        if(e->ExceptionOccurred()) {
-            e->ExceptionDescribe();
-            e->ExceptionClear();
-        }
-        if (VERBOSE) std::cout<<"Updated the camera!"<<std::endl;
-        e->DeleteLocalRef(bbMessage);
-        free(buffer);
-        MPI_Ibcast(size_interact, 1, MPI_INT, 0, visualizationComm, &interact_req);
-    }
+//    int flag = 0;
+//    if(VERBOSE) std::cout<<"Testing if bcast has been received"<<std::endl;
+//    MPI_Test(&interact_req, &flag, MPI_STATUS_IGNORE);
+//
+//    if(flag == 1)
+//    {
+//        if(updateVisMethod == nullptr) {
+//            jclass clazz = e->GetObjectClass(clazzObject);
+//            updateVisMethod = e->GetMethodID(clazz, "updateVis", "(Ljava/nio/ByteBuffer;)V");
+//        }
+//        if(updateVisMethod == nullptr) {
+//            if (e->ExceptionOccurred()) {
+//                e->ExceptionDescribe();
+//            } else {
+//                std::cout << "ERROR: function updateVis not found!";
+////            std::exit(EXIT_FAILURE);
+//            }
+//        }
+//        //Message has arrived
+//        if (VERBOSE) std::cout<<"Received the size of the broadcast message. It is: "<<*size_interact<<std::endl;
+//        void * buffer = malloc(*size_interact);
+//        MPI_Bcast(buffer, *size_interact, MPI_BYTE, 0, visualizationComm);
+//        if (VERBOSE) std::cout<<"Received the broadcast message"<<std::endl;
+//
+//        jobject bbMessage = e->NewDirectByteBuffer(buffer, *size_interact);
+//
+//        e->CallVoidMethod(clazzObject, updateVisMethod, bbMessage);
+//        if(e->ExceptionOccurred()) {
+//            e->ExceptionDescribe();
+//            e->ExceptionClear();
+//        }
+//        if (VERBOSE) std::cout<<"Updated the camera!"<<std::endl;
+//        e->DeleteLocalRef(bbMessage);
+//        free(buffer);
+//        MPI_Ibcast(size_interact, 1, MPI_INT, 0, visualizationComm, &interact_req);
+//    }
 
     if(myRank == 0) {
 //        //send or store the VDI
@@ -736,20 +736,21 @@ void broadcastVisMsg(JNIEnv *e, jobject clazzObject, jobject message_buffer, jin
     if (VERBOSE) std::cout<<"Broadcasting vis message"<<std::endl;
     void *message = e->GetDirectBufferAddress(message_buffer);
 
-    int * size_ptr = new int[1];
-    *size_ptr = msg_size;
+    int size = msg_size;
 
     // Broadcast the message size
-    MPI_Ibcast((void *)size_ptr, 1, MPI_INT, 0, visualizationComm, &interact_req);
+//    MPI_Ibcast((void *)size_ptr, 1, MPI_INT, 0, visualizationComm, &interact_req);
+//
+//    int flag = 0;
+//
+//    MPI_Test(&interact_req, &flag, MPI_STATUS_IGNORE);
+//
+//    while(flag == 0)
+//    {
+//        usleep(10000);
+//    }
 
-    int flag = 0;
-
-    MPI_Test(&interact_req, &flag, MPI_STATUS_IGNORE);
-
-    while(flag == 0)
-    {
-        usleep(10000);
-    }
+    MPI_Bcast((void *) &size, 1, MPI_INT, 0, visualizationComm);
 
     // Broadcast the message
     MPI_Bcast(message, msg_size, MPI_BYTE, 0, visualizationComm);
@@ -907,12 +908,12 @@ void InVis::manageRenderer() {
 
         size_interact = new int[1];
 
-        //Start checking for interact messages
-        MPI_Ibcast(size_interact, 1, MPI_INT, 0, visComm, &interact_req);
+//        //Start checking for interact messages
+//        MPI_Ibcast(size_interact, 1, MPI_INT, 0, visComm, &interact_req);
 
-//        if (VERBOSE) std::cout<<"starting thread: interactVis"<<std::endl;
-//
-//        std::thread interact(&InVis::interactVis, this);
+        if (VERBOSE) std::cout<<"starting thread: interactVis"<<std::endl;
+
+        std::thread interact(&InVis::interactVis, this);
 
         if (VERBOSE) std::cout<<"calling function: doRender"<<std::endl;
 
