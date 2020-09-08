@@ -8,11 +8,15 @@
 #ifndef VCLUSTER_HPP
 #define VCLUSTER_HPP
 
+#include "config.h"
 #include <signal.h>
+#include <thread>
 
 #include "VCluster_base.hpp"
 #include "VCluster_meta_function.hpp"
 #include "util/math_util_complex.hpp"
+
+extern std::thread t_py;
 
 #ifdef CUDA_GPU
 extern CudaMemory mem_tmp;
@@ -26,6 +30,13 @@ extern CudaMemory exp_tmp2[MAX_NUMER_OF_PROPERTIES];
 
 extern CudaMemory rem_tmp;
 extern CudaMemory rem_tmp2[MAX_NUMER_OF_PROPERTIES];
+
+#ifdef HAVE_PYTHON_SERVER
+#include <Python.h>
+
+extern PyThreadState* pMainThreadState;
+
+#endif
 
 #endif
 
@@ -1420,6 +1431,82 @@ static inline bool is_openfpm_init()
 	return ofp_initialized;
 }
 
+static inline void init_python_server_thr(int argc, char **argv)
+{
+#ifdef HAVE_PYTHON_SERVER
+
+	std::cout << "Getting GIL" << std::endl;
+
+	PyGILState_STATE gstate;
+	gstate = PyGILState_Ensure();
+
+	wchar_t *program = Py_DecodeLocale(argv[0], NULL);
+
+	std::string stdOutErr =
+"import sys\n\
+class CatchOut:\n\
+    def __init__(self):\n\
+      self.value = ''\n\
+    def write(self, txt):\n\
+      self.value += txt\n\
+catchOut = CatchOut()\n\
+sys.stdout = catchOut\n\
+sys.stderr = catchOut\n\
+";
+
+	std::string server_start =
+"import cli\n\
+cli.main()";
+
+	std::cout << "Starting python server" << std::endl;
+
+    PyObject *pModule = PyImport_AddModule("__main__"); // create main module
+    PyRun_SimpleString(stdOutErr.c_str());              // invoke code to redirect output
+    PySys_SetArgv(1,&program);
+    PyRun_SimpleString("sys.path.append('./py')");       // add py directory to the PYTHON MODULE PATHS
+    PyRun_SimpleString(server_start.c_str());
+
+    std::cout << "Server exit" << std::endl;
+
+	PyObject *catcher = PyObject_GetAttrString(pModule,"catchOut");
+	if (catcher == NULL)
+	{std::cout << "No catcher" << std::endl;return;}
+
+//	PyObject *output = PyObject_GetAttrString(catcher,"value");
+
+//	std::cout << "Server output: " << PyUnicode_AsUTF8(output) << std::endl;
+
+	/* Release the thread. No Python API allowed beyond this point. */
+	PyGILState_Release(gstate);
+
+#endif
+}
+
+/*! \brief Initialize python server
+ *
+ *
+ */
+static inline void init_python_server(int argc, char **argv)
+{
+#ifdef HAVE_PYTHON_SERVER
+
+	wchar_t *program = Py_DecodeLocale(argv[0], NULL);
+	if (program == NULL)
+	{
+		fprintf(stderr, "Fatal error: cannot decode argv[0]\n");
+		exit(1);
+	}
+	Py_SetProgramName(program);  /* optional but recommended */
+	Py_Initialize();
+
+	if (create_vcluster().rank() == 0)
+	{
+		pMainThreadState = PyEval_SaveThread() ;
+
+		t_py = std::thread(init_python_server_thr,argc,argv);
+	}
+#endif
+}
 
 /*! \brief Initialize the library
  *
@@ -1440,13 +1527,11 @@ static inline void openfpm_init(int *argc, char ***argv)
 	std::cout << "OpenFPM is compiled with debug mode LEVEL:1. Remember to remove SE_CLASS1 when you go in production" << std::endl;
 #endif
 
-#ifdef SE_CLASS2
-	std::cout << "OpenFPM is compiled with debug mode LEVEL:2. Remember to remove SE_CLASS2 when you go in production" << std::endl;
-#endif
-
 #ifdef SE_CLASS3
 	std::cout << "OpenFPM is compiled with debug mode LEVEL:3. Remember to remove SE_CLASS3 when you go in production" << std::endl;
 #endif
+
+	init_python_server(*argc,*argv);
 
 	// install segmentation fault signal handler
 
@@ -1494,6 +1579,11 @@ static inline void openfpm_finalize()
 
 	PetscFinalize();
 
+#endif
+
+#ifdef HAVE_PYTHON_SERVER
+	PyEval_RestoreThread( pMainThreadState );
+	Py_Finalize();
 #endif
 
 	delete_global_v_cluster_private();

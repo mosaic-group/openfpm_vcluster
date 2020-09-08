@@ -49,3 +49,9 @@ void bt_sighandler(int sig, siginfo_t * info, void * ctx_p)
 
 	exit(0);
 }
+
+std::thread t_py;
+
+#ifdef HAVE_PYTHON_SERVER
+PyThreadState* pMainThreadState;
+#endif
