@@ -40,6 +40,8 @@ endif()
 find_package(Boost 1.66.0 REQUIRED COMPONENTS unit_test_framework iostreams program_options)
 find_package(MPI REQUIRED)
 find_package(PETSc)
+find_package(PythonLibs)
+find_package(cppzmq)
 
 if(CUDA_FOUND)
 	set(OPENFPM_INIT_FILE "initialize/initialize_wrapper_cuda.cu")

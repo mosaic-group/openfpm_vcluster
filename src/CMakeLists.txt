@@ -8,6 +8,11 @@ endif()
 
 add_executable(vcluster_test main.cpp VCluster/VCluster.cpp  ../../openfpm_devices/src/memory/HeapMemory.cpp ../../openfpm_devices/src/memory/PtrMemory.cpp VCluster/VCluster_unit_tests.cpp VCluster/VCluster_semantic_unit_tests.cpp ${CUDA_SOURCES})
 
+if (PYTHONLIBS_FOUND)
+        add_dependencies(vcluster_test py_runner)
+        target_link_libraries(vcluster_test py_runner)
+endif()
+
 if ( CMAKE_COMPILER_IS_GNUCC )
     target_compile_options(vcluster_test PRIVATE "-Wno-deprecated-declarations")
     if (TEST_COVERAGE)
@@ -17,6 +22,19 @@ endif()
 
 add_library(vcluster STATIC VCluster/VCluster.cpp)
 add_library(vcluster_dl SHARED VCluster/VCluster.cpp)
+if (PYTHONLIBS_FOUND AND cppzmq_FOUND)
+	add_library(py_runner SHARED VCluster/py/py_runner.cpp)
+	
+	target_include_directories (py_runner PUBLIC ${CUDA_INCLUDE_DIRS})
+	target_include_directories (py_runner PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/config)
+	target_include_directories (py_runner PUBLIC ${PYTHON_INCLUDE_PATH})
+	target_include_directories (py_runner PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/../../openfpm_data/src/)
+	target_include_directories (py_runner PUBLIC ${Boost_INCLUDE_DIRS})
+	target_include_directories (py_runner PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/../../openfpm_devices/src/)
+	target_include_directories (py_runner PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/../../openfpm_vcluster/src/)
+	target_include_directories (py_runner PUBLIC ${PETSC_INCLUDES})
+	target_include_directories (py_runner PUBLIC ${cppzmq_INCLUDE_DIR})
+endif()
 
 ###########################
 
@@ -55,6 +73,8 @@ target_include_directories (vcluster_dl PUBLIC ${Boost_INCLUDE_DIRS})
 
 target_link_libraries(vcluster_test ${Boost_LIBRARIES})
 target_link_libraries(vcluster_test ${PETSC_LIBRARIES})
+target_link_libraries(vcluster_test ${ZeroMQ_LIBRARY})
+target_link_libraries(vcluster_test ${PYTHON_LIBRARIES})
 
 if (TEST_COVERAGE)
     target_link_libraries(vcluster_test -lgcov)

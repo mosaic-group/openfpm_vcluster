@@ -104,6 +104,12 @@ ${DEFINE_HAVE_SYS_TYPES_H}
 /* Define to 1 if you have the <unistd.h> header file. */
 ${DEFINE_HAVE_UNISTD_H}
 
+/* Test TinyObjLoader */
+${DEFINE_HAVE_TINYOBJLOADER}
+
+/* ACTION to take in case of error */
+${DEFINE_ACTION_ON_ERROR}
+
 /* Define to the sub-directory where libtool stores uninstalled libraries. */
 #define LT_OBJDIR ".libs/"
 
@@ -152,8 +158,16 @@ ${DEFINE_STOP_ON_ERROR}
 /* Test coverage mode */
 ${DEFINE_TEST_COVERAGE_MODE}
 
+/* If Python is detected */
+${DEFINE_HAVE_PYTHON_SERVER}
+
+/* If ZeroMQ is detected */
+${DEFINE_HAVE_ZEROMQ}
+
 /* when an error accur continue but avoid unsafe operation */
 /* #undef THROW_ON_ERROR */
 
 /* Version number of package */
 #define VERSION "1.0.0"
+
+#define OPENFPM_PDATA
