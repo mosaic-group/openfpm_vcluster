@@ -646,16 +646,16 @@ void gatherCompositedVDIs(JNIEnv *e, jobject clazzObject, jobject compositedVDIC
             e->ExceptionClear();
         }
 
-        if (VERBOSE) std::cout<<"Streaming the composited image out now"<<std::endl;
 
-        e->CallVoidMethod(clazzObject, streamMethod, bbImg);
-        if(e->ExceptionOccurred()) {
-            e->ExceptionDescribe();
-            e->ExceptionClear();
-        }
 
         //do benchmarking
-        if(count % 100 == 0) {
+        if(count % 10 == 0) {
+            if (VERBOSE) std::cout<<"Streaming the composited image out now"<<std::endl;
+            e->CallVoidMethod(clazzObject, streamMethod, bbImg);
+            if(e->ExceptionOccurred()) {
+                e->ExceptionDescribe();
+                e->ExceptionClear();
+            }
             std::time_t t = std::time(0);
 
             long timetaken = 0; //for the last 100 VDIs/images
