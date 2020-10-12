@@ -52,7 +52,7 @@ ubuntu_build:
   script:
     - ./build.sh $CI_PROJECT_DIR $CI_RUNNER_TAGS $CI_COMMIT_REF_NAME
 
-ubuntu_run:i
+ubuntu_run:
   needs: [ubuntu_build]
   stage: test
   tags:
