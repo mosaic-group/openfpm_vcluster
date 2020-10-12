@@ -9,6 +9,7 @@ centos_build:
     - ./build.sh $CI_PROJECT_DIR $CI_RUNNER_TAGS $CI_COMMIT_REF_NAME
 
 centos_run:
+  needs: [centos_build]
   stage: test
   tags:
     - centos
@@ -31,6 +32,7 @@ mac_build:
     - ./build.sh $CI_PROJECT_DIR $CI_RUNNER_TAGS $CI_COMMIT_REF_NAME
 
 mac_run:
+  needs: [mac_build]
   stage: test
   tags:
     - mac
@@ -50,7 +52,8 @@ ubuntu_build:
   script:
     - ./build.sh $CI_PROJECT_DIR $CI_RUNNER_TAGS $CI_COMMIT_REF_NAME
 
-ubuntu_run:
+ubuntu_run:i
+  needs: [ubuntu_build]
   stage: test
   tags:
     - ubuntu
