@@ -153,74 +153,74 @@ public:
 /*! \brief specialization for vector integer
  *
  */
-/*template<> class MPI_IallreduceW<openfpm::vector<int>>
+template<> class MPI_IallreduceW<openfpm::vector<int>>
 {
 public:
 	static inline void reduce(openfpm::vector<int> & buf,MPI_Op op, MPI_Request & req)
 	{
 		MPI_Iallreduce(MPI_IN_PLACE, &buf.get(0), buf.size(),MPI_INT, op, MPI_COMM_WORLD,&req);
 	}
-};*/
+};
 
 /*! \brief specialization for vector short
  *
  */
-/*template<> class MPI_IallreduceW<openfpm::vector<short>>
+template<> class MPI_IallreduceW<openfpm::vector<short>>
 {
 public:
 	static inline void reduce(openfpm::vector<short> & buf,MPI_Op op, MPI_Request & req)
 	{
 		MPI_Iallreduce(MPI_IN_PLACE, &buf.get(0), buf.size(),MPI_SHORT, op, MPI_COMM_WORLD,&req);
 	}
-};*/
+};
 
 /*! \brief specialization for vector char
  *
  */
-/*template<> class MPI_IallreduceW<openfpm::vector<char>>
+template<> class MPI_IallreduceW<openfpm::vector<char>>
 {
 public:
 	static inline void reduce(openfpm::vector<char> & buf,MPI_Op op, MPI_Request & req)
 	{
 		MPI_Iallreduce(MPI_IN_PLACE, &buf.get(0), buf.size(),MPI_CHAR, op, MPI_COMM_WORLD,&req);
 	}
-};*/
+};
 
 /*! \brief specialization for vector size_t
  *
  */
-/*template<> class MPI_IallreduceW<openfpm::vector<size_t>>
+template<> class MPI_IallreduceW<openfpm::vector<size_t>>
 {
 public:
 	static inline void reduce(openfpm::vector<size_t> & buf,MPI_Op op, MPI_Request & req)
 	{
 		MPI_Iallreduce(MPI_IN_PLACE, &buf.get(0), buf.size(),MPI_UNSIGNED_LONG, op, MPI_COMM_WORLD,&req);
 	}
-};*/
+};
 
 /*! \brief specialization for vector float
  *
  */
-/*template<> class MPI_IallreduceW<openfpm::vector<float>>
+template<> class MPI_IallreduceW<openfpm::vector<float>>
 {
 public:
 	static inline void reduce(openfpm::vector<float> & buf,MPI_Op op, MPI_Request & req)
 	{
 		MPI_Iallreduce(MPI_IN_PLACE, &buf.get(0), buf.size(),MPI_FLOAT, op, MPI_COMM_WORLD,&req);
 	}
-};*/
+};
 
 /*! \brief specialization for vector double
  *
  */
 
-/*template<> class MPI_IallreduceW<openfpm::vector<double>>
+template<> class MPI_IallreduceW<openfpm::vector<double>>
 {
 public:
 	static inline void reduce(openfpm::vector<double> & buf,MPI_Op op, MPI_Request & req)
 	{
 		MPI_Iallreduce(MPI_IN_PLACE, &buf.get(0), buf.size(),MPI_DOUBLE, op, MPI_COMM_WORLD,&req);
 	}
-};*/
+};
 
 #endif
