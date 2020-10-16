@@ -555,7 +555,7 @@ void distributeVDIs(JNIEnv *e, jobject clazzObject, jobject subVDICol, jint size
 
     t_alltoall.start();
     MPI_Alltoall(ptrCol, sizePerProcess*3, MPI_BYTE, recvBufCol, sizePerProcess*3, MPI_BYTE, renComm);
-    alltoall_time += t_alltoall.getwct();
+    if(count>0) {alltoall_time += t_alltoall.getwct();}
     //    MPI_Alltoall(ptrDepth, sizePerProcess*2, MPI_BYTE, recvBufDepth, sizePerProcess*2, MPI_BYTE, mpiComm);
 
     if(compositeMethod == nullptr) {
@@ -601,7 +601,7 @@ void gatherCompositedVDIs(JNIEnv *e, jobject clazzObject, jobject compositedVDIC
 
     t_gather.start();
     MPI_Gather(ptrCol, compositedVDILen*3, MPI_BYTE, gather_recv, compositedVDILen * 3, MPI_BYTE, root, renComm);
-    gather_time += t_gather.getwct();
+    if(count>0) {gather_time += t_gather.getwct();}
     //    MPI_Gather(ptrDepth, compositedVDILen*2, MPI_BYTE, recvBufDepth, compositedVDILen*2, MPI_BYTE, root, mpiComm);
     //The data is here now!
 
