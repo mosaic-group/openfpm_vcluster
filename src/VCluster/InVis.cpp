@@ -14,12 +14,13 @@
 #include <fstream>
 #include <unistd.h>
 #include <Vector/map_vector.hpp>
+#include "timer.hpp"
 
 #include "InVis.hpp"
 #include "memory/ShmBuffer.hpp"
 
 #define USE_VULKAN true
-#define VERBOSE true
+#define VERBOSE false
 #define SAVE_FILES false
 
 MPI_Comm renComm; // non class variable = renderComm
@@ -31,9 +32,14 @@ long prevtime = 0;
 int count = 0;
 long totaltime = 0;
 int timeVDIwrite = 0;
+double alltoall_time = 0.0;
+double gather_time = 0.0;
 
 void * recvBufCol = nullptr;
 void * gather_recv = nullptr;
+
+timer t_alltoall;
+timer t_gather;
 
 jmethodID streamMethod = nullptr;
 jmethodID compositeMethod = nullptr;
@@ -547,8 +553,10 @@ void distributeVDIs(JNIEnv *e, jobject clazzObject, jobject subVDICol, jint size
 
 //    void *recvBufDepth = malloc(sizePerProcess * rCommSize * 2);
 
+    t_alltoall.start();
     MPI_Alltoall(ptrCol, sizePerProcess*3, MPI_BYTE, recvBufCol, sizePerProcess*3, MPI_BYTE, renComm);
-//    MPI_Alltoall(ptrDepth, sizePerProcess*2, MPI_BYTE, recvBufDepth, sizePerProcess*2, MPI_BYTE, mpiComm);
+    alltoall_time += t_alltoall.getwct();
+    //    MPI_Alltoall(ptrDepth, sizePerProcess*2, MPI_BYTE, recvBufDepth, sizePerProcess*2, MPI_BYTE, mpiComm);
 
     if(compositeMethod == nullptr) {
         jclass clazz = e->GetObjectClass(clazzObject);
@@ -591,8 +599,10 @@ void gatherCompositedVDIs(JNIEnv *e, jobject clazzObject, jobject compositedVDIC
 //        recvBufDepth = NULL;
     }
 
+    t_gather.start();
     MPI_Gather(ptrCol, compositedVDILen*3, MPI_BYTE, gather_recv, compositedVDILen * 3, MPI_BYTE, root, renComm);
-//    MPI_Gather(ptrDepth, compositedVDILen*2, MPI_BYTE, recvBufDepth, compositedVDILen*2, MPI_BYTE, root, mpiComm);
+    gather_time += t_gather.getwct();
+    //    MPI_Gather(ptrDepth, compositedVDILen*2, MPI_BYTE, recvBufDepth, compositedVDILen*2, MPI_BYTE, root, mpiComm);
     //The data is here now!
 
 //    int flag = 0;
@@ -646,16 +656,16 @@ void gatherCompositedVDIs(JNIEnv *e, jobject clazzObject, jobject compositedVDIC
             e->ExceptionClear();
         }
 
+        if (VERBOSE) std::cout<<"Streaming the composited image out now"<<std::endl;
 
+        e->CallVoidMethod(clazzObject, streamMethod, bbImg);
+        if(e->ExceptionOccurred()) {
+            e->ExceptionDescribe();
+            e->ExceptionClear();
+        }
 
         //do benchmarking
-        if(count % 10 == 0) {
-            if (VERBOSE) std::cout<<"Streaming the composited image out now"<<std::endl;
-            e->CallVoidMethod(clazzObject, streamMethod, bbImg);
-            if(e->ExceptionOccurred()) {
-                e->ExceptionDescribe();
-                e->ExceptionClear();
-            }
+        if(count % 100 == 0) {
             std::time_t t = std::time(0);
 
             long timetaken = 0; //for the last 100 VDIs/images
@@ -672,6 +682,8 @@ void gatherCompositedVDIs(JNIEnv *e, jobject clazzObject, jobject compositedVDIC
                 std::cout<<"Average time for the last 100 VDIs/images was: "<<avg_recent<<std::endl;
                 avg_recent = 0.0;
                 std::cout<<"Overall average so far is"<<average_time<<" and total VDIs generated so far are "<< count <<std::endl;
+                std::cout<<"Overall alltoall time so far is "<<alltoall_time<<" and average is: "<< (alltoall_time/((double)count)) <<std::endl;
+                std::cout<<"Overall gather time so far is "<<gather_time<<" and average is: "<< (gather_time/((double)count)) <<std::endl;
             }
 //
 //            std::cout<<"Time taken was: "<<timetaken<<std::endl;
