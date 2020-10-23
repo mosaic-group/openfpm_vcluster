@@ -262,7 +262,9 @@ struct unpack_selector_with_prp_lin<true,T,S,layout_base,Memory>
 
 		// add the received particles to the vector
 		PtrMemory * ptr1 = new PtrMemory(recv_buf.get(i).getPointer(),recv_buf.get(i).size());
+		ptr1->incRef();
 
+		{
 		// create vector representation to a piece of memory already allocated
 		openfpm::vector<typename T::value_type,PtrMemory,typename layout_base<typename T::value_type>::type,layout_base,openfpm::grow_policy_identity> v2;
 
@@ -283,7 +285,10 @@ struct unpack_selector_with_prp_lin<true,T,S,layout_base,Memory>
 			sz_byte->get(i) = recv_buf.get(i).size();
 		if (sz != NULL)
 			sz->get(i) = recv_size_new - recv_size_old;
+		}
 
+		ptr1->decRef();
+		delete ptr1;
 		return 1;
 	}
 };
@@ -626,7 +631,7 @@ struct op_ssend_recv_add
 };
 
 //! Helper class to merge data without serialization
-template<bool sr,template<typename,typename> class op>
+template<bool sr,template<typename,typename> class op, typename vector_type_opart>
 struct op_ssend_recv_merge_impl
 {
 	//! Merge the
@@ -635,7 +640,7 @@ struct op_ssend_recv_merge_impl
 			 typename S,
 			 template <typename> class layout_base,
 			 int ... prp>
-	inline static void execute(D & recv,S & v2,size_t i,openfpm::vector<openfpm::vector<aggregate<size_t,size_t>>> & opart)
+	inline static void execute(D & recv,S & v2,size_t i,vector_type_opart & opart)
 	{
 		// Merge the information
 		recv.template merge_prp_v<op,
@@ -643,13 +648,14 @@ struct op_ssend_recv_merge_impl
 								  PtrMemory,
 								  openfpm::grow_policy_identity,
 								  layout_base,
+								  typename vector_type_opart::value_type,
 								  prp...>(v2,opart.get(i));
 	}
 };
 
 //! Helper class to merge data with serialization
-template<template<typename,typename> class op>
-struct op_ssend_recv_merge_impl<true,op>
+template<template<typename,typename> class op, typename vector_type_opart>
+struct op_ssend_recv_merge_impl<true,op,vector_type_opart>
 {
 	//! merge the data
 	template<typename T,
@@ -657,7 +663,7 @@ struct op_ssend_recv_merge_impl<true,op>
 			 typename S,
 			 template <typename> class layout_base,
 			 int ... prp>
-	inline static void execute(D & recv,S & v2,size_t i,openfpm::vector<openfpm::vector<aggregate<size_t,size_t>>> & opart)
+	inline static void execute(D & recv,S & v2,size_t i,vector_type_opart & opart)
 	{
 		// Merge the information
 		recv.template merge_prp_v<op,
@@ -665,19 +671,20 @@ struct op_ssend_recv_merge_impl<true,op>
 								  HeapMemory,
 								  openfpm::grow_policy_double,
 								  layout_base,
+								  typename vector_type_opart::value_type,
 								  prp...>(v2,opart.get(i));
 	}
 };
 
 //! Helper class to merge data
-template<template<typename,typename> class op>
+template<template<typename,typename> class op, typename vector_type_opart>
 struct op_ssend_recv_merge
 {
 	//! For each processor contain the list of the particles with which I must merge the information
-	openfpm::vector<openfpm::vector<aggregate<size_t,size_t>>> & opart;
+	vector_type_opart & opart;
 
 	//! constructor
-	op_ssend_recv_merge(openfpm::vector<openfpm::vector<aggregate<size_t,size_t>>> & opart)
+	op_ssend_recv_merge(vector_type_opart & opart)
 	:opart(opart)
 	{}
 
@@ -690,7 +697,81 @@ struct op_ssend_recv_merge
 			 int ... prp>
 	void execute(D & recv,S & v2,size_t i,size_t opt)
 	{
-		op_ssend_recv_merge_impl<sr,op>::template execute<T,D,S,layout_base,prp...>(recv,v2,i,opart);
+		op_ssend_recv_merge_impl<sr,op,vector_type_opart>::template execute<T,D,S,layout_base,prp...>(recv,v2,i,opart);
+	}
+};
+
+//! Helper class to merge data without serialization
+template<bool sr,template<typename,typename> class op, typename vector_type_opart, typename vector_type_prc_offset>
+struct op_ssend_recv_merge_gpu_impl
+{
+	//! Merge the
+	template<typename T,
+	         typename D,
+			 typename S,
+			 template <typename> class layout_base,
+			 int ... prp>
+	inline static void execute(D & recv,S & v2,size_t i,vector_type_opart & opart, vector_type_prc_offset & prc_off)
+	{
+		prc_off.template deviceToHost<0>();
+
+		unsigned int start = 0;
+		unsigned int stop = prc_off.template get<0>(i);
+
+		if (i != 0)
+		{start = prc_off.template get<0>(i-1);}
+
+		// Merge the information
+		recv.template merge_prp_v_device<op,
+		                          typename T::value_type,
+								  PtrMemory,
+								  openfpm::grow_policy_identity,
+								  layout_base,
+								  vector_type_opart,
+								  prp...>(v2,opart,start,stop);
+	}
+};
+
+//! Helper class to merge data with serialization
+template<template<typename,typename> class op, typename vector_type_opart, typename vector_type_prc_offset>
+struct op_ssend_recv_merge_gpu_impl<true,op,vector_type_opart,vector_type_prc_offset>
+{
+	//! merge the data
+	template<typename T,
+	         typename D,
+			 typename S,
+			 template <typename> class layout_base,
+			 int ... prp>
+	inline static void execute(D & recv,S & v2,size_t i,vector_type_opart & opart, vector_type_prc_offset & prc_off)
+	{
+		std::cout << __FILE__ << ":" << __LINE__ << " Error: not implemented" << std::endl;
+	}
+};
+
+//! Helper class to merge data
+template<template<typename,typename> class op, typename vector_type_opart, typename vector_type_prc_offset>
+struct op_ssend_recv_merge_gpu
+{
+	//! For each processor contain the list of the particles with which I must merge the information
+	vector_type_opart & opart;
+
+	vector_type_prc_offset & prc_offset;
+
+	//! constructor
+	op_ssend_recv_merge_gpu(vector_type_opart & opart, vector_type_prc_offset & prc_offset)
+	:opart(opart),prc_offset(prc_offset)
+	{}
+
+	//! execute the merge
+	template<bool sr,
+	         typename T,
+			 typename D,
+			 typename S,
+			 template <typename> class layout_base,
+			 int ... prp>
+	void execute(D & recv,S & v2,size_t i,size_t opt)
+	{
+		op_ssend_recv_merge_gpu_impl<sr,op,vector_type_opart,vector_type_prc_offset>::template execute<T,D,S,layout_base,prp...>(recv,v2,i,opart,prc_offset);
 	}
 };
 

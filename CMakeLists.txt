@@ -15,8 +15,8 @@ set(PETSC_ROOT CACHE PATH "If compiling with linear algebra indicate the PETSC r
 
 set(ENV{PETSC_DIR} ${PETSC_ROOT})
 
-set (CMAKE_CXX_STANDARD 11)
-set (CMAKE_CUDA_STANDARD 11)
+set (CMAKE_CXX_STANDARD 14)
+set (CMAKE_CUDA_STANDARD 14)
 
 if (ENABLE_GPU)
 	enable_language(CUDA)
@@ -31,8 +31,11 @@ if (ENABLE_GPU)
         elseif ( CUDA_VERSION_MAJOR EQUAL 10 AND CUDA_VERSION_MINOR EQUAL 2 )
                 message("CUDA is compatible")
                 set(WARNING_SUPPRESSION_AND_OPTION_NVCC  -Xcudafe "--display_error_number --diag_suppress=2976 --diag_suppress=2977 --diag_suppress=2979 --diag_suppress=186" --expt-extended-lambda)
-        else()
-                message(FATAL_ERROR "CUDA is incompatible, version 9.2 is only supported")
+elseif ( CUDA_VERSION_MAJOR EQUAL 11 AND CUDA_VERSION_MINOR EQUAL 0 )
+                message("CUDA is compatible")
+                set(WARNING_SUPPRESSION_AND_OPTION_NVCC  -Xcudafe "--display_error_number --diag_suppress=3059 --diag_suppress=3058 --diag_suppress=3057 --diag_suppress=3056 --diag_suppress=611 --diag_suppress=186" --expt-extended-lambda)
+	else()
+                message(FATAL_ERROR "CUDA is incompatible, version 9.2 10.1 10.2 and 11.0 is only supported")
         endif()
 
 endif()
