@@ -96,6 +96,27 @@ union red
 	double d;
 };
 
+template<bool check_type>
+struct check_type_nested
+{
+	template<typename T, typename obj_type>
+	static bool check(obj_type & obj)
+	{
+		obj.template checkType<typename T::value_type>();
+		return true;
+	}
+};
+
+template<>
+struct check_type_nested<false>
+{
+	template<typename T, typename obj_type>
+	static bool check(obj_type & obj)
+	{
+		return false;
+	}
+};
+
 /*! \brief This class virtualize the cluster of PC as a set of processes that communicate
  *
  * At the moment it is an MPI-like interface, with a more type aware, and simple, interface.
@@ -410,6 +431,10 @@ public:
 		// if it is an r-value reference make no send
 		if (std::is_rvalue_reference<T>::value == true)
 		{std::cerr << "Error: " << __FILE__ << ":" << __LINE__ << " the type " << demangle(typeid(T).name()) << " is a pointer, sending pointers values has no sense\n";}
+
+		// nested check
+		if (check_type_nested<is_vector<T>::value>::template check<T>(*this) == true)
+		{return;}
 
 		// ... if not, check that T has a method called noPointers
 		switch (check_no_pointers<T>::value())
