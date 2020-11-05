@@ -36,6 +36,7 @@ double alltoall_time = 0.0;
 double gather_time = 0.0;
 
 void * recvBufCol = nullptr;
+void * recvBufDepth = nullptr;
 void * gather_recv = nullptr;
 
 timer t_alltoall;
@@ -540,32 +541,33 @@ void InVis::getGridMemory() {
     jvm->DetachCurrentThread();
 }
 
-void distributeVDIs(JNIEnv *e, jobject clazzObject, jobject subVDICol, jint sizePerProcess, jint commSize) {
+void distributeVDIs(JNIEnv *e, jobject clazzObject, jobject subVDICol, jobject subVDIDepth, jint sizePerProcess, jint commSize) {
     if (VERBOSE) std::cout<<"In distribute VDIs function. Comm size is "<<commSize<<std::endl;
 
     void *ptrCol = e->GetDirectBufferAddress(subVDICol);
-//    void *ptrDepth = e->GetDirectBufferAddress(subVDIDepth);
+    void *ptrDepth = e->GetDirectBufferAddress(subVDIDepth);
 
     if(recvBufCol == nullptr) {
         std::cout<<"allocating in distributeVDIs"<<std::endl;
-        recvBufCol = malloc(sizePerProcess * commSize * 2);
+        recvBufCol = malloc(sizePerProcess * commSize);
+        recvBufDepth = malloc(sizePerProcess * commSize);
     }
 
-//    void *recvBufDepth = malloc(sizePerProcess * rCommSize * 2);
 
     t_alltoall.start();
-    MPI_Alltoall(ptrCol, sizePerProcess*2, MPI_BYTE, recvBufCol, sizePerProcess*2, MPI_BYTE, renComm);
+    MPI_Alltoall(ptrCol, sizePerProcess, MPI_BYTE, recvBufCol, sizePerProcess, MPI_BYTE, renComm);
+    MPI_Alltoall(ptrDepth, sizePerProcess, MPI_BYTE, recvBufDepth, sizePerProcess, MPI_BYTE, renComm);
     if(count>0) {alltoall_time += t_alltoall.getwct();}
     //    MPI_Alltoall(ptrDepth, sizePerProcess*2, MPI_BYTE, recvBufDepth, sizePerProcess*2, MPI_BYTE, mpiComm);
 
     if(compositeMethod == nullptr) {
         jclass clazz = e->GetObjectClass(clazzObject);
-        compositeMethod = e->GetMethodID(clazz, "compositeVDIs", "(Ljava/nio/ByteBuffer;I)V");
+        compositeMethod = e->GetMethodID(clazz, "compositeVDIs", "(Ljava/nio/ByteBuffer;Ljava/nio/ByteBuffer;I)V");
     }
 
 
-    jobject bbCol = e->NewDirectByteBuffer(recvBufCol, sizePerProcess * commSize * 2);
-//    jobject bbDepth = e->NewDirectByteBuffer(recvBufDepth, sizePerProcess * rCommSize * 2);
+    jobject bbCol = e->NewDirectByteBuffer(recvBufCol, sizePerProcess * commSize);
+    jobject bbDepth = e->NewDirectByteBuffer(recvBufDepth, sizePerProcess * commSize);
 
     if(e->ExceptionOccurred()) {
         e->ExceptionDescribe();
@@ -574,7 +576,7 @@ void distributeVDIs(JNIEnv *e, jobject clazzObject, jobject subVDICol, jint size
 
     if (VERBOSE) std::cout<<"Finished distributing the VDIs. Calling the Composite method now!"<<std::endl;
 
-    e->CallVoidMethod(clazzObject, compositeMethod, bbCol, sizePerProcess);
+    e->CallVoidMethod(clazzObject, compositeMethod, bbCol, bbDepth, sizePerProcess);
     if(e->ExceptionOccurred()) {
         e->ExceptionDescribe();
         e->ExceptionClear();
@@ -879,7 +881,7 @@ void InVis::manageRenderer() {
     }
 
     else {
-        JNINativeMethod methods[] { { (char *)"distributeVDIs", (char *)"(Ljava/nio/ByteBuffer;II)V", (void *)&distributeVDIs },
+        JNINativeMethod methods[] { { (char *)"distributeVDIs", (char *)"(Ljava/nio/ByteBuffer;Ljava/nio/ByteBuffer;II)V", (void *)&distributeVDIs },
                                     { (char *)"gatherCompositedVDIs", (char *)"(Ljava/nio/ByteBuffer;IIIIZ)V", (void *)&gatherCompositedVDIs }
         };  // mapping table
 
