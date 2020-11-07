@@ -222,6 +222,9 @@ class Vcluster_base
 	//! rank within the node
 	int shmrank;
 
+	//! NBX_cycle
+	int nbx_cycle;
+
 	//! disable copy constructor
 	Vcluster_base(const Vcluster_base &)
 	:NBX_cnt(0)
@@ -252,6 +255,9 @@ class Vcluster_base
 #endif
 
 				tot_sent += sz[i];
+
+//				std::cout << "TAG: " << SEND_SPARSE + (NBX_cnt + NBX_prc_qcnt)*131072 + i << "   " << NBX_cnt << "   "  << NBX_prc_qcnt << "  " << " rank: " << rank() << "   " << NBX_prc_cnt_base << "  nbx_cycle: " << nbx_cycle << std::endl;
+
 				MPI_SAFE_CALL(MPI_Issend(ptr[i], sz[i], MPI_BYTE, prc[i], SEND_SPARSE + (NBX_cnt + NBX_prc_qcnt)*131072 + i, MPI_COMM_WORLD,&req.last()));
 				log.logSend(prc[i]);
 			}
@@ -378,6 +384,23 @@ public:
 
                 std::cout << "Rank: " << m_rank << " on host: " << node_name << " work on GPU: " << context->getDevice() << "/" << context->getNDevice() << std::endl;
 #endif
+
+                int flag;
+                void *tag_ub_v;
+                int tag_ub;
+
+                MPI_Comm_get_attr(MPI_COMM_WORLD, MPI_TAG_UB, &tag_ub_v, &flag);
+                tag_ub = *(int*)tag_ub_v;
+
+                if (flag == true)
+                {
+                	nbx_cycle = (tag_ub - SEND_SPARSE - 131072 - NQUEUE*131072) / 131072;
+
+                	if (nbx_cycle < NQUEUE*2)
+                	{std::cerr << __FILE__ << ":" << __LINE__ << " Error MPI_TAG_UB is too small for OpenFPM" << std::endl;}
+                }
+                else
+                {nbx_cycle = 2048;}
 	}
 
 #ifdef SE_CLASS1
@@ -704,7 +727,7 @@ public:
 		execute();
 
 		// Circular counter
-		NBX_cnt = (NBX_cnt + 1) % 2048;
+		NBX_cnt = (NBX_cnt + 1) % nbx_cycle;
 	}
 
 	/*! \brief Send and receive multiple messages asynchronous version
@@ -964,7 +987,7 @@ public:
 		execute();
 
 		// Circular counter
-		NBX_cnt = (NBX_cnt + 1) % 2048;
+		NBX_cnt = (NBX_cnt + 1) % nbx_cycle;
 	}
 
 	/*! \brief Send and receive multiple messages asynchronous version
@@ -1102,7 +1125,7 @@ public:
 		execute();
 
 		// Circular counter
-		NBX_cnt = (NBX_cnt + 1) % 2048;
+		NBX_cnt = (NBX_cnt + 1) % nbx_cycle;
 
 		// Allocate the buffers
 
@@ -1119,7 +1142,7 @@ public:
 		execute();
 
 		// Circular counter
-		NBX_cnt = (NBX_cnt + 1) % 2048;
+		NBX_cnt = (NBX_cnt + 1) % nbx_cycle;
 	}
 
 	/*! \brief Send and receive multiple messages asynchronous version
@@ -1288,7 +1311,7 @@ public:
 		log.clear();
 
 		// Circular counter
-		NBX_cnt = (NBX_cnt + 1) % 2048;
+		NBX_cnt = (NBX_cnt + 1) % nbx_cycle;
 	}
 
 	/*! \brief Send and receive multiple messages Asynchronous version
@@ -1374,7 +1397,7 @@ public:
 				execute();
 
 				// Circular counter
-				NBX_cnt = (NBX_cnt + 1) % 2048;
+				NBX_cnt = (NBX_cnt + 1) % nbx_cycle;
 
 				// Allocate the buffers
 
@@ -1396,7 +1419,7 @@ public:
 				execute();
 
 				// Circular counter
-				NBX_cnt = (NBX_cnt + 1) % 2048;
+				NBX_cnt = (NBX_cnt + 1) % nbx_cycle;
 				NBX_active[j] = NBX_Type::NBX_UNACTIVE;
 
 				continue;
@@ -1425,7 +1448,7 @@ public:
 			log.clear();
 
 			// Circular counter
-			NBX_cnt = (NBX_cnt + 1) % 2048;
+			NBX_cnt = (NBX_cnt + 1) % nbx_cycle;
 			NBX_active[j] = NBX_Type::NBX_UNACTIVE;
 
 		}
