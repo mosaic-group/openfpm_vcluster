@@ -49,3 +49,5 @@ void bt_sighandler(int sig, siginfo_t * info, void * ctx_p)
 
 	exit(0);
 }
+
+double time_spent = 0.0;

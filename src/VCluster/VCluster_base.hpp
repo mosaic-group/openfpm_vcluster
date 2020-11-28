@@ -34,6 +34,8 @@
 #include <petscvec.h>
 #endif
 
+extern double time_spent;
+
 enum NBX_Type
 {
 	NBX_UNACTIVE,
@@ -506,6 +508,23 @@ public:
 		return this->m_size*numPE;
 	}
 
+	void print_stats()
+	{
+#ifdef VCLUSTER_PERF_REPORT
+		std::cout << "-- REPORT COMMUNICATIONS -- " << std::endl;
+
+		std::cout << "Processor " << this->rank() << " sent: " << tot_sent << std::endl;
+		std::cout << "Processor " << this->rank() << " received: " << tot_recv << std::endl;
+
+		std::cout << "Processor " << this->rank() << " time spent: " << time_spent << std::endl;
+		std::cout << "Processor " << this->rank() << " Bandwidth: S:"  << (double)tot_sent / time_spent * 1e-9 << "GB/s  R:" << (double)tot_recv / time_spent * 1e-9 << "GB/s" <<  std::endl;
+#else
+
+		std::cout << "Error to activate performance stats on VCluster enable VCLUSTER_PERF_REPORT" << std::endl;
+
+#endif
+	}
+
 	/*! \brief Get the process unit id
 	 *
 	 * \return the process ID
@@ -712,6 +731,12 @@ public:
 														  void * ptr_arg,
 														  long int opt=NONE)
 	{
+		#ifdef VCLUSTER_PERF_REPORT
+		timer nbx_timer;
+		nbx_timer.start();
+
+		#endif
+
 		// Allocate the buffers
 
 		for (size_t i = 0 ; i < prc.size() ; i++)
@@ -728,6 +753,11 @@ public:
 
 		// Circular counter
 		NBX_cnt = (NBX_cnt + 1) % nbx_cycle;
+
+		#ifdef VCLUSTER_PERF_REPORT
+		nbx_timer.stop();
+		time_spent += nbx_timer.getwct();
+		#endif
 	}
 
 	/*! \brief Send and receive multiple messages asynchronous version
@@ -972,6 +1002,12 @@ public:
 			                         size_t sz_recv[] ,void * (* msg_alloc)(size_t,size_t,size_t,size_t,size_t, size_t,void *),
 			                         void * ptr_arg, long int opt=NONE)
 	{
+		#ifdef VCLUSTER_PERF_REPORT
+		timer nbx_timer;
+		nbx_timer.start();
+
+		#endif
+
 		// Allocate the buffers
 
 		for (size_t i = 0 ; i < n_send ; i++)
@@ -988,6 +1024,11 @@ public:
 
 		// Circular counter
 		NBX_cnt = (NBX_cnt + 1) % nbx_cycle;
+
+		#ifdef VCLUSTER_PERF_REPORT
+		nbx_timer.stop();
+		time_spent += nbx_timer.getwct();
+		#endif
 	}
 
 	/*! \brief Send and receive multiple messages asynchronous version
@@ -1112,6 +1153,11 @@ public:
 									 void * (* msg_alloc)(size_t,size_t,size_t,size_t,size_t,size_t,void *),
 									 void * ptr_arg, long int opt=NONE)
 	{
+		#ifdef VCLUSTER_PERF_REPORT
+		timer nbx_timer;
+		nbx_timer.start();
+		#endif
+
 		sz_recv_tmp.resize(n_recv);
 
 		// First we understand the receive size for each processor
@@ -1143,6 +1189,11 @@ public:
 
 		// Circular counter
 		NBX_cnt = (NBX_cnt + 1) % nbx_cycle;
+
+		#ifdef VCLUSTER_PERF_REPORT
+		nbx_timer.stop();
+		time_spent += nbx_timer.getwct();
+		#endif
 	}
 
 	/*! \brief Send and receive multiple messages asynchronous version
@@ -1270,6 +1321,12 @@ public:
 			                         void * (* msg_alloc)(size_t,size_t,size_t,size_t,size_t,size_t,void *),
 			                         void * ptr_arg, long int opt = NONE)
 	{
+		#ifdef VCLUSTER_PERF_REPORT
+		timer nbx_timer;
+		nbx_timer.start();
+
+		#endif
+
 		if (NBX_prc_qcnt != 0)
 		{
 			std::cout << __FILE__ << ":" << __LINE__ << " error there are some asynchronous call running you have to complete them before go back to synchronous" << std::endl;
@@ -1312,6 +1369,11 @@ public:
 
 		// Circular counter
 		NBX_cnt = (NBX_cnt + 1) % nbx_cycle;
+
+		#ifdef VCLUSTER_PERF_REPORT
+		nbx_timer.stop();
+		time_spent += nbx_timer.getwct();
+		#endif
 	}
 
 	/*! \brief Send and receive multiple messages Asynchronous version

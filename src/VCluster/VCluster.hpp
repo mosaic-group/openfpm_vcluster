@@ -16,6 +16,7 @@
 
 #ifdef CUDA_GPU
 extern CudaMemory mem_tmp;
+extern double time_spent;
 
 #ifndef MAX_NUMER_OF_PROPERTIES
 #define MAX_NUMER_OF_PROPERTIES 20
