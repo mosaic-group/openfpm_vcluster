@@ -525,6 +525,21 @@ public:
 #endif
 	}
 
+	void clear_stats()
+	{
+#ifdef VCLUSTER_PERF_REPORT
+
+		tot_sent = 0;
+		tot_recv = 0;
+
+		time_spent = 0;
+#else
+
+		std::cout << "Error to activate performance stats on VCluster enable VCLUSTER_PERF_REPORT" << std::endl;
+
+#endif
+	}
+
 	/*! \brief Get the process unit id
 	 *
 	 * \return the process ID
