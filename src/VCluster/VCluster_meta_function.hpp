@@ -496,7 +496,7 @@ struct pack_unpack_cond_with_prp
 {
 	static void packingRequest(T & send, size_t & tot_size, openfpm::vector<size_t> & sz)
 	{
-		typedef typename ::generate_indexes<int, has_max_prop<T, has_value_type<T>::value>::number, MetaFuncOrd>::result ind_prop_to_pack;
+		typedef typename ::generate_indexes<int, has_max_prop<T, has_value_type_ofp<T>::value>::number, MetaFuncOrd>::result ind_prop_to_pack;
 		if (has_pack_gen<typename T::value_type>::value == false && is_vector<T>::value == true)
 		{
 			pack_unpack_cond_with_prp_inte_lin<T>::set_size_buffers(send,sz);
@@ -511,7 +511,7 @@ struct pack_unpack_cond_with_prp
 
 	static void packing(ExtPreAlloc<HeapMemory> & mem, T & send, Pack_stat & sts, openfpm::vector<const void *> & send_buf, size_t opt = 0)
 	{
-		typedef typename ::generate_indexes<int, has_max_prop<T, has_value_type<T>::value>::number, MetaFuncOrd>::result ind_prop_to_pack;
+		typedef typename ::generate_indexes<int, has_max_prop<T, has_value_type_ofp<T>::value>::number, MetaFuncOrd>::result ind_prop_to_pack;
 		if (has_pack_gen<typename T::value_type>::value == false && is_vector<T>::value == true)
 		{
 			pack_unpack_cond_with_prp_inte_lin<T>::set_buffers(send,send_buf,opt);
