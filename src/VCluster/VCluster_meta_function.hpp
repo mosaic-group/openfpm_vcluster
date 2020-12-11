@@ -716,10 +716,10 @@ struct op_ssend_recv_merge_gpu_impl
 		prc_off.template deviceToHost<0>();
 
 		unsigned int start = 0;
-		unsigned int stop = prc_off.template get<0>(i);
+		unsigned int stop = prc_off.template get<0>(i / sizeof...(prp));
 
 		if (i != 0)
-		{start = prc_off.template get<0>(i-1);}
+		{start = prc_off.template get<0>(i / sizeof...(prp)-1);}
 
 		// Merge the information
 		recv.template merge_prp_v_device<op,
