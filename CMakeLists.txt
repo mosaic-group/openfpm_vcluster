@@ -12,6 +12,8 @@ set(SE_CLASS1 CACHE BOOL "Activate compilation with SE_CLASS1")
 set(SE_CLASS2 CACHE BOOL "Activate compilation with SE_CLASS2")
 set(SE_CLASS3 CACHE BOOL "Activate compilation with SE_CLASS3")
 set(PETSC_ROOT CACHE PATH "If compiling with linear algebra indicate the PETSC root directory")
+set(ALPAKA_ROOT CACHE PATH "Alpaka root path")
+set(CUDA_ON_CPU CACHE BOOL "Make Cuda work on heap")
 
 set(ENV{PETSC_DIR} ${PETSC_ROOT})
 
@@ -40,7 +42,7 @@ elseif ( CUDA_VERSION_MAJOR EQUAL 11 AND CUDA_VERSION_MINOR EQUAL 0 )
 
 endif()
 
-find_package(Boost 1.66.0 REQUIRED COMPONENTS unit_test_framework iostreams program_options)
+find_package(Boost 1.66.0 REQUIRED COMPONENTS unit_test_framework iostreams program_options fiber)
 find_package(MPI REQUIRED)
 find_package(PETSc)
 
