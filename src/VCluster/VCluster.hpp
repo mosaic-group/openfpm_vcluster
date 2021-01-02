@@ -1426,61 +1426,7 @@ static inline bool is_openfpm_init()
  * This function MUST be called before any other function
  *
  */
-static inline void openfpm_init(int *argc, char ***argv)
-{
-#ifdef HAVE_PETSC
-
-	PetscInitialize(argc,argv,NULL,NULL);
-
-#endif
-
-	init_global_v_cluster_private(argc,argv);
-
-#ifdef SE_CLASS1
-	std::cout << "OpenFPM is compiled with debug mode LEVEL:1. Remember to remove SE_CLASS1 when you go in production" << std::endl;
-#endif
-
-#ifdef SE_CLASS2
-	std::cout << "OpenFPM is compiled with debug mode LEVEL:2. Remember to remove SE_CLASS2 when you go in production" << std::endl;
-#endif
-
-#ifdef SE_CLASS3
-	std::cout << "OpenFPM is compiled with debug mode LEVEL:3. Remember to remove SE_CLASS3 when you go in production" << std::endl;
-#endif
-
-	// install segmentation fault signal handler
-
-	struct sigaction sa;
-
-	sa.sa_sigaction = bt_sighandler;
-	sigemptyset(&sa.sa_mask);
-	sa.sa_flags = SA_RESTART;
-
-	sigaction(SIGSEGV, &sa, NULL);
-
-	if (argc != NULL && *argc != 0)
-	{program_name = std::string(*argv[0]);}
-
-	// Initialize math pre-computation tables
-	openfpm::math::init_getFactorization();
-
-	ofp_initialized = true;
-
-#ifdef CUDA_GPU
-
-	// Initialize temporal memory
-	mem_tmp.incRef();
-
-	exp_tmp.incRef();
-
-	for (int i = 0 ; i < MAX_NUMER_OF_PROPERTIES ; i++)
-	{
-		exp_tmp2[i].incRef();
-	}
-
-
-#endif
-}
+void openfpm_init(int *argc, char ***argv);
 
 
 /*! \brief Finalize the library
@@ -1488,34 +1434,7 @@ static inline void openfpm_init(int *argc, char ***argv)
  * This function MUST be called at the end of the program
  *
  */
-static inline void openfpm_finalize()
-{
-#ifdef HAVE_PETSC
-
-	PetscFinalize();
-
-#endif
-
-	delete_global_v_cluster_private();
-	ofp_initialized = false;
-
-#ifdef CUDA_GPU
-
-	// Release memory
-	mem_tmp.destroy();
-	mem_tmp.decRef();
-
-	exp_tmp.destroy();
-	exp_tmp.decRef();
-
-	for (int i = 0 ; i < MAX_NUMER_OF_PROPERTIES ; i++)
-	{
-		exp_tmp2[i].destroy();
-		exp_tmp2[i].decRef();
-	}
-
-#endif
-}
+void openfpm_finalize();
 
 
 #endif

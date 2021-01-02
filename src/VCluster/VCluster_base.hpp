@@ -25,9 +25,6 @@
 #include "memory/BHeapMemory.hpp"
 #include "Packer_Unpacker/has_max_prop.hpp"
 #include "data_type/aggregate.hpp"
-#if defined(CUDA_GPU) && defined(__NVCC__)
-#include "util/cuda/moderngpu/launch_box.hxx"
-#endif
 #include "util/cuda/ofp_context.hxx"
 
 #ifdef HAVE_PETSC
