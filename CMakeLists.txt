@@ -12,6 +12,8 @@ set(SE_CLASS1 CACHE BOOL "Activate compilation with SE_CLASS1")
 set(SE_CLASS2 CACHE BOOL "Activate compilation with SE_CLASS2")
 set(SE_CLASS3 CACHE BOOL "Activate compilation with SE_CLASS3")
 set(PETSC_ROOT CACHE PATH "If compiling with linear algebra indicate the PETSC root directory")
+set(ALPAKA_ROOT CACHE PATH "Alpaka root path")
+set(CUDA_ON_CPU CACHE BOOL "Make Cuda work on heap")
 
 set(ENV{PETSC_DIR} ${PETSC_ROOT})
 
@@ -43,7 +45,7 @@ elseif ( CUDA_VERSION_MAJOR EQUAL 11 AND CUDA_VERSION_MINOR EQUAL 1 )
 
 endif()
 
-find_package(Boost 1.66.0 REQUIRED COMPONENTS unit_test_framework iostreams program_options)
+find_package(Boost 1.72.0 REQUIRED COMPONENTS unit_test_framework iostreams program_options OPTIONAL_COMPONENTS fiber context)
 find_package(MPI REQUIRED)
 find_package(PETSc)
 
@@ -82,10 +84,19 @@ else()
 endif()
 
 if (Boost_FOUND)
-	set(DEFINE_HAVE_BOOST "#define HAVE_BOOST")
-	set(DEFINE_HAVE_BOOST_IOSTREAMS "#define HAVE_BOOST_IOSTREAMS")
-	set(DEFINE_HAVE_BOOST_PROGRAM_OPTIONS "#define HAVE_BOOST_PROGRAM_OPTIONS")
-	set(DEFINE_HAVE_BOOST_UNIT_TEST_FRAMEWORK "#define HAVE_BOOST_UNIT_TEST_FRAMEWORK")
+        set(DEFINE_HAVE_BOOST "#define HAVE_BOOST")
+        set(DEFINE_HAVE_BOOST_IOSTREAMS "#define HAVE_BOOST_IOSTREAMS")
+        set(DEFINE_HAVE_BOOST_PROGRAM_OPTIONS "#define HAVE_BOOST_PROGRAM_OPTIONS")
+        set(DEFINE_HAVE_BOOST_UNIT_TEST_FRAMEWORK "#define HAVE_BOOST_UNIT_TEST_FRAMEWORK")
+        if (Boost_CONTEXT_FOUND)
+                set(DEFINE_HAVE_BOOST_CONTEXT "#define HAVE_BOOST_CONTEXT")
+        else()
+                #if context is not there CUDA_ON_CPU cannot be activated
+                set(CUDA_ON_CPU OFF)
+        endif()
+        if (Boost_FIBER_FOUND)
+                set(DEFINE_HAVE_BOOST_FIBER "#define HAVE_BOOST_FIBER")
+        endif()
 else()
 	message( FATAL_ERROR "BOOST is required in order to install OpenFPM" )
 endif()
@@ -96,4 +107,5 @@ configure_file(${CMAKE_CURRENT_SOURCE_DIR}/src/config/config_cmake.h.in ${CMAKE_
 include_directories(SYSTEM ${MPI_INCLUDE_PATH})
 
 add_subdirectory (src)
+add_subdirectory (../openfpm_devices/ build)
 
