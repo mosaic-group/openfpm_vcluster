@@ -70,58 +70,11 @@ fi
 
 export PATH="$PATH:$HOME/openfpm_dependencies/openfpm_vcluster/MPI/bin"
 
-if [ "$hostname" == "gin" ]; then
- echo "Compiling on gin\n"
- module load gcc/4.9.2
- module load openmpi/1.8.1
-
-elif [ "$hostname" == "wetcluster" ]; then
- echo "Compiling on wetcluster"
-
-## produce the module path
-
- export MODULEPATH="/sw/apps/modules/modulefiles:$MODULEPATH"
-
- script="module load gcc/4.9.2\n 
-module load openmpi/1.8.1\n
-module load boost/1.54.0\n
-compile_options='--with-boost=/sw/apps/boost/1.54.0/'\n
-\n
-sh ./autogen.sh\n
-sh ./configure \"\$compile_options\"  CXX=mpic++\n
-make\n
-if [ \"\$?\" = "0" ]; then exit 1 ; fi\n
-exit(0)\n"
-
- echo $script | sed -r 's/\\n/\n/g' > compile_script
-
- bsub -o output_compile.%J -K -n 1 -J compile sh ./compile_script
-
-elif [ "$hostname" == "taurus" ]; then
- echo "Compiling on taurus"
-
- echo "$PATH"
- module load gcc/5.3.0
- module load boost/1.60.0
- module load openmpi/1.10.2-gnu
- module unload bullxmpi
-
- sh ./autogen.sh
- sh ./configure  CXX=mpic++
- make
- if [ $? -ne 0 ]; then exit 1 ; fi
-
-### to exclude --exclude=taurusi[6300-6400],taurusi[5400-5500]
-
-else
-
- source $HOME/.bashrc
- echo "$PATH"
- echo "Compiling general"
- sh ./autogen.sh
- sh ./configure  CXX=mpic++ --with-boost=$HOME/openfpm_dependencies/openfpm_vcluster/BOOST
- make VERBOSE=1 -j 4
- if [ $? -ne 0 ]; then exit 1 ; fi
-
-fi
+source $HOME/.bashrc
+echo "$PATH"
+echo "Compiling general"
+sh ./autogen.sh
+sh ./configure  CXX=mpic++ --with-boost=$HOME/openfpm_dependencies/openfpm_vcluster/BOOST --enable-cuda-on-cpu
+make VERBOSE=1 -j 4
+if [ $? -ne 0 ]; then exit 1 ; fi
 
