@@ -43,6 +43,7 @@ fi
 #	kill 73440 87662 87661 73439 51687 51686
 #fi
 
+rm -rf $HOME/openfpm_dependencies/openfpm_vcluster/BOOST
 
 if [ ! -d $HOME/openfpm_dependencies/openfpm_vcluster/BOOST ]; then
         if [ x"$hostname" == x"cifarm-mac-node" ]; then
