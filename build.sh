@@ -43,6 +43,11 @@ fi
 #	kill 73440 87662 87661 73439 51687 51686
 #fi
 
+if [ x"$hostname" == x"cifarm-centos-node.mpi-cbg.de"  ]; then
+        echo "CentOS node"
+        source /opt/rh/devtoolset-7/enable
+fi
+
 if [ ! -d $HOME/openfpm_dependencies/openfpm_vcluster/BOOST ]; then
         if [ x"$hostname" == x"cifarm-mac-node" ]; then
                 echo "Compiling for OSX"
