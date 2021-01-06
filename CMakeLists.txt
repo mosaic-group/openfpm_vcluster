@@ -73,14 +73,6 @@ if(PETSC_FOUND)
 	set(DEFINE_HAVE_PETSC "#define HAVE_PETSC")
 endif()
 
-if(CUDA_FOUND)
-	set(DEFINE_CUDA_GPU "#define CUDA_GPU")
-endif()
-
-if(CUDA_ON_CPU)
-        set(DEFINE_CUDA_GPU "#define CUDA_GPU")
-endif()
-
 if(MPI_FOUND)
 	set(DEFINE_HAVE_MPI "#define HAVE_MPI")
 else()
@@ -105,6 +97,13 @@ else()
 	message( FATAL_ERROR "BOOST is required in order to install OpenFPM" )
 endif()
 
+if(CUDA_FOUND)
+        set(DEFINE_CUDA_GPU "#define CUDA_GPU")
+endif()
+
+if(CUDA_ON_CPU)
+        set(DEFINE_CUDA_GPU "#define CUDA_GPU")
+endif()
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/src/config/config_cmake.h.in ${CMAKE_CURRENT_SOURCE_DIR}/src/config/config.h)
 
