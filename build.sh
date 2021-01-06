@@ -82,7 +82,7 @@ source $HOME/.bashrc
 echo "$PATH"
 echo "Compiling general"
 sh ./autogen.sh
-sh ./configure  CXX=mpic++ --with-boost=$HOME/openfpm_dependencies/openfpm_vcluster/BOOST --with-libhilbert=$HOME/openfpm_dependencies/openfpm_vcluster/LIBHILBERT  --enable-cuda-on-cpu
+sh ./configure  CXX=mpic++ --with_vcdevel=$HOME/openfpm_dependencies/openfpm_vcluster/VCDEVEL  --with-boost=$HOME/openfpm_dependencies/openfpm_vcluster/BOOST --with-libhilbert=$HOME/openfpm_dependencies/openfpm_vcluster/LIBHILBERT  --enable-cuda-on-cpu
 make VERBOSE=1 -j 4
 if [ $? -ne 0 ]; then exit 1 ; fi
 
