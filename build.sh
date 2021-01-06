@@ -68,13 +68,17 @@ if [ ! -d $HOME/openfpm_dependencies/openfpm_vcluster/MPI ]; then
 	./install_MPI.sh $HOME/openfpm_dependencies/openfpm_vcluster/ 4
 fi
 
+if [ ! -d $HOME/openfpm_dependencies/openfpm_vcluster/LIBHILBERT ]; then
+        ./install_LIBHILBERT.sh $HOME/openfpm_dependencies/openfpm_vcluster/ 4
+fi
+
 export PATH="$PATH:$HOME/openfpm_dependencies/openfpm_vcluster/MPI/bin"
 
 source $HOME/.bashrc
 echo "$PATH"
 echo "Compiling general"
 sh ./autogen.sh
-sh ./configure  CXX=mpic++ --with-boost=$HOME/openfpm_dependencies/openfpm_vcluster/BOOST --enable-cuda-on-cpu
+sh ./configure  CXX=mpic++ --with-boost=$HOME/openfpm_dependencies/openfpm_vcluster/BOOST --with-libhilbert=$HOME/openfpm_dependencies/openfpm_vcluster/LIBHILBERT  --enable-cuda-on-cpu
 make VERBOSE=1 -j 4
 if [ $? -ne 0 ]; then exit 1 ; fi
 
