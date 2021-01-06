@@ -73,7 +73,7 @@ if [ ! -d $HOME/openfpm_dependencies/openfpm_vcluster/LIBHILBERT ]; then
 fi
 
 if [ ! -d $HOME/openfpm_dependencies/openfpm_vcluster/VCDEVEL ]; then
-        ./install_VCDEVEL.sh $HOME/openfpm_dependencies/openfpm_vcluster/ 4
+        ./install_VCDEVEL.sh $HOME/openfpm_dependencies/openfpm_vcluster/ 4 gcc g++
 fi
 
 export PATH="$PATH:$HOME/openfpm_dependencies/openfpm_vcluster/MPI/bin"
