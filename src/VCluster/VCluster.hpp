@@ -13,6 +13,7 @@
 #include "VCluster_base.hpp"
 #include "VCluster_meta_function.hpp"
 #include "util/math_util_complex.hpp"
+#include "memory/mem_conf.hpp"
 
 #ifdef CUDA_GPU
 extern CudaMemory mem_tmp;
@@ -1426,8 +1427,9 @@ static inline bool is_openfpm_init()
  * This function MUST be called before any other function
  *
  */
-void openfpm_init(int *argc, char ***argv);
+void openfpm_init_vcl(int *argc, char ***argv);
 
+size_t openfpm_vcluster_compilation_mask();
 
 /*! \brief Finalize the library
  *
@@ -1436,6 +1438,54 @@ void openfpm_init(int *argc, char ***argv);
  */
 void openfpm_finalize();
 
+static std::string get_link_lib(size_t opt)
+{
+	std::string op;
+
+	if (opt & 0x01)
+	{
+		return "_cuda_on_cpu";
+	}
+
+	if (opt & 0x04)
+	{
+		return "_cuda";
+	}
+
+	return "";
+}
+
+/*! \brief Initialize the library
+ *
+ * This function MUST be called before any other function
+ *
+ */
+static void openfpm_init(int *argc, char ***argv)
+{
+	openfpm_init_vcl(argc,argv);
+
+	size_t compiler_mask = 0;
+
+	#ifdef CUDA_ON_CPU
+	compiler_mask |= 0x1;
+	#endif
+
+	#ifdef __NVCC__
+	compiler_mask |= 0x02;
+	#endif
+
+	#ifdef CUDA_GPU
+	compiler_mask |= 0x04;
+	#endif
+
+	if (compiler_mask != openfpm_vcluster_compilation_mask() || compiler_mask != openfpm_ofpmmemory_compilation_mask())
+	{
+		std::cout << __FILE__ << ":" << __LINE__ << " Error: with the compilation options you are using you should linking with " <<
+		                                              get_link_lib(compiler_mask) << " but you are linking with " <<
+		                                              "-lvcluster_" << get_link_lib(openfpm_vcluster_compilation_mask()) << " and -lofpmmemory_" << 
+													  get_link_lib(openfpm_ofpmmemory_compilation_mask()) << std::endl;
+	}
+}
 
 #endif
 

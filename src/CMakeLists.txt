@@ -24,20 +24,27 @@ if ( CMAKE_COMPILER_IS_GNUCC )
     endif()
 endif()
 
+###########################
+
 add_library(vcluster STATIC VCluster/VCluster.cpp)
 add_library(vcluster_dl SHARED VCluster/VCluster.cpp)
 
-add_dependencies(vcluster_test ofpmmemory)
-
-###########################
-
 if(CUDA_FOUND)
 	target_compile_options(vcluster_test PUBLIC $<$<COMPILE_LANGUAGE:CUDA>: ${WARNING_SUPPRESSION_AND_OPTION_NVCC} >)
+        target_compile_options(vcluster PUBLIC $<$<COMPILE_LANGUAGE:CUDA>: ${WARNING_SUPPRESSION_AND_OPTION_NVCC} >)
+        target_compile_options(vcluster_dl PUBLIC $<$<COMPILE_LANGUAGE:CUDA>: ${WARNING_SUPPRESSION_AND_OPTION_NVCC} >)
 	target_include_directories (vcluster_test PUBLIC ${MPI_C_INCLUDE_DIRS})
         if (TEST_COVERAGE)
                 target_compile_options(vcluster_test PRIVATE $<$<COMPILE_LANGUAGE:CUDA>: -Xcompiler "-fprofile-arcs -ftest-coverage" >)
         endif()
+
+        if (NOT CUDA_ON_CPU)
+                set_source_files_properties(VCluster/VCluster.cpp PROPERTIES LANGUAGE CUDA)
+        endif()
 endif()
+
+
+add_dependencies(vcluster_test ofpmmemory)
 
 target_include_directories (vcluster_test PUBLIC ${CUDA_INCLUDE_DIRS})
 target_include_directories (vcluster_test PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
