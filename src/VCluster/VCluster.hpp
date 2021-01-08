@@ -1480,10 +1480,11 @@ static void openfpm_init(int *argc, char ***argv)
 
 	if (compiler_mask != openfpm_vcluster_compilation_mask() || compiler_mask != openfpm_ofpmmemory_compilation_mask())
 	{
-		std::cout << __FILE__ << ":" << __LINE__ << " Error: with the compilation options you are using you should linking with " <<
-		                                              get_link_lib(compiler_mask) << " but you are linking with " <<
-		                                              "-lvcluster_" << get_link_lib(openfpm_vcluster_compilation_mask()) << " and -lofpmmemory_" << 
-													  get_link_lib(openfpm_ofpmmemory_compilation_mask()) << std::endl;
+		std::cout << __FILE__ << ":" << __LINE__ << " Error: in compilation you should link with " <<
+		                                            "-lvcluster" << get_link_lib(compiler_mask) << " and -lofpmmemory" << get_link_lib(compiler_mask) << 
+													" but you are linking with " <<
+		                                            "-lvcluster" << get_link_lib(openfpm_vcluster_compilation_mask()) << " and -lofpmmemory" << 
+													get_link_lib(openfpm_ofpmmemory_compilation_mask()) << std::endl;
 	}
 }
 
