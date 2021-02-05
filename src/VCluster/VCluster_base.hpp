@@ -662,7 +662,7 @@ public:
 				check_valid(ptr,msize);
 #endif
 				tot_recv += msize;
-				#ifdef GARBAGE_INJECTOR
+				#ifdef VCLUSTER_GARBAGE_INJECTOR
 				memset(ptr,0xFF,msize);
 				#endif
 				MPI_SAFE_CALL(MPI_Recv(ptr,msize,MPI_BYTE,stat_t.MPI_SOURCE,stat_t.MPI_TAG,MPI_COMM_WORLD,&stat_t));
