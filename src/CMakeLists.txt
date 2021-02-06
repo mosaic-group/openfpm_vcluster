@@ -6,6 +6,10 @@ if (CUDA_FOUND OR CUDA_ON_CPU)
 	set(CUDA_SOURCES VCluster/cuda/VCluster_semantic_unit_cuda_tests.cu VCluster/cuda/VCluster_unit_tests.cu )
 endif()
 
+if(CMAKE_CXX_COMPILER_ID STREQUAL "Intel")
+	add_definitions("-DBOOST_MPL_CFG_HAS_TYPEOF")
+endif()
+
 if (CUDA_ON_CPU)
 	add_definitions(-DCUDA_ON_CPU -D__NVCC__ -DCUDART_VERSION=11000)
         set_source_files_properties(${CUDA_SOURCES} PROPERTIES LANGUAGE CXX)
