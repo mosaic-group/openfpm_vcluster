@@ -539,7 +539,7 @@ public:
 
 	/*! \brief Get the process unit id
 	 *
-	 * \return the process ID
+	 * \return the process ID (rank in MPI)
 	 *
 	 */
 	size_t getProcessUnitID()
@@ -1734,6 +1734,7 @@ public:
 
 		// Wait for all the requests
 		stat.resize(req.size());
+
 		MPI_SAFE_CALL(MPI_Waitall(req.size(),&req.get(0),&stat.get(0)));
 
 		// Remove executed request and status
