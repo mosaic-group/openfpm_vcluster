@@ -195,7 +195,7 @@ class Vcluster: public Vcluster_base<InternalMemory>
 			size_t req = 0;
 
 			//Pack requesting
-			pack_unpack_cond_with_prp<has_max_prop<T, has_value_type<T>::value>::value,op, T, S, layout_base>::packingRequest(send.get(i), req, send_sz_byte);
+			pack_unpack_cond_with_prp<has_max_prop<T, has_value_type_ofp<T>::value>::value,op, T, S, layout_base>::packingRequest(send.get(i), req, send_sz_byte);
 			tot_size += req;
 		}
 
@@ -242,7 +242,7 @@ class Vcluster: public Vcluster_base<InternalMemory>
 
 			Pack_stat sts;
 
-			pack_unpack_cond_with_prp<has_max_prop<T, has_value_type<T>::value>::value, op, T, S, layout_base>::packing(*mem[NBX_prc_scnt], send.get(i), sts, send_buf,opt);
+			pack_unpack_cond_with_prp<has_max_prop<T, has_value_type_ofp<T>::value>::value, op, T, S, layout_base>::packing(*mem[NBX_prc_scnt], send.get(i), sts, send_buf,opt);
 		}
 
 		// receive information
@@ -400,7 +400,7 @@ class Vcluster: public Vcluster_base<InternalMemory>
 		if (sz != NULL)
 		{sz->resize(self_base::recv_buf[NBX_prc_pcnt].size());}
 
-		pack_unpack_cond_with_prp<has_max_prop<T, has_value_type<T>::value>::value,op, T, S, layout_base, prp... >::unpacking(recv, self_base::recv_buf[NBX_prc_pcnt], sz, sz_byte, op_param,opt);
+		pack_unpack_cond_with_prp<has_max_prop<T, has_value_type_ofp<T>::value>::value,op, T, S, layout_base, prp... >::unpacking(recv, self_base::recv_buf[NBX_prc_pcnt], sz, sz_byte, op_param,opt);
 	}
 
 	public:
@@ -518,7 +518,7 @@ class Vcluster: public Vcluster_base<InternalMemory>
 			self_base::sendrecvMultipleMessagesNBX(send_req.size(),NULL,NULL,NULL,msg_alloc,&bi);
 
 			// we generate the list of the properties to unpack
-			typedef typename ::generate_indexes<int, has_max_prop<T, has_value_type<T>::value>::number, MetaFuncOrd>::result ind_prop_to_pack;
+			typedef typename ::generate_indexes<int, has_max_prop<T, has_value_type_ofp<T>::value>::number, MetaFuncOrd>::result ind_prop_to_pack;
 
 			// operation object
 			op_ssend_recv_add<void> opa;
@@ -548,7 +548,7 @@ class Vcluster: public Vcluster_base<InternalMemory>
 
 			size_t tot_size = 0;
 
-			pack_unpack_cond_with_prp<has_max_prop<T, has_value_type<T>::value>::value,op_ssend_recv_add<void>, T, S, layout_base>::packingRequest(send, tot_size, sz);
+			pack_unpack_cond_with_prp<has_max_prop<T, has_value_type_ofp<T>::value>::value,op_ssend_recv_add<void>, T, S, layout_base>::packingRequest(send, tot_size, sz);
 
 			HeapMemory pmem;
 
@@ -559,7 +559,7 @@ class Vcluster: public Vcluster_base<InternalMemory>
 
 			Pack_stat sts;
 			
-			pack_unpack_cond_with_prp<has_max_prop<T, has_value_type<T>::value>::value,op_ssend_recv_add<void>, T, S, layout_base>::packing(mem, send, sts, send_buf);
+			pack_unpack_cond_with_prp<has_max_prop<T, has_value_type_ofp<T>::value>::value,op_ssend_recv_add<void>, T, S, layout_base>::packing(mem, send, sts, send_buf);
 
 			pack_unpack_cond_with_prp_inte_lin<T>::construct_prc(send_prc,send_prc_);
 
@@ -647,7 +647,7 @@ class Vcluster: public Vcluster_base<InternalMemory>
 			self_base::sendrecvMultipleMessagesNBX(prc.size(),(size_t *)sz_byte.getPointer(),(size_t *)prc.getPointer(),(void **)send_buf.getPointer(),msg_alloc,(void *)&bi);
 
 			// we generate the list of the properties to pack
-			typedef typename ::generate_indexes<int, has_max_prop<T, has_value_type<T>::value>::number, MetaFuncOrd>::result ind_prop_to_pack;
+			typedef typename ::generate_indexes<int, has_max_prop<T, has_value_type_ofp<T>::value>::number, MetaFuncOrd>::result ind_prop_to_pack;
 
 			// operation object
 			op_ssend_recv_add<void> opa;
@@ -668,7 +668,7 @@ class Vcluster: public Vcluster_base<InternalMemory>
 			self_base::sendrecvMultipleMessagesNBX(send_req.size(),NULL,NULL,NULL,msg_alloc,&bi);
 
 			// we generate the list of the properties to pack
-			typedef typename ::generate_indexes<int, has_max_prop<T, has_value_type<T>::value>::number, MetaFuncOrd>::result ind_prop_to_pack;
+			typedef typename ::generate_indexes<int, has_max_prop<T, has_value_type_ofp<T>::value>::number, MetaFuncOrd>::result ind_prop_to_pack;
 
 			// operation object
 			op_ssend_recv_add<void> opa;
@@ -809,7 +809,7 @@ class Vcluster: public Vcluster_base<InternalMemory>
 		delete pmem[NBX_prc_scnt];
 
 		// we generate the list of the properties to pack
-		typedef typename ::generate_indexes<int, has_max_prop<T, has_value_type<T>::value>::number, MetaFuncOrd>::result ind_prop_to_pack;
+		typedef typename ::generate_indexes<int, has_max_prop<T, has_value_type_ofp<T>::value>::number, MetaFuncOrd>::result ind_prop_to_pack;
 
 		op_ssend_recv_add<void> opa;
 
@@ -1218,7 +1218,7 @@ class Vcluster: public Vcluster_base<InternalMemory>
 		delete pmem[NBX_prc_pcnt];
 
 		// we generate the list of the properties to pack
-		typedef typename ::generate_indexes<int, has_max_prop<T, has_value_type<T>::value>::number, MetaFuncOrd>::result ind_prop_to_pack;
+		typedef typename ::generate_indexes<int, has_max_prop<T, has_value_type_ofp<T>::value>::number, MetaFuncOrd>::result ind_prop_to_pack;
 
 		op_ssend_recv_add<void> opa;
 
