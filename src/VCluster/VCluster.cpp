@@ -21,6 +21,22 @@ bool ofp_initialized = false;
 size_t tot_sent = 0;
 size_t tot_recv = 0;
 
+//! NBX has a potential pitfall that must be addressed,
+//! NBX Send all the messages and probe for incoming messages,
+//! if there is an incoming message it receive it producing
+//! an acknowledge notification on the sending processor.
+//! When all the sends has been acknowledged, the processor call the MPI_Ibarrier
+//! when all the processors call MPI_Ibarrier all send has been received.
+//! While the processors are waiting for the MPI_Ibarrier to complete, all processors
+//! are still probing for incoming message, Unfortunately some processor
+//! can quit the MPI_Ibarrier before others and this mean that some
+//! processor can exit the probing status before others, these processors can in theory
+//! start new communications while the other processor are still in probing status producing
+//! a wrong send/recv association to
+//! resolve this problem an incremental NBX_cnt is used as message TAG to distinguish that the
+//! messages come from other send or subsequent NBX procedures
+size_t NBX_cnt = 0;
+
 std::string program_name;
 
 #ifdef CUDA_GPU

@@ -30,6 +30,8 @@ extern CudaMemory rem_tmp2[MAX_NUMER_OF_PROPERTIES];
 
 #endif
 
+extern size_t NBX_cnt;
+
 void bt_sighandler(int sig, siginfo_t * info, void * ctx);
 
 /*! \brief Implementation of VCluster class
