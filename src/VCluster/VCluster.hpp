@@ -1472,10 +1472,6 @@ static void openfpm_init(int *argc, char ***argv)
 	compiler_mask |= 0x1;
 	#endif
 
-	#ifdef __NVCC__
-	compiler_mask |= 0x02;
-	#endif
-
 	#ifdef CUDA_GPU
 	compiler_mask |= 0x04;
 	#endif
