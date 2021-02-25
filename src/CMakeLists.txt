@@ -135,7 +135,11 @@ endif()
 target_compile_features(vcluster_test PUBLIC cxx_std_11)
 target_link_libraries(vcluster_test ${MPI_C_LIBRARIES})
 
-install(TARGETS vcluster vcluster_dl vcluster_cuda_on_cpu vcluster_dl_cuda_on_cpu DESTINATION openfpm_vcluster/lib)
+if (CUDA_FOUND AND NOT CUDA_ON_CPU)
+	set(ADDITIONAL_OPENFPM_LIBS vcluster_cuda_on_cpu vcluster_dl_cuda_on_cpu)
+endif()
+
+install(TARGETS vcluster vcluster_dl ${ADDITIONAL_OPENFPM_LIBS} DESTINATION openfpm_vcluster/lib)
 install(FILES MPI_wrapper/MPI_IallreduceW.hpp 
 	      MPI_wrapper/MPI_IrecvW.hpp 
 	      MPI_wrapper/MPI_IBcastW.hpp  
