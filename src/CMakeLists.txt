@@ -139,22 +139,25 @@ if (CUDA_FOUND AND NOT CUDA_ON_CPU)
 	set(ADDITIONAL_OPENFPM_LIBS vcluster_cuda_on_cpu vcluster_dl_cuda_on_cpu)
 endif()
 
-install(TARGETS vcluster vcluster_dl ${ADDITIONAL_OPENFPM_LIBS} DESTINATION openfpm_vcluster/lib)
+install(TARGETS vcluster vcluster_dl ${ADDITIONAL_OPENFPM_LIBS} DESTINATION openfpm_vcluster/lib COMPONENT OpenFPM)
 install(FILES MPI_wrapper/MPI_IallreduceW.hpp 
 	      MPI_wrapper/MPI_IrecvW.hpp 
 	      MPI_wrapper/MPI_IBcastW.hpp  
 	      MPI_wrapper/MPI_IsendW.hpp 
 	      MPI_wrapper/MPI_util.hpp 
 	      MPI_wrapper/MPI_IAllGather.hpp
-	      DESTINATION openfpm_vcluster/include/MPI_wrapper)
+	      DESTINATION openfpm_vcluster/include/MPI_wrapper
+	      COMPONENT OpenFPM)
 
 install(FILES VCluster/VCluster_base.hpp
 	      VCluster/VCluster.hpp 
 	      VCluster/VCluster_meta_function.hpp
-	      DESTINATION openfpm_vcluster/include/VCluster )
+	      DESTINATION openfpm_vcluster/include/VCluster 
+	      COMPONENT OpenFPM)
 
 install (FILES util/Vcluster_log.hpp
-	 DESTINATION openfpm_vcluster/include/util)
+	 DESTINATION openfpm_vcluster/include/util
+	 COMPONENT OpenFPM)
 
 #if(BUILD_TESTING)
 
