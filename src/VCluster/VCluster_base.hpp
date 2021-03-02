@@ -1567,7 +1567,7 @@ public:
 	 * \return true if succeed false otherwise
 	 *
 	 */
-	template<typename T, typename Mem, typename gr> bool send(size_t proc, size_t tag, openfpm::vector<T,Mem,gr> & v)
+	template<typename T, typename Mem, template<typename> class gr> bool send(size_t proc, size_t tag, openfpm::vector<T,Mem,gr> & v)
 	{
 #ifdef SE_CLASS1
 		checkType<T>();
@@ -1632,7 +1632,7 @@ public:
      * \return true if succeed false otherwise
      *
      */
-    template<typename T, typename Mem, typename gr> bool recv(size_t proc, size_t tag, openfpm::vector<T,Mem,gr> & v)
+    template<typename T, typename Mem, template<typename> class gr> bool recv(size_t proc, size_t tag, openfpm::vector<T,Mem,gr> & v)
     {
 #ifdef SE_CLASS1
             checkType<T>();
@@ -1661,7 +1661,7 @@ public:
 	 * \return true if succeed false otherwise
 	 *
 	 */
-	template<typename T, typename Mem, typename gr> bool allGather(T & send, openfpm::vector<T,Mem,gr> & v)
+	template<typename T, typename Mem, template<typename> class gr> bool allGather(T & send, openfpm::vector<T,Mem,gr> & v)
 	{
 #ifdef SE_CLASS1
 		checkType<T>();
@@ -1695,8 +1695,8 @@ public:
 	 * \return true if succeed false otherwise
 	 *
 	 */
-	template<typename T, typename Mem, typename lt_type, template<typename> class layout_base >
-	bool Bcast(openfpm::vector<T,Mem,lt_type,layout_base> & v, size_t root)
+	template<typename T, typename Mem, template<typename> class layout_base >
+	bool Bcast(openfpm::vector<T,Mem,layout_base> & v, size_t root)
 	{
 #ifdef SE_CLASS1
 		checkType<T>();

@@ -114,7 +114,7 @@ struct unpack_each_prop_buffer
 		PtrMemory * ptr1 = new PtrMemory(recv_buf.get(i).getPointer(),recv_buf.get(i).size());
 
 		// create vector representation to a piece of memory already allocated
-		openfpm::vector<typename Vt::value_type,PtrMemory,typename layout_base<typename Vt::value_type>::type,layout_base,openfpm::grow_policy_identity> v2;
+		openfpm::vector<typename Vt::value_type,PtrMemory,layout_base,openfpm::grow_policy_identity> v2;
 
 		v2.template setMemory<prp_num::value>(*ptr1);
 
@@ -157,7 +157,7 @@ struct process_receive_mem_traits_inte
 	openfpm::vector_fr<BMemory<Memory>> & recv_buf;
 
 	//! Fake vector that map over received memory
-	openfpm::vector<typename sT::value_type,PtrMemory,typename layout_base<typename sT::value_type>::type,layout_base,openfpm::grow_policy_identity> & v2;
+	openfpm::vector<typename sT::value_type,PtrMemory,layout_base,openfpm::grow_policy_identity> & v2;
 
 	size_t n_ele = 0;
 
@@ -169,7 +169,7 @@ struct process_receive_mem_traits_inte
 	 * \param v set of pointer buffers to set
 	 *
 	 */
-	inline process_receive_mem_traits_inte(openfpm::vector<typename sT::value_type,PtrMemory,typename layout_base<typename sT::value_type>::type,layout_base,openfpm::grow_policy_identity> & v2,
+	inline process_receive_mem_traits_inte(openfpm::vector<typename sT::value_type,PtrMemory,layout_base,openfpm::grow_policy_identity> & v2,
 			                               openfpm::vector_fr<BMemory<Memory>> & recv_buf,
 			                               size_t i,
 			                               size_t opt)
@@ -221,7 +221,7 @@ struct unpack_selector_with_prp_lin
                                                                              size_t opt)
 	{
 		// create vector representation to a piece of memory already allocated
-		openfpm::vector<typename T::value_type,PtrMemory,typename layout_base<typename T::value_type>::type,layout_base,openfpm::grow_policy_identity> v2;
+		openfpm::vector<typename T::value_type,PtrMemory,layout_base,openfpm::grow_policy_identity> v2;
 
 		process_receive_mem_traits_inte<T,layout_base,Memory> prmti(v2,recv_buf,i,opt);
 
@@ -266,7 +266,7 @@ struct unpack_selector_with_prp_lin<true,T,S,layout_base,Memory>
 
 		{
 		// create vector representation to a piece of memory already allocated
-		openfpm::vector<typename T::value_type,PtrMemory,typename layout_base<typename T::value_type>::type,layout_base,openfpm::grow_policy_identity> v2;
+		openfpm::vector<typename T::value_type,PtrMemory,layout_base,openfpm::grow_policy_identity> v2;
 
 		v2.setMemory(*ptr1);
 

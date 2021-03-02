@@ -13,7 +13,7 @@ template<typename T,typename Memory, template <typename> class layout_base>  voi
 {
 	//! [bcast numbers]
 
-	openfpm::vector<T,Memory,typename layout_base<T>::type,layout_base> bdata;
+	openfpm::vector<T,Memory,layout_base> bdata;
 
 	if (vcl.getProcessUnitID() == 0)
 	{
@@ -44,7 +44,7 @@ template<typename T,typename Memory, template <typename> class layout_base>  voi
 {
 	//! [bcast numbers]
 
-	openfpm::vector<T,Memory,typename layout_base<T>::type,layout_base> bdata;
+	openfpm::vector<T,Memory,layout_base> bdata;
 
 	if (vcl.getProcessUnitID() == 0)
 	{
