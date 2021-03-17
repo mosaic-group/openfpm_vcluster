@@ -25,14 +25,13 @@
 #include "memory/BHeapMemory.hpp"
 #include "Packer_Unpacker/has_max_prop.hpp"
 #include "data_type/aggregate.hpp"
-#if defined(CUDA_GPU) && defined(__NVCC__)
-#include "util/cuda/moderngpu/launch_box.hxx"
-#endif
 #include "util/cuda/ofp_context.hxx"
 
 #ifdef HAVE_PETSC
 #include <petscvec.h>
 #endif
+
+extern double time_spent;
 
 enum NBX_Type
 {
@@ -68,6 +67,8 @@ extern size_t tot_sent;
 extern size_t tot_recv;
 
 ///////////////////// Post functions /////////////
+
+extern size_t NBX_cnt;
 
 template<typename T> void assign(T * ptr1, T * ptr2)
 {
@@ -124,22 +125,6 @@ class Vcluster_base
 {
 	//! log file
 	Vcluster_log log;
-
-	//! NBX has a potential pitfall that must be addressed,
-	//! NBX Send all the messages and probe for incoming messages,
-	//! if there is an incoming message it receive it producing
-	//! an acknowledge notification on the sending processor.
-	//! When all the sends has been acknowledged, the processor call the MPI_Ibarrier
-	//! when all the processors call MPI_Ibarrier all send has been received.
-	//! While the processors are waiting for the MPI_Ibarrier to complete, all processors
-	//! are still probing for incoming message, Unfortunately some processor
-	//! can quit the MPI_Ibarrier before others and this mean that some
-	//! processor can exit the probing status before others, these processors can in theory
-	//! start new communications while the other processor are still in probing status producing
-	//! a wrong send/recv association to
-	//! resolve this problem an incremental NBX_cnt is used as message TAG to distinguish that the
-	//! messages come from other send or subsequent NBX procedures
-	size_t NBX_cnt;
 
 	//! temporal vector used for meta-communication
 	//! ( or meta-data before the real communication )
@@ -227,7 +212,6 @@ class Vcluster_base
 
 	//! disable copy constructor
 	Vcluster_base(const Vcluster_base &)
-	:NBX_cnt(0)
 	{};
 
 	void queue_all_sends(size_t n_send , size_t sz[],
@@ -307,7 +291,6 @@ public:
 	 *
 	 */
 	Vcluster_base(int *argc, char ***argv)
-	:NBX_cnt(0)
 	{
 		// reset NBX_Active
 
@@ -506,6 +489,38 @@ public:
 		return this->m_size*numPE;
 	}
 
+	void print_stats()
+	{
+#ifdef VCLUSTER_PERF_REPORT
+		std::cout << "-- REPORT COMMUNICATIONS -- " << std::endl;
+
+		std::cout << "Processor " << this->rank() << " sent: " << tot_sent << std::endl;
+		std::cout << "Processor " << this->rank() << " received: " << tot_recv << std::endl;
+
+		std::cout << "Processor " << this->rank() << " time spent: " << time_spent << std::endl;
+		std::cout << "Processor " << this->rank() << " Bandwidth: S:"  << (double)tot_sent / time_spent * 1e-9 << "GB/s  R:" << (double)tot_recv / time_spent * 1e-9 << "GB/s" <<  std::endl;
+#else
+
+		std::cout << "Error to activate performance stats on VCluster enable VCLUSTER_PERF_REPORT" << std::endl;
+
+#endif
+	}
+
+	void clear_stats()
+	{
+#ifdef VCLUSTER_PERF_REPORT
+
+		tot_sent = 0;
+		tot_recv = 0;
+
+		time_spent = 0;
+#else
+
+		std::cout << "Error to activate performance stats on VCluster enable VCLUSTER_PERF_REPORT" << std::endl;
+
+#endif
+	}
+
 	/*! \brief Get the process unit id
 	 *
 	 * \return the process ID (rank in MPI)
@@ -631,6 +646,9 @@ public:
 				check_valid(ptr,msize);
 #endif
 				tot_recv += msize;
+				#ifdef VCLUSTER_GARBAGE_INJECTOR
+				memset(ptr,0xFF,msize);
+				#endif
 				MPI_SAFE_CALL(MPI_Recv(ptr,msize,MPI_BYTE,stat_t.MPI_SOURCE,stat_t.MPI_TAG,MPI_COMM_WORLD,&stat_t));
 
 #ifdef SE_CLASS2
@@ -712,6 +730,12 @@ public:
 														  void * ptr_arg,
 														  long int opt=NONE)
 	{
+		#ifdef VCLUSTER_PERF_REPORT
+		timer nbx_timer;
+		nbx_timer.start();
+
+		#endif
+
 		// Allocate the buffers
 
 		for (size_t i = 0 ; i < prc.size() ; i++)
@@ -728,6 +752,11 @@ public:
 
 		// Circular counter
 		NBX_cnt = (NBX_cnt + 1) % nbx_cycle;
+
+		#ifdef VCLUSTER_PERF_REPORT
+		nbx_timer.stop();
+		time_spent += nbx_timer.getwct();
+		#endif
 	}
 
 	/*! \brief Send and receive multiple messages asynchronous version
@@ -972,6 +1001,12 @@ public:
 			                         size_t sz_recv[] ,void * (* msg_alloc)(size_t,size_t,size_t,size_t,size_t, size_t,void *),
 			                         void * ptr_arg, long int opt=NONE)
 	{
+		#ifdef VCLUSTER_PERF_REPORT
+		timer nbx_timer;
+		nbx_timer.start();
+
+		#endif
+
 		// Allocate the buffers
 
 		for (size_t i = 0 ; i < n_send ; i++)
@@ -988,6 +1023,11 @@ public:
 
 		// Circular counter
 		NBX_cnt = (NBX_cnt + 1) % nbx_cycle;
+
+		#ifdef VCLUSTER_PERF_REPORT
+		nbx_timer.stop();
+		time_spent += nbx_timer.getwct();
+		#endif
 	}
 
 	/*! \brief Send and receive multiple messages asynchronous version
@@ -1112,6 +1152,11 @@ public:
 									 void * (* msg_alloc)(size_t,size_t,size_t,size_t,size_t,size_t,void *),
 									 void * ptr_arg, long int opt=NONE)
 	{
+		#ifdef VCLUSTER_PERF_REPORT
+		timer nbx_timer;
+		nbx_timer.start();
+		#endif
+
 		sz_recv_tmp.resize(n_recv);
 
 		// First we understand the receive size for each processor
@@ -1143,6 +1188,11 @@ public:
 
 		// Circular counter
 		NBX_cnt = (NBX_cnt + 1) % nbx_cycle;
+
+		#ifdef VCLUSTER_PERF_REPORT
+		nbx_timer.stop();
+		time_spent += nbx_timer.getwct();
+		#endif
 	}
 
 	/*! \brief Send and receive multiple messages asynchronous version
@@ -1270,6 +1320,12 @@ public:
 			                         void * (* msg_alloc)(size_t,size_t,size_t,size_t,size_t,size_t,void *),
 			                         void * ptr_arg, long int opt = NONE)
 	{
+		#ifdef VCLUSTER_PERF_REPORT
+		timer nbx_timer;
+		nbx_timer.start();
+
+		#endif
+
 		if (NBX_prc_qcnt != 0)
 		{
 			std::cout << __FILE__ << ":" << __LINE__ << " error there are some asynchronous call running you have to complete them before go back to synchronous" << std::endl;
@@ -1312,6 +1368,11 @@ public:
 
 		// Circular counter
 		NBX_cnt = (NBX_cnt + 1) % nbx_cycle;
+
+		#ifdef VCLUSTER_PERF_REPORT
+		nbx_timer.stop();
+		time_spent += nbx_timer.getwct();
+		#endif
 	}
 
 	/*! \brief Send and receive multiple messages Asynchronous version

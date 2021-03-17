@@ -13,6 +13,7 @@
 #include "VCluster_base.hpp"
 #include "VCluster_meta_function.hpp"
 #include "util/math_util_complex.hpp"
+#include "memory/mem_conf.hpp"
 
 #ifdef CUDA_GPU
 extern CudaMemory mem_tmp;
@@ -28,6 +29,8 @@ extern CudaMemory rem_tmp;
 extern CudaMemory rem_tmp2[MAX_NUMER_OF_PROPERTIES];
 
 #endif
+
+extern size_t NBX_cnt;
 
 void bt_sighandler(int sig, siginfo_t * info, void * ctx);
 
@@ -1426,97 +1429,66 @@ static inline bool is_openfpm_init()
  * This function MUST be called before any other function
  *
  */
-static inline void openfpm_init(int *argc, char ***argv)
-{
-#ifdef HAVE_PETSC
+void openfpm_init_vcl(int *argc, char ***argv);
 
-	PetscInitialize(argc,argv,NULL,NULL);
-
-#endif
-
-	init_global_v_cluster_private(argc,argv);
-
-#ifdef SE_CLASS1
-	std::cout << "OpenFPM is compiled with debug mode LEVEL:1. Remember to remove SE_CLASS1 when you go in production" << std::endl;
-#endif
-
-#ifdef SE_CLASS2
-	std::cout << "OpenFPM is compiled with debug mode LEVEL:2. Remember to remove SE_CLASS2 when you go in production" << std::endl;
-#endif
-
-#ifdef SE_CLASS3
-	std::cout << "OpenFPM is compiled with debug mode LEVEL:3. Remember to remove SE_CLASS3 when you go in production" << std::endl;
-#endif
-
-	// install segmentation fault signal handler
-
-	struct sigaction sa;
-
-	sa.sa_sigaction = bt_sighandler;
-	sigemptyset(&sa.sa_mask);
-	sa.sa_flags = SA_RESTART;
-
-	sigaction(SIGSEGV, &sa, NULL);
-
-	if (argc != NULL && *argc != 0)
-	{program_name = std::string(*argv[0]);}
-
-	// Initialize math pre-computation tables
-	openfpm::math::init_getFactorization();
-
-	ofp_initialized = true;
-
-#ifdef CUDA_GPU
-
-	// Initialize temporal memory
-	mem_tmp.incRef();
-
-	exp_tmp.incRef();
-
-	for (int i = 0 ; i < MAX_NUMER_OF_PROPERTIES ; i++)
-	{
-		exp_tmp2[i].incRef();
-	}
-
-
-#endif
-}
-
+size_t openfpm_vcluster_compilation_mask();
 
 /*! \brief Finalize the library
  *
  * This function MUST be called at the end of the program
  *
  */
-static inline void openfpm_finalize()
+void openfpm_finalize();
+
+static std::string get_link_lib(size_t opt)
 {
-#ifdef HAVE_PETSC
+	std::string op;
 
-	PetscFinalize();
-
-#endif
-
-	delete_global_v_cluster_private();
-	ofp_initialized = false;
-
-#ifdef CUDA_GPU
-
-	// Release memory
-	mem_tmp.destroy();
-	mem_tmp.decRef();
-
-	exp_tmp.destroy();
-	exp_tmp.decRef();
-
-	for (int i = 0 ; i < MAX_NUMER_OF_PROPERTIES ; i++)
+	if (opt & 0x01)
 	{
-		exp_tmp2[i].destroy();
-		exp_tmp2[i].decRef();
+		return "_cuda_on_cpu";
 	}
 
-#endif
+	if (opt & 0x04)
+	{
+		return "_cuda";
+	}
+
+	return "";
 }
 
+/*! \brief Initialize the library
+ *
+ * This function MUST be called before any other function
+ *
+ */
+static void openfpm_init(int *argc, char ***argv)
+{
+	openfpm_init_vcl(argc,argv);
+
+	size_t compiler_mask = 0;
+
+	#ifdef CUDA_ON_CPU
+	compiler_mask |= 0x1;
+	#endif
+
+	#ifdef __NVCC__
+	compiler_mask |= 0x02;
+	#endif
+
+	#ifdef CUDA_GPU
+	compiler_mask |= 0x04;
+	#endif
+
+	if (compiler_mask != openfpm_vcluster_compilation_mask() || compiler_mask != openfpm_ofpmmemory_compilation_mask())
+	{
+		std::cout << __FILE__ << ":" << __LINE__ << " Error: in compilation you should link with " <<
+		                                            "-lvcluster" << get_link_lib(compiler_mask) << " and -lofpmmemory" << get_link_lib(compiler_mask) << 
+													" but you are linking with " <<
+		                                            "-lvcluster" << get_link_lib(openfpm_vcluster_compilation_mask()) << " and -lofpmmemory" << 
+													get_link_lib(openfpm_ofpmmemory_compilation_mask()) << std::endl;
+	}
+}
 
 #endif
 
