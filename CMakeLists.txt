@@ -15,6 +15,8 @@ set(PETSC_ROOT CACHE PATH "If compiling with linear algebra indicate the PETSC r
 set(ALPAKA_ROOT CACHE PATH "Alpaka root path")
 set(CUDA_ON_CPU CACHE BOOL "Make Cuda work on heap")
 
+execute_process(COMMAND bash -c "cp ${CMAKE_CURRENT_SOURCE_DIR}/src/VCluster/VCluster.cpp ${CMAKE_CURRENT_SOURCE_DIR}/src/VCluster/VCluster_cuda_on_cpu.cpp")
+
 if (ENABLE_GPU)
     set(CUDA_ON_CPU OFF)
     enable_language(CUDA)

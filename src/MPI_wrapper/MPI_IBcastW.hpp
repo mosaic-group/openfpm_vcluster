@@ -223,9 +223,9 @@ struct bcast_inte_impl
 template<bool is_lin_or_inte>
 struct b_cast_helper
 {
-	 template<typename T, typename Mem, typename lt_type, template<typename> class layout_base >
+	 template<typename T, typename Mem, template<typename> class layout_base >
 	 static void bcast_(openfpm::vector<MPI_Request> & req,
-			            openfpm::vector<T,Mem,lt_type,layout_base> & v,
+			            openfpm::vector<T,Mem,layout_base> & v,
 			            size_t root)
 	{
 		// Create one request
@@ -239,12 +239,12 @@ struct b_cast_helper
 template<>
 struct b_cast_helper<false>
 {
-	 template<typename T, typename Mem, typename lt_type, template<typename> class layout_base >
+	 template<typename T, typename Mem, template<typename> class layout_base >
 	 static void bcast_(openfpm::vector<MPI_Request> & req,
-			            openfpm::vector<T,Mem,lt_type,layout_base> & v,
+			            openfpm::vector<T,Mem,layout_base> & v,
 			            size_t root)
 	{
-		 bcast_inte_impl<openfpm::vector<T,Mem,lt_type,layout_base>> bc(v,req,root);
+		 bcast_inte_impl<openfpm::vector<T,Mem,layout_base>> bc(v,req,root);
 
 		 boost::mpl::for_each_ref<boost::mpl::range_c<int,0,T::max_prop>>(bc);
 	}

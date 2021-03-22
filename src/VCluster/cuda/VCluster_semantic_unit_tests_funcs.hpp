@@ -20,7 +20,7 @@ void test_different_layouts()
 		if (vcl.getProcessingUnits() >= 32)
 			return;
 
-		openfpm::vector<aggregate<int,float,size_t>,Memory,typename layout_base<aggregate<int,float,size_t>>::type,layout_base> v1;
+		openfpm::vector<aggregate<int,float,size_t>,Memory,layout_base> v1;
 		v1.resize(vcl.getProcessUnitID());
 
 		for(size_t j = 0 ; j < vcl.getProcessUnitID() ; j++)
@@ -30,7 +30,7 @@ void test_different_layouts()
 			v1.template get<2>(j) = 11.0+100000;
 		}
 
-		openfpm::vector<aggregate<int,float,size_t>,Memory,typename layout_base<aggregate<int,float,size_t>>::type,layout_base> v2;
+		openfpm::vector<aggregate<int,float,size_t>,Memory,layout_base> v2;
 
 		vcl.SGather<decltype(v1),decltype(v2),layout_base>(v1,v2,(i%vcl.getProcessingUnits()));
 
