@@ -647,7 +647,19 @@ public:
 #endif
 				tot_recv += msize;
 				#ifdef VCLUSTER_GARBAGE_INJECTOR
-				memset(ptr,0xFF,msize);
+					#ifdef __NVCC__
+					cudaPointerAttributes cpa;
+					auto error = cudaPointerGetAttributes(&cpa,ptr);
+					if (error == cudaSuccess)
+					{
+						if(cpa.type == cudaMemoryTypeDevice)
+						{cudaMemset(ptr,0xFF,msize);}
+						else
+						{memset(ptr,0xFF,msize);}
+					}
+					#else
+					memset(ptr,0xFF,msize);
+					#endif
 				#endif
 				MPI_SAFE_CALL(MPI_Recv(ptr,msize,MPI_BYTE,stat_t.MPI_SOURCE,stat_t.MPI_TAG,MPI_COMM_WORLD,&stat_t));
 
