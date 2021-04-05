@@ -647,7 +647,7 @@ public:
 #endif
 				tot_recv += msize;
 				#ifdef VCLUSTER_GARBAGE_INJECTOR
-					#ifdef __NVCC__
+					#if defined (__NVCC__) && !defined(CUDA_ON_CPU)
 					cudaPointerAttributes cpa;
 					auto error = cudaPointerGetAttributes(&cpa,ptr);
 					if (error == cudaSuccess)
