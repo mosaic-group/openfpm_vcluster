@@ -21,7 +21,7 @@
 
 #define USE_VULKAN true
 #define VERBOSE false
-#define SAVE_FILES false
+#define SAVE_FILES true
 
 MPI_Comm renComm; // non class variable = renderComm
 MPI_Comm visualizationComm; // non class variable = visComm
@@ -34,6 +34,7 @@ long totaltime = 0;
 int timeVDIwrite = 0;
 double alltoall_time = 0.0;
 double gather_time = 0.0;
+int numLayers = -1;
 
 void * recvBufCol = nullptr;
 void * recvBufDepth = nullptr;
@@ -541,22 +542,33 @@ void InVis::getGridMemory() {
     jvm->DetachCurrentThread();
 }
 
-void distributeVDIs(JNIEnv *e, jobject clazzObject, jobject subVDICol, jobject subVDIDepth, jint sizePerProcess, jint commSize) {
+void distributeVDIs(JNIEnv *e, jobject clazzObject, jobject subVDICol, jobject subVDIDepth, jint sizePerProcess, jint commSize, jboolean generateVDIs) {
     if (VERBOSE) std::cout<<"In distribute VDIs function. Comm size is "<<commSize<<std::endl;
 
     void *ptrCol = e->GetDirectBufferAddress(subVDICol);
-    void *ptrDepth = e->GetDirectBufferAddress(subVDIDepth);
+    void *ptrDepth = nullptr;
+    if(!generateVDIs) { ptrDepth = e->GetDirectBufferAddress(subVDIDepth); }
+
+    if(numLayers == -1) {
+        if (generateVDIs) {
+            numLayers = 3; // color + start depth + end depth
+        } else {
+            numLayers = 1; // only color, because depth is in a separate buffer
+        }
+    }
 
     if(recvBufCol == nullptr) {
         std::cout<<"allocating in distributeVDIs"<<std::endl;
-        recvBufCol = malloc(sizePerProcess * commSize);
-        recvBufDepth = malloc(sizePerProcess * commSize);
+        recvBufCol = malloc(sizePerProcess * commSize * numLayers);
+        if(!generateVDIs) { recvBufDepth = malloc(sizePerProcess * commSize); }
     }
 
 
     t_alltoall.start();
-    MPI_Alltoall(ptrCol, sizePerProcess, MPI_BYTE, recvBufCol, sizePerProcess, MPI_BYTE, renComm);
-    MPI_Alltoall(ptrDepth, sizePerProcess, MPI_BYTE, recvBufDepth, sizePerProcess, MPI_BYTE, renComm);
+    MPI_Alltoall(ptrCol, sizePerProcess * numLayers, MPI_BYTE, recvBufCol, sizePerProcess * numLayers, MPI_BYTE, renComm);
+    if(!generateVDIs) {
+        MPI_Alltoall(ptrDepth, sizePerProcess, MPI_BYTE, recvBufDepth, sizePerProcess, MPI_BYTE, renComm);
+    }
     if(count>0) {alltoall_time += t_alltoall.getwct();}
     //    MPI_Alltoall(ptrDepth, sizePerProcess*2, MPI_BYTE, recvBufDepth, sizePerProcess*2, MPI_BYTE, mpiComm);
 
@@ -566,8 +578,13 @@ void distributeVDIs(JNIEnv *e, jobject clazzObject, jobject subVDICol, jobject s
     }
 
 
-    jobject bbCol = e->NewDirectByteBuffer(recvBufCol, sizePerProcess * commSize);
-    jobject bbDepth = e->NewDirectByteBuffer(recvBufDepth, sizePerProcess * commSize);
+    jobject bbCol = e->NewDirectByteBuffer(recvBufCol, sizePerProcess * commSize * numLayers);
+    jobject bbDepth;
+    if(generateVDIs) {
+        bbDepth = e->NewDirectByteBuffer(recvBufDepth, 0);
+    } else {
+        bbDepth = e->NewDirectByteBuffer(recvBufDepth, sizePerProcess * commSize);
+    }
 
     if(e->ExceptionOccurred()) {
         e->ExceptionDescribe();
@@ -583,7 +600,7 @@ void distributeVDIs(JNIEnv *e, jobject clazzObject, jobject subVDICol, jobject s
     }
 }
 
-void gatherCompositedVDIs(JNIEnv *e, jobject clazzObject, jobject compositedVDIColor, jint root, jint compositedVDILen, jint myRank, jint commSize, jboolean saveFiles) {
+void gatherCompositedVDIs(JNIEnv *e, jobject clazzObject, jobject compositedVDIColor, jint root, jint compositedVDILen, jint myRank, jint commSize, jboolean generateVDIs, jboolean saveFiles) {
 
     if (VERBOSE) std::cout<<"In Gather function " <<std::endl;
     void *ptrCol = e->GetDirectBufferAddress(compositedVDIColor);
@@ -592,8 +609,8 @@ void gatherCompositedVDIs(JNIEnv *e, jobject clazzObject, jobject compositedVDIC
 //    void *recvBufDepth;
     if (myRank == 0) {
         if(gather_recv == nullptr) {
-            std::cout<<"allocatign in gather"<<std::endl;
-            gather_recv = malloc(compositedVDILen * commSize * 2);
+            std::cout<<"allocating in gather"<<std::endl;
+            gather_recv = malloc(compositedVDILen * commSize);
         }
     }
     else {
@@ -602,7 +619,7 @@ void gatherCompositedVDIs(JNIEnv *e, jobject clazzObject, jobject compositedVDIC
     }
 
     t_gather.start();
-    MPI_Gather(ptrCol, compositedVDILen * 2, MPI_BYTE, gather_recv, compositedVDILen * 2, MPI_BYTE, root, renComm);
+    MPI_Gather(ptrCol, compositedVDILen, MPI_BYTE, gather_recv, compositedVDILen, MPI_BYTE, root, renComm);
     if(count>0) {gather_time += t_gather.getwct();}
     //    MPI_Gather(ptrDepth, compositedVDILen*2, MPI_BYTE, recvBufDepth, compositedVDILen*2, MPI_BYTE, root, mpiComm);
     //The data is here now!
@@ -646,24 +663,28 @@ void gatherCompositedVDIs(JNIEnv *e, jobject clazzObject, jobject compositedVDIC
 
     if(myRank == 0) {
 //        //send or store the VDI
-        if(streamMethod == nullptr) {
-            jclass clazz = e->GetObjectClass(clazzObject);
-            streamMethod = e->GetMethodID(clazz, "streamImage", "(Ljava/nio/ByteBuffer;)V");
-        }
+        if(generateVDIs) {
+            //TODO: implement streaming of VDIs
+        } else {
+            if(streamMethod == nullptr) {
+                jclass clazz = e->GetObjectClass(clazzObject);
+                streamMethod = e->GetMethodID(clazz, "streamImage", "(Ljava/nio/ByteBuffer;)V");
+            }
 
-        jobject bbImg = e->NewDirectByteBuffer(gather_recv, compositedVDILen * commSize * 2);
+            jobject bbImg = e->NewDirectByteBuffer(gather_recv, compositedVDILen * commSize);
 
-        if(e->ExceptionOccurred()) {
-            e->ExceptionDescribe();
-            e->ExceptionClear();
-        }
+            if(e->ExceptionOccurred()) {
+                e->ExceptionDescribe();
+                e->ExceptionClear();
+            }
 
-        if (VERBOSE) std::cout<<"Streaming the composited image out now"<<std::endl;
+            if (VERBOSE) std::cout<<"Streaming the composited image out now"<<std::endl;
 
-        e->CallVoidMethod(clazzObject, streamMethod, bbImg);
-        if(e->ExceptionOccurred()) {
-            e->ExceptionDescribe();
-            e->ExceptionClear();
+            e->CallVoidMethod(clazzObject, streamMethod, bbImg);
+            if(e->ExceptionOccurred()) {
+                e->ExceptionDescribe();
+                e->ExceptionClear();
+            }
         }
 
         //do benchmarking
@@ -721,7 +742,7 @@ void gatherCompositedVDIs(JNIEnv *e, jobject clazzObject, jobject compositedVDIC
 
                 if (b_stream)
                 {
-                    b_stream.write(static_cast<const char *>(gather_recv), compositedVDILen * commSize * 2);
+                    b_stream.write(static_cast<const char *>(gather_recv), compositedVDILen * commSize);
 //                b_streamDepth.write(static_cast<const char *>(recvBufDepth), compositedVDILen * rCommSize * 2);
 
                     if (b_stream.good()) {
@@ -881,8 +902,8 @@ void InVis::manageRenderer() {
     }
 
     else {
-        JNINativeMethod methods[] { { (char *)"distributeVDIs", (char *)"(Ljava/nio/ByteBuffer;Ljava/nio/ByteBuffer;II)V", (void *)&distributeVDIs },
-                                    { (char *)"gatherCompositedVDIs", (char *)"(Ljava/nio/ByteBuffer;IIIIZ)V", (void *)&gatherCompositedVDIs }
+        JNINativeMethod methods[] { { (char *)"distributeVDIs", (char *)"(Ljava/nio/ByteBuffer;Ljava/nio/ByteBuffer;IIZ)V", (void *)&distributeVDIs },
+                                    { (char *)"gatherCompositedVDIs", (char *)"(Ljava/nio/ByteBuffer;IIIIZZ)V", (void *)&gatherCompositedVDIs }
         };  // mapping table
 
         int ret = env->RegisterNatives(clazz, methods, 2);
