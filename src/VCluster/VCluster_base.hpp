@@ -1,6 +1,7 @@
 #ifndef VCLUSTER_BASE_HPP_
 #define VCLUSTER_BASE_HPP_
 
+
 #include "util/cuda_util.hpp"
 #ifdef OPENMPI
 #include <mpi.h>

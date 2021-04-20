@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.8 FATAL_ERROR)
 
 ########################### Executables
 
-if (CUDA_FOUND OR CUDA_ON_CPU)
+if (CUDA_FOUND OR CUDA_ON_CPU OR HIP_FOUND)
 	set(CUDA_SOURCES VCluster/cuda/VCluster_semantic_unit_cuda_tests.cu VCluster/cuda/VCluster_unit_tests.cu )
 endif()
 
@@ -12,14 +12,41 @@ endif()
 
 if (CUDA_ON_CPU)
 	add_definitions(-DCUDA_ON_CPU -D__NVCC__ -DCUDART_VERSION=11000)
-    set_source_files_properties(${CUDA_SOURCES} PROPERTIES LANGUAGE CXX)
+	set_source_files_properties(${CUDA_SOURCES} PROPERTIES LANGUAGE CXX)
 	# set_source_files_properties(${CUDA_SOURCES} PROPERTIES COMPILE_FLAGS "-D__NVCC__ -DCUDA_GPU -DCUDART_VERSION=11000")
-    if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang" OR CMAKE_CXX_COMPILER_ID STREQUAL "Clang" OR CMAKE_CXX_COMPILER_ID STREQUAL "Intel")
-        add_definitions("-x c++")
-    endif()
+	if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang" OR CMAKE_CXX_COMPILER_ID STREQUAL "Clang" OR CMAKE_CXX_COMPILER_ID STREQUAL "Intel")
+        	add_definitions("-x c++")
+    	endif()
 endif()
 
-add_executable(vcluster_test main.cpp VCluster/VCluster.cpp VCluster/VCluster_unit_tests.cpp VCluster/VCluster_semantic_unit_tests.cpp ${CUDA_SOURCES})
+if ( HIP_ENABLE AND HIP_FOUND )
+
+	list(APPEND HIP_HIPCC_FLAGS ${CMAKE_CXX_FLAGS_DEBUG})
+
+        if (CMAKE_BUILD_TYPE STREQUAL "Debug")
+                list(APPEND HIP_HIPCC_FLAGS -O0)
+        endif()
+
+	list(APPEND HIP_HIPCC_FLAGS -D__NVCC__ -D__HIP__  -DCUDART_VERSION=11000 -D__CUDACC__ -D__CUDACC_VER_MAJOR__=11 -D__CUDACC_VER_MINOR__=0 -D__CUDACC_VER_BUILD__=0)
+        set_source_files_properties(${CUDA_SOURCES} PROPERTIES LANGUAGE CXX)
+        
+	set(CMAKE_CXX_COMPILER ${HIP_HIPCC_EXECUTABLE})
+
+	set_source_files_properties(VCluster/VCluster.cpp PROPERTIES HIP_SOURCE_PROPERTY_FORMAT 1)
+
+	hip_add_executable(vcluster_test main.cpp VCluster/VCluster.cpp VCluster/VCluster_unit_tests.cpp VCluster/VCluster_semantic_unit_tests.cpp ${CUDA_SOURCES})
+
+        hip_add_library(vcluster STATIC VCluster/VCluster.cpp)
+        hip_add_library(vcluster_dl SHARED VCluster/VCluster.cpp)
+
+else()
+
+	add_executable(vcluster_test main.cpp VCluster/VCluster.cpp VCluster/VCluster_unit_tests.cpp VCluster/VCluster_semantic_unit_tests.cpp ${CUDA_SOURCES})
+
+	add_library(vcluster STATIC VCluster/VCluster.cpp)
+	add_library(vcluster_dl SHARED VCluster/VCluster.cpp)
+
+endif()
 
 if ( CMAKE_COMPILER_IS_GNUCC )
     target_compile_options(vcluster_test PRIVATE "-Wno-deprecated-declarations")
@@ -34,8 +61,6 @@ endif()
 
 ###########################
 
-add_library(vcluster STATIC VCluster/VCluster.cpp)
-add_library(vcluster_dl SHARED VCluster/VCluster.cpp)
 
 if ( CUDA_FOUND AND NOT CUDA_ON_CPU )
 	### We construct cuda_on_cpu vcluster
