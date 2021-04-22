@@ -159,6 +159,7 @@ endif()
 # will also build with -std=c++11
 target_compile_features(vcluster_test PUBLIC cxx_std_11)
 target_link_libraries(vcluster_test ${MPI_C_LIBRARIES})
+target_link_libraries(vcluster_test ${MPI_CXX_LIBRARIES})
 
 if (CUDA_FOUND AND NOT CUDA_ON_CPU)
 	set(ADDITIONAL_OPENFPM_LIBS vcluster_cuda_on_cpu vcluster_dl_cuda_on_cpu)
