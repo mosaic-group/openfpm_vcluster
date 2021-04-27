@@ -1,6 +1,7 @@
 #ifndef VCLUSTER_BASE_HPP_
 #define VCLUSTER_BASE_HPP_
 
+
 #include "util/cuda_util.hpp"
 #ifdef OPENMPI
 #include <mpi.h>
@@ -647,7 +648,19 @@ public:
 #endif
 				tot_recv += msize;
 				#ifdef VCLUSTER_GARBAGE_INJECTOR
-				memset(ptr,0xFF,msize);
+					#if defined (__NVCC__) && !defined(CUDA_ON_CPU)
+					cudaPointerAttributes cpa;
+					auto error = cudaPointerGetAttributes(&cpa,ptr);
+					if (error == cudaSuccess)
+					{
+						if(cpa.type == cudaMemoryTypeDevice)
+						{cudaMemset(ptr,0xFF,msize);}
+						else
+						{memset(ptr,0xFF,msize);}
+					}
+					#else
+					memset(ptr,0xFF,msize);
+					#endif
 				#endif
 				MPI_SAFE_CALL(MPI_Recv(ptr,msize,MPI_BYTE,stat_t.MPI_SOURCE,stat_t.MPI_TAG,MPI_COMM_WORLD,&stat_t));
 
