@@ -125,6 +125,11 @@ target_link_libraries(vcluster_test ofpmmemory)
 target_link_libraries(vcluster_dl ${PETSC_LIBRARIES})
 target_link_libraries(vcluster ${PETSC_LIBRARIES})
 
+if (${CMAKE_SYSTEM_NAME} MATCHES "Windows" )
+	target_link_libraries(vcluster_dl ofpmmemory)
+	target_link_libraries(vcluster ofpmmemory)
+endif()
+
 if (TEST_COVERAGE)
     target_link_libraries(vcluster_test -lgcov)
 endif()

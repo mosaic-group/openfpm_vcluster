@@ -1,7 +1,7 @@
 #define PRINT_STACKTRACE
 
 #include "VCluster.hpp"
-#ifndef __CYGWIN__
+#if !defined(__CYGWIN__) && !defined(WIN64)
 #include <execinfo.h>
 #endif
 
@@ -53,6 +53,8 @@ CudaMemory exp_tmp2[MAX_NUMER_OF_PROPERTIES];
 
 #endif
 
+#ifndef WIN64
+
 // Segmentation fault signal handler
 void bt_sighandler(int sig, siginfo_t * info, void * ctx_p)
 {
@@ -65,6 +67,8 @@ void bt_sighandler(int sig, siginfo_t * info, void * ctx_p)
 
 	exit(0);
 }
+
+#endif
 
 double time_spent = 0.0;
 
@@ -102,6 +106,8 @@ void openfpm_init_vcl(int *argc, char ***argv)
 
 	// install segmentation fault signal handler
 
+#ifndef WIN64
+
 	struct sigaction sa;
 
 	sa.sa_sigaction = bt_sighandler;
@@ -109,6 +115,8 @@ void openfpm_init_vcl(int *argc, char ***argv)
 	sa.sa_flags = SA_RESTART;
 
 	sigaction(SIGSEGV, &sa, NULL);
+
+#endif
 
 	if (argc != NULL && *argc != 0)
 	{program_name = std::string(*argv[0]);}

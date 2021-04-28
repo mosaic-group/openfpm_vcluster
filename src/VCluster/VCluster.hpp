@@ -32,7 +32,11 @@ extern CudaMemory rem_tmp2[MAX_NUMER_OF_PROPERTIES];
 
 extern size_t NBX_cnt;
 
+#ifndef WIN64
+
 void bt_sighandler(int sig, siginfo_t * info, void * ctx);
+
+#endif
 
 /*! \brief Implementation of VCluster class
  *

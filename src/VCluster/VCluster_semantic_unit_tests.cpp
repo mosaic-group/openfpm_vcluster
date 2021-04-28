@@ -27,6 +27,10 @@ struct Aexample
 	double c;
 };
 
+#ifdef WIN64
+static void usleep(int us) {};
+#endif
+
 
 BOOST_AUTO_TEST_SUITE( VCluster_semantic_test )
 

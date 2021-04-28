@@ -134,7 +134,7 @@ template<> class MPI_IAllGatherW<size_t>
 public:
 	static inline void gather(void * sbuf, size_t sz_s ,void * rbuf, size_t sz_r, MPI_Request & req)
 	{
-		MPI_SAFE_CALL(MPI_Iallgather(sbuf,sz_s,MPI_UNSIGNED_LONG, rbuf, sz_r, MPI_UNSIGNED_LONG, MPI_COMM_WORLD,&req));
+		MPI_SAFE_CALL(MPI_Iallgather(sbuf,sz_s,MPI_UINT64_T, rbuf, sz_r, MPI_UINT64_T, MPI_COMM_WORLD,&req));
 	}
 };
 

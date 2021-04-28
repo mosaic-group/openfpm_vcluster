@@ -95,11 +95,14 @@ BOOST_AUTO_TEST_CASE( VCluster_use_reductions)
 	//! [max min sum]
 
 	if ( vcl.getProcessingUnits() < 128 )
-	{BOOST_REQUIRE_EQUAL(c_max,(char)vcl.getProcessingUnits()-1);}
+	{BOOST_REQUIRE_EQUAL(c_max,(char)vcl.getProcessingUnits()-1);
+	 BOOST_REQUIRE_EQUAL(c,(char)vcl.getProcessingUnits());}
 	if ( vcl.getProcessingUnits() < 256 )
-	{BOOST_REQUIRE_EQUAL(uc_max,(unsigned char)vcl.getProcessingUnits()-1);}
+	{BOOST_REQUIRE_EQUAL(uc_max,(unsigned char)vcl.getProcessingUnits()-1);
+	 BOOST_REQUIRE_EQUAL(uc,(unsigned char)vcl.getProcessingUnits());}
 	if ( vcl.getProcessingUnits() < 32768 )
-	{BOOST_REQUIRE_EQUAL(s_max,(short int) vcl.getProcessingUnits()-1);}
+	{BOOST_REQUIRE_EQUAL(s_max,(short int) vcl.getProcessingUnits()-1);
+	 BOOST_REQUIRE_EQUAL(s,(short int) vcl.getProcessingUnits());}
 	if ( vcl.getProcessingUnits() < 65536 )
 	{BOOST_REQUIRE_EQUAL(us_max,(unsigned short)vcl.getProcessingUnits()-1);}
 	if ( vcl.getProcessingUnits() < 2147483648 )

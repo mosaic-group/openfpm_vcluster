@@ -127,6 +127,10 @@ void * msg_alloc4(size_t msg_i ,size_t total_msg, size_t total_p, size_t i, size
 	return &(v->recv_message->last().get(0));
 }
 
+#ifdef WIN64
+static void usleep(int us) {};
+#endif
+
 template<unsigned int ip, typename T> void commFunc(Vcluster<> & vcl,openfpm::vector< size_t > & prc, openfpm::vector< T > & data, void * (* msg_alloc)(size_t,size_t,size_t,size_t,size_t,size_t,void *), void * ptr_arg)
 {
 	if (ip == NBX)
@@ -143,7 +147,6 @@ template<unsigned int ip, typename T> void commFunc(Vcluster<> & vcl,openfpm::ve
 		usleep(1000);
 		vcl.progressCommunication();
 		usleep(1000);
-
 		vcl.sendrecvMultipleMessagesNBXWait();
 	}
 }

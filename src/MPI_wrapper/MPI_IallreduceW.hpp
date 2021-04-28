@@ -27,6 +27,19 @@ public:
 	}
 };
 
+/*! \brief specialization for long unsinged integer
+ *
+ */
+template<> class MPI_IallreduceW<long unsigned int>
+{
+public:
+	static inline void reduce(long unsigned int & buf,MPI_Op op, MPI_Request & req)
+	{
+		MPI_SAFE_CALL(MPI_Iallreduce(MPI_IN_PLACE, &buf, 1,MPI_UNSIGNED_LONG, op, MPI_COMM_WORLD,&req));
+	}
+};
+
+
 
 /*! \brief specialization for integer
  *
@@ -108,7 +121,7 @@ template<> class MPI_IallreduceW<size_t>
 public:
 	static inline void reduce(size_t & buf,MPI_Op op, MPI_Request & req)
 	{
-		MPI_SAFE_CALL(MPI_Iallreduce(MPI_IN_PLACE, &buf, 1,MPI_UNSIGNED_LONG, op, MPI_COMM_WORLD,&req));
+		MPI_SAFE_CALL(MPI_Iallreduce(MPI_IN_PLACE, &buf, 1,MPI_UNSIGNED_LONG_LONG, op, MPI_COMM_WORLD,&req));
 	}
 };
 
