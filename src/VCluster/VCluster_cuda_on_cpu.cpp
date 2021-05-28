@@ -68,6 +68,33 @@ void bt_sighandler(int sig, siginfo_t * info, void * ctx_p)
 
 double time_spent = 0.0;
 
+/*! \brief Initialize a global instance of Runtime Virtual Cluster Machine
+ *
+ * Initialize a global instance of Runtime Virtual Cluster Machine
+ *
+ */
+
+void init_global_v_cluster_private(int *argc, char ***argv, init_options option)
+{
+    if (option == init_options::in_situ_visualization)
+    {
+        initialize_in_situ(argc, argv);
+    }
+
+    //PETSC initialize?
+    if (global_v_cluster_private_heap == NULL)
+    {global_v_cluster_private_heap = new Vcluster<>(argc,argv);}
+
+    if (global_v_cluster_private_cuda == NULL)
+    {global_v_cluster_private_cuda = new Vcluster<CudaMemory>(argc,argv);}
+}
+
+void delete_global_v_cluster_private()
+{
+    delete global_v_cluster_private_heap;
+    delete global_v_cluster_private_cuda;
+}
+
 
 /*! \brief Initialize the library
  *

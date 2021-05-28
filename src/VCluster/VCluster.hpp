@@ -14,6 +14,8 @@
 #include "VCluster_meta_function.hpp"
 #include "util/math_util_complex.hpp"
 #include "memory/mem_conf.hpp"
+#include "initialize_in_situ.hpp"
+//#include "../../../openfpm_live_in_situ/include/initialize_in_situ.hpp"
 
 #ifdef CUDA_GPU
 extern CudaMemory mem_tmp;
@@ -31,6 +33,12 @@ extern CudaMemory rem_tmp2[MAX_NUMER_OF_PROPERTIES];
 #endif
 
 extern size_t NBX_cnt;
+
+enum init_options
+{
+    none = 0x0,
+    in_situ_visualization = 0x1,
+};
 
 void bt_sighandler(int sig, siginfo_t * info, void * ctx);
 
@@ -408,16 +416,17 @@ class Vcluster: public Vcluster_base<InternalMemory>
 
 	public:
 
-	/*! \brief Constructor
-	 *
-	 * \param argc main number of arguments
-	 * \param argv main set of arguments
-	 *
-	 */
-	Vcluster(int *argc, char ***argv)
-	:Vcluster_base<InternalMemory>(argc,argv)
-	{
-	}
+    /*! \brief Constructor
+     *
+     * \param argc main number of arguments
+     * \param argv main set of arguments
+     * \param ext_comm the MPI communicator to use
+     *
+     */
+    Vcluster(int *argc, char ***argv, MPI_Comm ext_comm = MPI_COMM_WORLD)
+            :Vcluster_base<InternalMemory>(argc,argv,ext_comm)
+    {
+    }
 
 	/*! \brief Semantic Gather, gather the data from all processors into one node
 	 *
@@ -1363,26 +1372,8 @@ class Vcluster: public Vcluster_base<InternalMemory>
 extern Vcluster<> * global_v_cluster_private_heap;
 extern Vcluster<CudaMemory> * global_v_cluster_private_cuda;
 
-/*! \brief Initialize a global instance of Runtime Virtual Cluster Machine
- *
- * Initialize a global instance of Runtime Virtual Cluster Machine
- *
- */
-
-static inline void init_global_v_cluster_private(int *argc, char ***argv)
-{
-	if (global_v_cluster_private_heap == NULL)
-	{global_v_cluster_private_heap = new Vcluster<>(argc,argv);}
-
-	if (global_v_cluster_private_cuda == NULL)
-	{global_v_cluster_private_cuda = new Vcluster<CudaMemory>(argc,argv);}
-}
-
-static inline void delete_global_v_cluster_private()
-{
-	delete global_v_cluster_private_heap;
-	delete global_v_cluster_private_cuda;
-}
+void init_global_v_cluster_private(int *argc, char ***argv, init_options option = init_options::none);
+void delete_global_v_cluster_private();
 
 template<typename Memory>
 struct get_vcl

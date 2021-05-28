@@ -93,6 +93,8 @@ endif()
 
 
 add_dependencies(vcluster_test ofpmmemory)
+add_dependencies(vcluster ofpinsitu)
+add_dependencies(vcluster_dl ofpinsitu)
 
 target_include_directories (vcluster_test PUBLIC ${CUDA_INCLUDE_DIRS})
 target_include_directories (vcluster_test PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
@@ -110,6 +112,7 @@ target_include_directories (vcluster PUBLIC ${PETSC_INCLUDES})
 target_include_directories (vcluster PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/config)
 target_include_directories (vcluster PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../../openfpm_data/src/)
 target_include_directories (vcluster PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../../openfpm_devices/src/)
+target_include_directories (vcluster PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../../openfpm_live_in_situ/include/)
 target_include_directories (vcluster PUBLIC ${Boost_INCLUDE_DIRS})
 target_include_directories (vcluster PUBLIC ${ALPAKA_ROOT}/include)
 
@@ -119,6 +122,7 @@ target_include_directories (vcluster_dl PUBLIC ${PETSC_INCLUDES})
 target_include_directories (vcluster_dl PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/config)
 target_include_directories (vcluster_dl PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../../openfpm_data/src/)
 target_include_directories (vcluster_dl PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../../openfpm_devices/src/)
+target_include_directories (vcluster_dl PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../../openfpm_live_in_situ/include/)
 target_include_directories (vcluster_dl PUBLIC ${Boost_INCLUDE_DIRS})
 target_include_directories (vcluster_dl PUBLIC ${ALPAKA_ROOT}/include)
 
@@ -146,6 +150,7 @@ endif()
 target_link_libraries(vcluster_test ${Boost_LIBRARIES})
 target_link_libraries(vcluster_test ${PETSC_LIBRARIES})
 target_link_libraries(vcluster_test ofpmmemory)
+target_link_libraries(vcluster_test ofpinsitu)
 
 target_link_libraries(vcluster_dl ${PETSC_LIBRARIES})
 target_link_libraries(vcluster ${PETSC_LIBRARIES})

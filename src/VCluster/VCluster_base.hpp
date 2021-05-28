@@ -124,6 +124,9 @@ union red
 template<typename InternalMemory>
 class Vcluster_base
 {
+	//! external communicator
+	MPI_Comm ext_comm;
+
 	//! log file
 	Vcluster_log log;
 
@@ -243,7 +246,7 @@ class Vcluster_base
 
 //				std::cout << "TAG: " << SEND_SPARSE + (NBX_cnt + NBX_prc_qcnt)*131072 + i << "   " << NBX_cnt << "   "  << NBX_prc_qcnt << "  " << " rank: " << rank() << "   " << NBX_prc_cnt_base << "  nbx_cycle: " << nbx_cycle << std::endl;
 
-				MPI_SAFE_CALL(MPI_Issend(ptr[i], sz[i], MPI_BYTE, prc[i], SEND_SPARSE + (NBX_cnt + NBX_prc_qcnt)*131072 + i, MPI_COMM_WORLD,&req.last()));
+				MPI_SAFE_CALL(MPI_Issend(ptr[i], sz[i], MPI_BYTE, prc[i], SEND_SPARSE + (NBX_cnt + NBX_prc_qcnt)*131072 + i, ext_comm,&req.last()));
 				log.logSend(prc[i]);
 			}
 		}
@@ -289,9 +292,11 @@ public:
 	 *
 	 * \param argc pointer to arguments counts passed to the program
 	 * \param argv pointer to arguments vector passed to the program
+	 * \param ext_comm the MPI communicator to use
 	 *
 	 */
-	Vcluster_base(int *argc, char ***argv)
+	Vcluster_base(int *argc, char ***argv, MPI_Comm ext_comm)
+	:ext_comm(ext_comm)
 	{
 		// reset NBX_Active
 
@@ -319,7 +324,7 @@ public:
 		// We try to get the local processors rank
 
 		MPI_Comm shmcomm;
-		MPI_Comm_split_type(MPI_COMM_WORLD, MPI_COMM_TYPE_SHARED, 0,
+		MPI_Comm_split_type(ext_comm, MPI_COMM_TYPE_SHARED, 0,
 		                    MPI_INFO_NULL, &shmcomm);
 
 		MPI_Comm_rank(shmcomm, &shmrank);
@@ -328,8 +333,8 @@ public:
 		// Get the total number of process
 		// and the rank of this process
 
-		MPI_Comm_size(MPI_COMM_WORLD, &m_size);
-		MPI_Comm_rank(MPI_COMM_WORLD, &m_rank);
+		MPI_Comm_size(ext_comm, &m_size);
+		MPI_Comm_rank(ext_comm, &m_rank);
 
 #ifdef SE_CLASS2
 			process_v_cl = m_rank;
@@ -373,7 +378,7 @@ public:
                 void *tag_ub_v;
                 int tag_ub;
 
-                MPI_Comm_get_attr(MPI_COMM_WORLD, MPI_TAG_UB, &tag_ub_v, &flag);
+                MPI_Comm_get_attr(ext_comm, MPI_TAG_UB, &tag_ub_v, &flag);
                 tag_ub = *(int*)tag_ub_v;
 
                 if (flag == true)
@@ -463,7 +468,7 @@ public:
 	 */
 	MPI_Comm getMPIComm()
 	{
-		return MPI_COMM_WORLD;
+		return ext_comm;
 	}
 
 	/*! \brief Get the total number of processors
@@ -565,7 +570,7 @@ public:
 		req.add();
 
 		// reduce
-		MPI_IallreduceW<T>::reduce(num,MPI_SUM,req.last());
+		MPI_IallreduceW<T>::reduce(num,MPI_SUM,req.last(),ext_comm);
 	}
 
 	/*! \brief Get the maximum number across all processors (or reduction with infinity norm)
@@ -584,7 +589,7 @@ public:
 		req.add();
 
 		// reduce
-		MPI_IallreduceW<T>::reduce(num,MPI_MAX,req.last());
+		MPI_IallreduceW<T>::reduce(num,MPI_MAX,req.last(),ext_comm);
 	}
 
 	/*! \brief Get the minimum number across all processors (or reduction with insinity norm)
@@ -604,7 +609,7 @@ public:
 		req.add();
 
 		// reduce
-		MPI_IallreduceW<T>::reduce(num,MPI_MIN,req.last());
+		MPI_IallreduceW<T>::reduce(num,MPI_MIN,req.last(),ext_comm);
 	}
 
 	/*! \brief In case of Asynchonous communications like sendrecvMultipleMessagesNBXAsync this function
@@ -616,7 +621,7 @@ public:
 	{
 		MPI_Status stat_t;
 		int stat = false;
-		MPI_SAFE_CALL(MPI_Iprobe(MPI_ANY_SOURCE,MPI_ANY_TAG,MPI_COMM_WORLD,&stat,&stat_t));
+		MPI_SAFE_CALL(MPI_Iprobe(MPI_ANY_SOURCE,MPI_ANY_TAG,ext_comm,&stat,&stat_t));
 
 		// If I have an incoming message and is related to this NBX communication
 		if (stat == true)
@@ -662,7 +667,7 @@ public:
 					memset(ptr,0xFF,msize);
 					#endif
 				#endif
-				MPI_SAFE_CALL(MPI_Recv(ptr,msize,MPI_BYTE,stat_t.MPI_SOURCE,stat_t.MPI_TAG,MPI_COMM_WORLD,&stat_t));
+				MPI_SAFE_CALL(MPI_Recv(ptr,msize,MPI_BYTE,stat_t.MPI_SOURCE,stat_t.MPI_TAG,ext_comm,&stat_t));
 
 #ifdef SE_CLASS2
 				check_valid(ptr,msize);
@@ -687,7 +692,7 @@ public:
 
 				// If all send has been completed
 				if (flag == true)
-				{MPI_SAFE_CALL(MPI_Ibarrier(MPI_COMM_WORLD,&bar_req));NBX_prc_reached_bar_req[i] = true;}
+				{MPI_SAFE_CALL(MPI_Ibarrier(ext_comm,&bar_req));NBX_prc_reached_bar_req[i] = true;}
 			}
 		}
 	}
@@ -1557,7 +1562,7 @@ public:
 		req.add();
 
 		// send
-		MPI_IsendWB::send(proc,SEND_RECV_BASE + tag,mem,sz,req.last());
+		MPI_IsendWB::send(proc,SEND_RECV_BASE + tag,mem,sz,req.last(),ext_comm);
 
 		return true;
 	}
@@ -1592,7 +1597,7 @@ public:
 		req.add();
 
 		// send
-		MPI_IsendW<T,Mem,gr>::send(proc,SEND_RECV_BASE + tag,v,req.last());
+		MPI_IsendW<T,Mem,gr>::send(proc,SEND_RECV_BASE + tag,v,req.last(),ext_comm);
 
 		return true;
 	}
@@ -1623,7 +1628,7 @@ public:
 		req.add();
 
 		// receive
-		MPI_IrecvWB::recv(proc,SEND_RECV_BASE + tag,v,sz,req.last());
+		MPI_IrecvWB::recv(proc,SEND_RECV_BASE + tag,v,sz,req.last(),ext_comm);
 
 		return true;
 	}
@@ -1657,7 +1662,7 @@ public:
             req.add();
 
             // receive
-            MPI_IrecvW<T>::recv(proc,SEND_RECV_BASE + tag,v,req.last());
+            MPI_IrecvW<T>::recv(proc,SEND_RECV_BASE + tag,v,req.last(),ext_comm);
 
             return true;
     }
@@ -1687,7 +1692,7 @@ public:
 		v.resize(getProcessingUnits());
 
 		// gather
-		MPI_IAllGatherW<T>::gather(&send,1,v.getPointer(),1,req.last());
+		MPI_IAllGatherW<T>::gather(&send,1,v.getPointer(),1,req.last(),ext_comm);
 
 		return true;
 	}
@@ -1715,7 +1720,7 @@ public:
 		checkType<T>();
 #endif
 
-		b_cast_helper<openfpm::vect_isel<T>::value == STD_VECTOR || is_layout_mlin<layout_base<T>>::value >::bcast_(req,v,root);
+		b_cast_helper<openfpm::vect_isel<T>::value == STD_VECTOR || is_layout_mlin<layout_base<T>>::value >::bcast_(req,v,root,ext_comm);
 
 		return true;
 	}
