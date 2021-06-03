@@ -8,6 +8,7 @@
 #include "util/print_stack.hpp"
 #include "util/math_util_complex.hpp"
 
+
 Vcluster<> * global_v_cluster_private_heap = NULL;
 Vcluster<CudaMemory> * global_v_cluster_private_cuda = NULL;
 
@@ -38,6 +39,8 @@ size_t tot_recv = 0;
 size_t NBX_cnt = 0;
 
 std::string program_name;
+
+init_options global_option;
 
 #ifdef CUDA_GPU
 
@@ -76,14 +79,16 @@ double time_spent = 0.0;
 
 void init_global_v_cluster_private(int *argc, char ***argv, init_options option)
 {
+    global_option = option;
+    MPI_Comm comm_compute;
     if (option == init_options::in_situ_visualization)
     {
-        initialize_in_situ(argc, argv);
+        comm_compute = initialize_in_situ(argc, argv);
     }
 
     //PETSC initialize?
     if (global_v_cluster_private_heap == NULL)
-    {global_v_cluster_private_heap = new Vcluster<>(argc,argv);}
+    {global_v_cluster_private_heap = new Vcluster<>(argc,argv,comm_compute);}
 
     if (global_v_cluster_private_cuda == NULL)
     {global_v_cluster_private_cuda = new Vcluster<CudaMemory>(argc,argv);}
@@ -184,6 +189,12 @@ size_t openfpm_vcluster_compilation_mask()
  */
 void openfpm_finalize()
 {
+    if (global_option == init_options::in_situ_visualization)
+    {
+        MPI_Request bar_req;
+        MPI_Ibarrier(MPI_COMM_WORLD,&bar_req);
+    }
+
 #ifdef HAVE_PETSC
 
 	PetscFinalize();
