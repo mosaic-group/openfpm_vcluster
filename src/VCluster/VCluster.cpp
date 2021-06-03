@@ -8,7 +8,6 @@
 #include "util/print_stack.hpp"
 #include "util/math_util_complex.hpp"
 
-init_options global_option;
 
 Vcluster<> * global_v_cluster_private_heap = NULL;
 Vcluster<CudaMemory> * global_v_cluster_private_cuda = NULL;
@@ -40,6 +39,8 @@ size_t tot_recv = 0;
 size_t NBX_cnt = 0;
 
 std::string program_name;
+
+init_options global_option;
 
 #ifdef CUDA_GPU
 
@@ -79,14 +80,14 @@ double time_spent = 0.0;
 void init_global_v_cluster_private(int *argc, char ***argv, init_options option)
 {
     global_option = option;
+    MPI_Comm comm_compute;
     if (option == init_options::in_situ_visualization)
     {
-        MPI_Comm comm_compute = initialize_in_situ(argc, argv);
+        comm_compute = initialize_in_situ(argc, argv);
     }
 
-    //PETSC initialize?
     if (global_v_cluster_private_heap == NULL)
-    {global_v_cluster_private_heap = new Vcluster<>(argc,argv);}
+    {global_v_cluster_private_heap = new Vcluster<>(argc,argv,comm_compute);}
 
     if (global_v_cluster_private_cuda == NULL)
     {global_v_cluster_private_cuda = new Vcluster<CudaMemory>(argc,argv);}
@@ -104,15 +105,18 @@ void delete_global_v_cluster_private()
  * This function MUST be called before any other function
  *
  */
-void openfpm_init_vcl(int *argc, char ***argv)
+void openfpm_init_vcl(int *argc, char ***argv, init_options option)
 {
 #ifdef HAVE_PETSC
-
-	PetscInitialize(argc,argv,NULL,NULL);
+    if(option != init_options::in_situ_visualization)
+    {
+        // if in-situ vis is active, the in-situ code will take care of initializing PETSC on the appropriate MPI communicator
+        PetscInitialize(argc,argv,NULL,NULL);
+    }
 
 #endif
 
-	init_global_v_cluster_private(argc,argv);
+	init_global_v_cluster_private(argc,argv,option);
 
 #ifdef SE_CLASS1
 	std::cout << "OpenFPM is compiled with debug mode LEVEL:1. Remember to remove SE_CLASS1 when you go in production" << std::endl;

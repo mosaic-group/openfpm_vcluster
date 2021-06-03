@@ -40,6 +40,8 @@ enum init_options
     in_situ_visualization = 0x1,
 };
 
+extern init_options global_option;
+
 void bt_sighandler(int sig, siginfo_t * info, void * ctx);
 
 /*! \brief Implementation of VCluster class
@@ -1420,7 +1422,7 @@ static inline bool is_openfpm_init()
  * This function MUST be called before any other function
  *
  */
-void openfpm_init_vcl(int *argc, char ***argv);
+void openfpm_init_vcl(int *argc, char ***argv, init_options option = init_options::none);
 
 size_t openfpm_vcluster_compilation_mask();
 
@@ -1453,9 +1455,9 @@ static std::string get_link_lib(size_t opt)
  * This function MUST be called before any other function
  *
  */
-static void openfpm_init(int *argc, char ***argv)
+static void openfpm_init(int *argc, char ***argv, init_options option = init_options::none)
 {
-	openfpm_init_vcl(argc,argv);
+	openfpm_init_vcl(argc,argv, option);
 
 	size_t compiler_mask = 0;
 

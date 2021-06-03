@@ -551,6 +551,16 @@ public:
 		return m_rank;
 	}
 
+    /*! \brief Get the rank within the node
+    *
+    * \return the rank of the process within the node
+    *
+    */
+    size_t shmRank()
+    {
+        return shmrank;
+    }
+
 
 	/*! \brief Sum the numbers across all processors and get the result
 	 *
