@@ -93,6 +93,9 @@ endif()
 
 
 add_dependencies(vcluster_test ofpmmemory)
+add_dependencies(vcluster ofpmmemory)
+add_dependencies(vcluster_dl ofpmmemory)
+
 
 target_include_directories (vcluster_test PUBLIC ${CUDA_INCLUDE_DIRS})
 target_include_directories (vcluster_test PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
@@ -149,6 +152,8 @@ target_link_libraries(vcluster_test ofpmmemory)
 
 target_link_libraries(vcluster_dl ${PETSC_LIBRARIES})
 target_link_libraries(vcluster ${PETSC_LIBRARIES})
+target_link_libraries(vcluster ofpmmemory)
+target_link_libraries(vcluster_dl ofpmmemory)
 
 if (TEST_COVERAGE)
     target_link_libraries(vcluster_test -lgcov)
