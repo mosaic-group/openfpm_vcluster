@@ -151,8 +151,13 @@ target_link_libraries(vcluster_test ofpmmemory)
 target_link_libraries(vcluster ofpmmemory)
 target_link_libraries(vcluster_dl ofpmmemory)
 
+target_link_libraries(vcluster ofpmmemory)
+target_link_libraries(vcluster_dl ofpmmemory)
+
+
 target_link_libraries(vcluster_dl ${PETSC_LIBRARIES})
 target_link_libraries(vcluster ${PETSC_LIBRARIES})
+
 
 if (TEST_COVERAGE)
     target_link_libraries(vcluster_test -lgcov)
