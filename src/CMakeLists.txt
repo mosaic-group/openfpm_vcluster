@@ -29,7 +29,7 @@ if ( HIP_ENABLE AND HIP_FOUND )
 
 	list(APPEND HIP_HIPCC_FLAGS -D__NVCC__ -D__HIP__  -DCUDART_VERSION=11000 -D__CUDACC__ -D__CUDACC_VER_MAJOR__=11 -D__CUDACC_VER_MINOR__=0 -D__CUDACC_VER_BUILD__=0)
         set_source_files_properties(${CUDA_SOURCES} PROPERTIES LANGUAGE CXX)
-        
+
 	set(CMAKE_CXX_COMPILER ${HIP_HIPCC_EXECUTABLE})
 
 	set_source_files_properties(VCluster/VCluster.cpp PROPERTIES HIP_SOURCE_PROPERTY_FORMAT 1)
@@ -93,6 +93,8 @@ endif()
 
 
 add_dependencies(vcluster_test ofpmmemory)
+add_dependencies(vcluster ofpmmemory)
+add_dependencies(vcluster_dl ofpmmemory)
 
 target_include_directories (vcluster_test PUBLIC ${CUDA_INCLUDE_DIRS})
 target_include_directories (vcluster_test PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
@@ -132,7 +134,7 @@ if (CUDA_FOUND AND NOT CUDA_ON_CPU)
 	target_include_directories (vcluster_cuda_on_cpu PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../../openfpm_devices/src/)
 	target_include_directories (vcluster_cuda_on_cpu PUBLIC ${Boost_INCLUDE_DIRS})
 	target_include_directories (vcluster_cuda_on_cpu PUBLIC ${ALPAKA_ROOT}/include)
-	
+
 	target_include_directories (vcluster_dl_cuda_on_cpu PUBLIC ${CUDA_INCLUDE_DIRS})
 	target_include_directories (vcluster_dl_cuda_on_cpu PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 	target_include_directories (vcluster_dl_cuda_on_cpu PUBLIC ${PETSC_INCLUDES})
@@ -146,6 +148,8 @@ endif()
 target_link_libraries(vcluster_test ${Boost_LIBRARIES})
 target_link_libraries(vcluster_test ${PETSC_LIBRARIES})
 target_link_libraries(vcluster_test ofpmmemory)
+target_link_libraries(vcluster ofpmmemory)
+target_link_libraries(vcluster_dl ofpmmemory)
 
 target_link_libraries(vcluster_dl ${PETSC_LIBRARIES})
 target_link_libraries(vcluster ${PETSC_LIBRARIES})
@@ -166,19 +170,19 @@ if (CUDA_FOUND AND NOT CUDA_ON_CPU)
 endif()
 
 install(TARGETS vcluster vcluster_dl  ${ADDITIONAL_OPENFPM_LIBS}  DESTINATION openfpm_vcluster/lib COMPONENT OpenFPM)
-install(FILES MPI_wrapper/MPI_IallreduceW.hpp 
-	      MPI_wrapper/MPI_IrecvW.hpp 
-	      MPI_wrapper/MPI_IBcastW.hpp  
-	      MPI_wrapper/MPI_IsendW.hpp 
-	      MPI_wrapper/MPI_util.hpp 
+install(FILES MPI_wrapper/MPI_IallreduceW.hpp
+	      MPI_wrapper/MPI_IrecvW.hpp
+	      MPI_wrapper/MPI_IBcastW.hpp
+	      MPI_wrapper/MPI_IsendW.hpp
+	      MPI_wrapper/MPI_util.hpp
 	      MPI_wrapper/MPI_IAllGather.hpp
 	      DESTINATION openfpm_vcluster/include/MPI_wrapper
 	      COMPONENT OpenFPM)
 
 install(FILES VCluster/VCluster_base.hpp
-	      VCluster/VCluster.hpp 
+	      VCluster/VCluster.hpp
 	      VCluster/VCluster_meta_function.hpp
-	      DESTINATION openfpm_vcluster/include/VCluster 
+	      DESTINATION openfpm_vcluster/include/VCluster
 	      COMPONENT OpenFPM)
 
 install (FILES util/Vcluster_log.hpp
