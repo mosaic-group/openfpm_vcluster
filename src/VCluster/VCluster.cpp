@@ -1,5 +1,6 @@
 #define PRINT_STACKTRACE
 
+#include "config.h"
 #include "VCluster.hpp"
 #ifndef __CYGWIN__
 #include <execinfo.h>
@@ -76,6 +77,7 @@ double time_spent = 0.0;
  */
 void openfpm_init_vcl(int *argc, char ***argv)
 {
+
 #ifdef HAVE_PETSC
 
 	PetscInitialize(argc,argv,NULL,NULL);
