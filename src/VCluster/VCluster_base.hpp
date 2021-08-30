@@ -164,7 +164,7 @@ class Vcluster_base
 	size_t rid[NQUEUE];
 
 	//! NBX comunication on queue (-1 mean 0, 0 mean 1, 1 mean 2, .... )
-	unsigned int NBX_prc_qcnt = -1;
+	int NBX_prc_qcnt = -1;
 
 	//! Is the barrier request reached
 	bool NBX_prc_reached_bar_req[NQUEUE];
