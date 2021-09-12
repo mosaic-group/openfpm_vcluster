@@ -64,7 +64,7 @@ void bt_sighandler(int sig, siginfo_t * info, void * ctx_p)
 
 	print_stack();
 
-	exit(0);
+	exit(1);
 }
 
 double time_spent = 0.0;
