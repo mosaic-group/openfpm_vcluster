@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.8 FATAL_ERROR)
 
 ########################### Executables
 
-if (CUDA_FOUND OR CUDA_ON_CPU)
+if (NOT CUDA_ON_BACKEND STREQUAL "None")
 	set(CUDA_SOURCES VCluster/cuda/VCluster_semantic_unit_cuda_tests.cu VCluster/cuda/VCluster_unit_tests.cu )
 endif()
 
@@ -10,13 +10,12 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "Intel")
 	add_definitions("-DBOOST_MPL_CFG_HAS_TYPEOF")
 endif()
 
-if (CUDA_ON_CPU)
-	add_definitions(-DCUDA_ON_CPU -D__NVCC__ -DCUDART_VERSION=11000)
-    set_source_files_properties(${CUDA_SOURCES} PROPERTIES LANGUAGE CXX)
-	# set_source_files_properties(${CUDA_SOURCES} PROPERTIES COMPILE_FLAGS "-D__NVCC__ -DCUDA_GPU -DCUDART_VERSION=11000")
-    if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang" OR CMAKE_CXX_COMPILER_ID STREQUAL "Clang" OR CMAKE_CXX_COMPILER_ID STREQUAL "Intel")
-        add_definitions("-x c++")
-    endif()
+if (CUDA_ON_BACKEND STREQUAL "OpenMP" OR CUDA_ON_BACKEND STREQUAL "SEQUENTIAL")
+	add_definitions( -D__NVCC__ -DCUDART_VERSION=11000)
+	set_source_files_properties(${CUDA_SOURCES} PROPERTIES LANGUAGE CXX)
+	if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang" OR CMAKE_CXX_COMPILER_ID STREQUAL "Clang" OR CMAKE_CXX_COMPILER_ID STREQUAL "Intel")
+        	add_definitions("-x c++")
+	endif()
 endif()
 
 add_executable(vcluster_test main.cpp VCluster/VCluster.cpp VCluster/VCluster_unit_tests.cpp VCluster/VCluster_semantic_unit_tests.cpp ${CUDA_SOURCES})
@@ -37,14 +36,6 @@ endif()
 add_library(vcluster STATIC VCluster/VCluster.cpp)
 add_library(vcluster_dl SHARED VCluster/VCluster.cpp)
 
-if ( CUDA_FOUND AND NOT CUDA_ON_CPU )
-	### We construct cuda_on_cpu vcluster
-	add_library(vcluster_cuda_on_cpu STATIC VCluster/VCluster_cuda_on_cpu.cpp)
-	add_library(vcluster_dl_cuda_on_cpu SHARED VCluster/VCluster_cuda_on_cpu.cpp)
-
-	target_compile_options(vcluster_cuda_on_cpu PUBLIC -DCUDA_ON_CPU -D__NVCC__ -DCUDART_VERSION=11000)
-	target_compile_options(vcluster_dl_cuda_on_cpu PUBLIC -DCUDA_ON_CPU -D__NVCC__ -DCUDART_VERSION=11000)
-endif()
 
 if(CUDA_FOUND)
 	if (CMAKE_CUDA_COMPILER_ID STREQUAL "NVIDIA")
@@ -61,7 +52,7 @@ if(CUDA_FOUND)
         target_compile_options(vcluster_test PRIVATE $<$<COMPILE_LANGUAGE:CUDA>: -Xcompiler "-fprofile-arcs -ftest-coverage" >)
     endif()
 
-    if (NOT CUDA_ON_CPU)
+    if (CUDA_ON_BACKEND STREQUAL "CUDA")
         set_source_files_properties(VCluster/VCluster.cpp PROPERTIES LANGUAGE CUDA)
     endif()
 endif()
@@ -97,30 +88,11 @@ target_include_directories (vcluster_dl PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/../..
 target_include_directories (vcluster_dl PUBLIC ${Boost_INCLUDE_DIRS})
 target_include_directories (vcluster_dl PUBLIC ${ALPAKA_ROOT}/include)
 
-if (CUDA_FOUND AND NOT CUDA_ON_CPU)
-	### We construct cuda_on_cpu vcluster
-	target_include_directories (vcluster_cuda_on_cpu PUBLIC ${CUDA_INCLUDE_DIRS})
-	target_include_directories (vcluster_cuda_on_cpu PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
-	target_include_directories (vcluster_cuda_on_cpu PUBLIC ${PETSC_INCLUDES})
-	target_include_directories (vcluster_cuda_on_cpu PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/config)
-	target_include_directories (vcluster_cuda_on_cpu PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/../../openfpm_data/src/)
-	target_include_directories (vcluster_cuda_on_cpu PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/../../openfpm_devices/src/)
-	target_include_directories (vcluster_cuda_on_cpu PUBLIC ${Boost_INCLUDE_DIRS})
-	target_include_directories (vcluster_cuda_on_cpu PUBLIC ${ALPAKA_ROOT}/include)
-	
-	target_include_directories (vcluster_dl_cuda_on_cpu PUBLIC ${CUDA_INCLUDE_DIRS})
-	target_include_directories (vcluster_dl_cuda_on_cpu PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
-	target_include_directories (vcluster_dl_cuda_on_cpu PUBLIC ${PETSC_INCLUDES})
-	target_include_directories (vcluster_dl_cuda_on_cpu PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/config)
-	target_include_directories (vcluster_dl_cuda_on_cpu PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/../../openfpm_data/src/)
-	target_include_directories (vcluster_dl_cuda_on_cpu PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/../../openfpm_devices/src/)
-	target_include_directories (vcluster_dl_cuda_on_cpu PUBLIC ${Boost_INCLUDE_DIRS})
-	target_include_directories (vcluster_dl_cuda_on_cpu PUBLIC ${ALPAKA_ROOT}/include)
-endif()
 
 target_link_libraries(vcluster_test ${Boost_LIBRARIES})
 target_link_libraries(vcluster_test ${PETSC_LIBRARIES})
 target_link_libraries(vcluster_test ofpmmemory)
+target_link_libraries(vcluster_test OpenMP::OpenMP_CXX)
 
 target_link_libraries(vcluster_dl ${PETSC_LIBRARIES})
 target_link_libraries(vcluster ${PETSC_LIBRARIES})
@@ -135,11 +107,8 @@ endif()
 target_compile_features(vcluster_test PUBLIC cxx_std_11)
 target_link_libraries(vcluster_test ${MPI_C_LIBRARIES})
 
-if (CUDA_FOUND AND NOT CUDA_ON_CPU)
-	set(ADDITIONAL_OPENFPM_LIBS vcluster_cuda_on_cpu vcluster_dl_cuda_on_cpu)
-endif()
 
-install(TARGETS vcluster vcluster_dl ${ADDITIONAL_OPENFPM_LIBS} DESTINATION openfpm_vcluster/lib COMPONENT OpenFPM)
+install(TARGETS vcluster vcluster_dl DESTINATION openfpm_vcluster/lib COMPONENT OpenFPM)
 install(FILES MPI_wrapper/MPI_IallreduceW.hpp 
 	      MPI_wrapper/MPI_IrecvW.hpp 
 	      MPI_wrapper/MPI_IBcastW.hpp  

@@ -13,14 +13,12 @@ set(SE_CLASS2 CACHE BOOL "Activate compilation with SE_CLASS2")
 set(SE_CLASS3 CACHE BOOL "Activate compilation with SE_CLASS3")
 set(PETSC_ROOT CACHE PATH "If compiling with linear algebra indicate the PETSC root directory")
 set(ALPAKA_ROOT CACHE PATH "Alpaka root path")
-set(CUDA_ON_CPU CACHE BOOL "Make Cuda work on heap")
 
-execute_process(COMMAND bash -c "cp ${CMAKE_CURRENT_SOURCE_DIR}/src/VCluster/VCluster.cpp ${CMAKE_CURRENT_SOURCE_DIR}/src/VCluster/VCluster_cuda_on_cpu.cpp")
+add_subdirectory (../openfpm_data/ openfpm_data)
 
-if (ENABLE_GPU)
-    set(CUDA_ON_CPU OFF)
-    enable_language(CUDA)
-    find_package(CUDA)
+if (CUDA_ON_BACKEND STREQUAL "CUDA")
+        enable_language(CUDA)
+        find_package(CUDA)
 endif()
 
 set(ENV{PETSC_DIR} ${PETSC_ROOT})
@@ -31,6 +29,7 @@ set (CMAKE_CUDA_STANDARD 14)
 find_package(Boost 1.72.0 REQUIRED COMPONENTS unit_test_framework iostreams program_options OPTIONAL_COMPONENTS fiber context)
 find_package(MPI REQUIRED)
 find_package(PETSc)
+find_package(OpenMP)
 
 if(CUDA_FOUND)
 	set(OPENFPM_INIT_FILE "initialize/initialize_wrapper_cuda.cu")
@@ -62,39 +61,28 @@ else()
 	message( FATAL_ERROR "MPI is required in order to install OpenFPM" )
 endif()
 
-if (Boost_FOUND)
-        set(DEFINE_HAVE_BOOST "#define HAVE_BOOST")
-        set(DEFINE_HAVE_BOOST_IOSTREAMS "#define HAVE_BOOST_IOSTREAMS")
-        set(DEFINE_HAVE_BOOST_PROGRAM_OPTIONS "#define HAVE_BOOST_PROGRAM_OPTIONS")
-        set(DEFINE_HAVE_BOOST_UNIT_TEST_FRAMEWORK "#define HAVE_BOOST_UNIT_TEST_FRAMEWORK")
-        if (Boost_CONTEXT_FOUND)
-                set(DEFINE_HAVE_BOOST_CONTEXT "#define HAVE_BOOST_CONTEXT")
-        else()
-                #if context is not there CUDA_ON_CPU cannot be activated
-                set(CUDA_ON_CPU OFF)
-        endif()
-        if (Boost_FIBER_FOUND)
-                set(DEFINE_HAVE_BOOST_FIBER "#define HAVE_BOOST_FIBER")
-        endif()
-else()
-	message( FATAL_ERROR "BOOST is required in order to install OpenFPM" )
-endif()
-
 if(CUDA_FOUND)
         set(DEFINE_CUDA_GPU "#define CUDA_GPU")
 endif()
 
-if(CUDA_ON_CPU)
-        set(DEFINE_CUDA_GPU "#define CUDA_GPU")
-endif()
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/src/config/config_cmake.h.in ${CMAKE_CURRENT_SOURCE_DIR}/src/config/config.h)
 
 include_directories(SYSTEM ${MPI_INCLUDE_PATH})
 
-add_subdirectory (../openfpm_data/ openfpm_data)
-
 set(WARNING_SUPPRESSION_AND_OPTION_NVCC ${WARNING_SUPPRESSION_AND_OPTION_NVCC} PARENT_SCOPE)
 set(WARNING_SUPPRESSION_AND_OPTION_NVCC_TEXT ${WARNING_SUPPRESSION_AND_OPTION_NVCC_TEXT} PARENT_SCOPE)
 
 add_subdirectory (src)
+
+set(DEFINE_HAVE_BOOST ${DEFINE_HAVE_BOOST} PARENT_SCOPE)
+set(DEFINE_HAVE_BOOST_IOSTREAMS ${DEFINE_HAVE_BOOST_IOSTREAMS} PARENT_SCOPE)
+set(DEFINE_HAVE_BOOST_PROGRAM_OPTIONS ${DEFINE_HAVE_BOOST_PROGRAM_OPTIONS} PARENT_SCOPE)
+set(DEFINE_HAVE_BOOST_UNIT_TEST_FRAMEWORK ${DEFINE_HAVE_BOOST_UNIT_TEST_FRAMEWORK} PARENT_SCOPE)
+set(DEFINE_HAVE_BOOST_CONTEXT ${DEFINE_HAVE_BOOST_CONTEXT} PARENT_SCOPE)
+set(DEFINE_HAVE_BOOST_FIBER ${DEFINE_HAVE_BOOST_FIBER} PARENT_SCOPE)
+set(DEFINE_HAVE_OPENMP ${DEFINE_HAVE_OPENMP} PARENT_SCOPE)
+set(DEFINE_HAVE_ALPAKA ${DEFINE_HAVE_ALPAKA} PARENT_SCOPE)
+set(DEFINE_CUDA_GPU ${DEFINE_CUDA_GPU} PARENT_SCOPE)
+set(DEFINE_CUDIFY_BACKEND ${DEFINE_CUDIFY_BACKEND} PARENT_SCOPE)
+

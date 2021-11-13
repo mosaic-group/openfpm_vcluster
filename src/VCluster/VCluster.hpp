@@ -14,6 +14,7 @@
 #include "VCluster_meta_function.hpp"
 #include "util/math_util_complex.hpp"
 #include "memory/mem_conf.hpp"
+#include "util/cudify/cudify.hpp"
 
 #ifdef CUDA_GPU
 extern CudaMemory mem_tmp;
@@ -1440,23 +1441,6 @@ size_t openfpm_vcluster_compilation_mask();
  */
 void openfpm_finalize();
 
-static std::string get_link_lib(size_t opt)
-{
-	std::string op;
-
-	if (opt & 0x01)
-	{
-		return "_cuda_on_cpu";
-	}
-
-	if (opt & 0x04)
-	{
-		return "_cuda";
-	}
-
-	return "";
-}
-
 /*! \brief Initialize the library
  *
  * This function MUST be called before any other function
@@ -1466,23 +1450,15 @@ static void openfpm_init(int *argc, char ***argv)
 {
 	openfpm_init_vcl(argc,argv);
 
-	size_t compiler_mask = 0;
+	size_t compiler_mask = CUDA_ON_BACKEND;
 
-	#ifdef CUDA_ON_CPU
-	compiler_mask |= 0x1;
-	#endif
-
-	#ifdef CUDA_GPU
-	compiler_mask |= 0x04;
-	#endif
+    init_wrappers();
 
 	if (compiler_mask != openfpm_vcluster_compilation_mask() || compiler_mask != openfpm_ofpmmemory_compilation_mask())
 	{
-		std::cout << __FILE__ << ":" << __LINE__ << " Error: in compilation you should link with " <<
-		                                            "-lvcluster" << get_link_lib(compiler_mask) << " and -lofpmmemory" << get_link_lib(compiler_mask) << 
-													" but you are linking with " <<
-		                                            "-lvcluster" << get_link_lib(openfpm_vcluster_compilation_mask()) << " and -lofpmmemory" << 
-													get_link_lib(openfpm_ofpmmemory_compilation_mask()) << std::endl;
+		std::cout << __FILE__ << ":" << __LINE__ << " Error: the program has been compiled with CUDA_ON_BACKEND: " << compiler_mask << " but libvcluster has been compiled with CUDA_ON_BACKEND: " <<
+		                                            openfpm_vcluster_compilation_mask() << ", and libofpmmemory has been compiled with CUDA_ON_BACKEND: " << openfpm_ofpmmemory_compilation_mask() << 
+													" recompile the library with the right CUDA_ON_BACKEND" << std::endl;
 	}
 }
 
