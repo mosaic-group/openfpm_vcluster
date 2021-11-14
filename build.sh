@@ -54,10 +54,12 @@ if [ x"$hostname" == x"cifarm-mac-node" ]; then
 	export PATH="$HOME/openfpm_dependencies/openfpm_vcluster/CMAKE/bin:$PATH"
 fi
 
+rm -rf $HOME/openfpm_dependencies/openfpm_vcluster/BOOST
+
 if [ ! -d $HOME/openfpm_dependencies/openfpm_vcluster/BOOST ]; then
         if [ x"$hostname" == x"cifarm-mac-node" ]; then
                 echo "Compiling for OSX"
-                ./install_BOOST.sh $HOME/openfpm_dependencies/openfpm_vcluster/ 4 darwin
+                ./install_BOOST.sh $HOME/openfpm_dependencies/openfpm_vcluster/ 4 clang
         else
                 echo "Compiling for Linux"
                 ./install_BOOST.sh $HOME/openfpm_dependencies/openfpm_vcluster/ 4 gcc
