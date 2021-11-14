@@ -64,6 +64,7 @@ if [ ! -d $HOME/openfpm_dependencies/openfpm_vcluster/BOOST ]; then
         fi
 fi
 
+./install_CMAKE_on_CI.sh $HOME/openfpm_dependencies/openfpm_vcluster/ 4
 
 if [ ! -d $HOME/openfpm_dependencies/openfpm_vcluster/MPI ]; then
 	./install_MPI.sh $HOME/openfpm_dependencies/openfpm_vcluster/ 4
