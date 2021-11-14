@@ -83,7 +83,7 @@ source $HOME/.bashrc
 echo "$PATH"
 echo "Compiling general"
 sh ./autogen.sh
-if [ x"$hostname" == x"cifarm-mac-node" ]; then
+if [ x"$hostname" == x"cifarm-mac-node.mpi-cbg.de" ]; then
 	./configure  CXX=mpic++ --with-vcdevel=$HOME/openfpm_dependencies/openfpm_vcluster/VCDEVEL  --with-boost=$HOME/openfpm_dependencies/openfpm_vcluster/BOOST --with-libhilbert=$HOME/openfpm_dependencies/openfpm_vcluster/LIBHILBERT  --enable-cuda-on-cpu
 else
 	./configure  CXX=mpic++ --with-vcdevel=$HOME/openfpm_dependencies/openfpm_vcluster/VCDEVEL  --with-boost=$HOME/openfpm_dependencies/openfpm_vcluster/BOOST --with-libhilbert=$HOME/openfpm_dependencies/openfpm_vcluster/LIBHILBERT  --with-cuda-on-backend=OpenMP
