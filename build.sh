@@ -42,6 +42,7 @@ fi
 if [ x"$hostname" == x"cifarm-centos-node.mpi-cbg.de"  ]; then
         echo "CentOS node"
         source /opt/rh/devtoolset-7/enable
+	export PATH="$HOME/openfpm_dependencies/openfpm_vcluster/CMAKE/bin:$PATH"
 fi
 
 if [ x"$hostname" == x"cifarm-ubuntu-node"  ]; then
@@ -49,7 +50,9 @@ if [ x"$hostname" == x"cifarm-ubuntu-node"  ]; then
         export PATH="/opt/bin:$PATH"
 fi
 
-rm -rf $HOME/openfpm_dependencies/openfpm_vcluster/BOOST
+if [ x"$hostname" == x"cifarm-mac-node" ]; then
+	export PATH="$HOME/openfpm_dependencies/openfpm_vcluster/CMAKE/bin:$PATH"
+fi
 
 if [ ! -d $HOME/openfpm_dependencies/openfpm_vcluster/BOOST ]; then
         if [ x"$hostname" == x"cifarm-mac-node" ]; then
@@ -61,7 +64,6 @@ if [ ! -d $HOME/openfpm_dependencies/openfpm_vcluster/BOOST ]; then
         fi
 fi
 
-./install_CMAKE_on_CI.sh $HOME/openfpm_dependencies/openfpm_vcluster/ 4
 
 if [ ! -d $HOME/openfpm_dependencies/openfpm_vcluster/MPI ]; then
 	./install_MPI.sh $HOME/openfpm_dependencies/openfpm_vcluster/ 4
