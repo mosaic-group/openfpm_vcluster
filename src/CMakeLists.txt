@@ -18,7 +18,34 @@ if (CUDA_ON_BACKEND STREQUAL "OpenMP" OR CUDA_ON_BACKEND STREQUAL "SEQUENTIAL")
 	endif()
 endif()
 
-add_executable(vcluster_test main.cpp VCluster/VCluster.cpp VCluster/VCluster_unit_tests.cpp VCluster/VCluster_semantic_unit_tests.cpp ${CUDA_SOURCES})
+if ( HIP_ENABLE AND HIP_FOUND )
+
+	list(APPEND HIP_HIPCC_FLAGS ${CMAKE_CXX_FLAGS_DEBUG})
+
+        if (CMAKE_BUILD_TYPE STREQUAL "Debug")
+                list(APPEND HIP_HIPCC_FLAGS -O0)
+        endif()
+
+	list(APPEND HIP_HIPCC_FLAGS -D__NVCC__ -D__HIP__  -DCUDART_VERSION=11000 -D__CUDACC__ -D__CUDACC_VER_MAJOR__=11 -D__CUDACC_VER_MINOR__=0 -D__CUDACC_VER_BUILD__=0)
+        set_source_files_properties(${CUDA_SOURCES} PROPERTIES LANGUAGE CXX)
+        
+	set(CMAKE_CXX_COMPILER ${HIP_HIPCC_EXECUTABLE})
+
+	set_source_files_properties(VCluster/VCluster.cpp PROPERTIES HIP_SOURCE_PROPERTY_FORMAT 1)
+
+	hip_add_executable(vcluster_test main.cpp VCluster/VCluster.cpp VCluster/VCluster_unit_tests.cpp VCluster/VCluster_semantic_unit_tests.cpp ${CUDA_SOURCES})
+
+        hip_add_library(vcluster STATIC VCluster/VCluster.cpp)
+        hip_add_library(vcluster_dl SHARED VCluster/VCluster.cpp)
+
+else()
+
+	add_executable(vcluster_test main.cpp VCluster/VCluster.cpp VCluster/VCluster_unit_tests.cpp VCluster/VCluster_semantic_unit_tests.cpp ${CUDA_SOURCES})
+
+	add_library(vcluster STATIC VCluster/VCluster.cpp)
+	add_library(vcluster_dl SHARED VCluster/VCluster.cpp)
+
+endif()
 
 if ( CMAKE_COMPILER_IS_GNUCC )
     target_compile_options(vcluster_test PRIVATE "-Wno-deprecated-declarations")
@@ -33,8 +60,6 @@ endif()
 
 ###########################
 
-add_library(vcluster STATIC VCluster/VCluster.cpp)
-add_library(vcluster_dl SHARED VCluster/VCluster.cpp)
 
 
 if(CUDA_FOUND)
@@ -59,6 +84,9 @@ endif()
 
 
 add_dependencies(vcluster_test ofpmmemory)
+add_dependencies(vcluster ofpmmemory)
+add_dependencies(vcluster_dl ofpmmemory)
+
 
 target_include_directories (vcluster_test PUBLIC ${CUDA_INCLUDE_DIRS})
 target_include_directories (vcluster_test PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
@@ -71,20 +99,20 @@ target_include_directories (vcluster_test PUBLIC ${PETSC_INCLUDES})
 target_include_directories (vcluster_test PUBLIC ${ALPAKA_ROOT}/include)
 
 target_include_directories (vcluster PUBLIC ${CUDA_INCLUDE_DIRS})
-target_include_directories (vcluster PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+target_include_directories (vcluster PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 target_include_directories (vcluster PUBLIC ${PETSC_INCLUDES})
-target_include_directories (vcluster PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/config)
-target_include_directories (vcluster PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/../../openfpm_data/src/)
-target_include_directories (vcluster PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/../../openfpm_devices/src/)
+target_include_directories (vcluster PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/config)
+target_include_directories (vcluster PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../../openfpm_data/src/)
+target_include_directories (vcluster PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../../openfpm_devices/src/)
 target_include_directories (vcluster PUBLIC ${Boost_INCLUDE_DIRS})
 target_include_directories (vcluster PUBLIC ${ALPAKA_ROOT}/include)
 
 target_include_directories (vcluster_dl PUBLIC ${CUDA_INCLUDE_DIRS})
-target_include_directories (vcluster_dl PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+target_include_directories (vcluster_dl PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 target_include_directories (vcluster_dl PUBLIC ${PETSC_INCLUDES})
-target_include_directories (vcluster_dl PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/config)
-target_include_directories (vcluster_dl PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/../../openfpm_data/src/)
-target_include_directories (vcluster_dl PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/../../openfpm_devices/src/)
+target_include_directories (vcluster_dl PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/config)
+target_include_directories (vcluster_dl PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../../openfpm_data/src/)
+target_include_directories (vcluster_dl PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../../openfpm_devices/src/)
 target_include_directories (vcluster_dl PUBLIC ${Boost_INCLUDE_DIRS})
 target_include_directories (vcluster_dl PUBLIC ${ALPAKA_ROOT}/include)
 
@@ -92,10 +120,19 @@ target_include_directories (vcluster_dl PUBLIC ${ALPAKA_ROOT}/include)
 target_link_libraries(vcluster_test ${Boost_LIBRARIES})
 target_link_libraries(vcluster_test ${PETSC_LIBRARIES})
 target_link_libraries(vcluster_test ofpmmemory)
-target_link_libraries(vcluster_test OpenMP::OpenMP_CXX)
+if (OPENMP_FOUND)
+	target_link_libraries(vcluster_test OpenMP::OpenMP_CXX)
+endif()
+
+target_link_libraries(vcluster ofpmmemory)
+target_link_libraries(vcluster_dl ofpmmemory)
+
 
 target_link_libraries(vcluster_dl ${PETSC_LIBRARIES})
 target_link_libraries(vcluster ${PETSC_LIBRARIES})
+target_link_libraries(vcluster ofpmmemory)
+target_link_libraries(vcluster_dl ofpmmemory)
+
 
 if (TEST_COVERAGE)
     target_link_libraries(vcluster_test -lgcov)
@@ -106,6 +143,7 @@ endif()
 # will also build with -std=c++11
 target_compile_features(vcluster_test PUBLIC cxx_std_11)
 target_link_libraries(vcluster_test ${MPI_C_LIBRARIES})
+target_link_libraries(vcluster_test ${MPI_CXX_LIBRARIES})
 
 
 install(TARGETS vcluster vcluster_dl DESTINATION openfpm_vcluster/lib COMPONENT OpenFPM)

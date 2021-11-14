@@ -13,13 +13,10 @@ set(SE_CLASS2 CACHE BOOL "Activate compilation with SE_CLASS2")
 set(SE_CLASS3 CACHE BOOL "Activate compilation with SE_CLASS3")
 set(PETSC_ROOT CACHE PATH "If compiling with linear algebra indicate the PETSC root directory")
 set(ALPAKA_ROOT CACHE PATH "Alpaka root path")
+set(HIP_ENABLE CACHE BOOL "Enable HIP compiler")
+set(AMD_ARCH_COMPILE "gfx900" CACHE STRING "AMD gpu architecture used to compile kernels")
 
 add_subdirectory (../openfpm_data/ openfpm_data)
-
-if (CUDA_ON_BACKEND STREQUAL "CUDA")
-        enable_language(CUDA)
-        find_package(CUDA)
-endif()
 
 set(ENV{PETSC_DIR} ${PETSC_ROOT})
 
@@ -30,6 +27,16 @@ find_package(Boost 1.72.0 REQUIRED COMPONENTS unit_test_framework iostreams prog
 find_package(MPI REQUIRED)
 find_package(PETSc)
 find_package(OpenMP)
+find_package(HIP)
+
+if(HIP_FOUND)
+        set(DEFINE_HIP_GPU "#define HIP_GPU")
+        set(DEFINE_CUDIFY_USE_HIP "#define CUDIFY_USE_HIP")
+endif()
+
+if(HIP_FOUND)
+        set(DEFINE_CUDA_GPU "#define CUDA_GPU")
+endif()
 
 if(CUDA_FOUND)
 	set(OPENFPM_INIT_FILE "initialize/initialize_wrapper_cuda.cu")
@@ -85,4 +92,5 @@ set(DEFINE_HAVE_OPENMP ${DEFINE_HAVE_OPENMP} PARENT_SCOPE)
 set(DEFINE_HAVE_ALPAKA ${DEFINE_HAVE_ALPAKA} PARENT_SCOPE)
 set(DEFINE_CUDA_GPU ${DEFINE_CUDA_GPU} PARENT_SCOPE)
 set(DEFINE_CUDIFY_BACKEND ${DEFINE_CUDIFY_BACKEND} PARENT_SCOPE)
+set(OPTIONAL_BOOST_LIBS ${OPTIONAL_BOOST_LIBS} PARENT_SCOPE)
 
