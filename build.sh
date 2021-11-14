@@ -49,6 +49,8 @@ if [ x"$hostname" == x"cifarm-ubuntu-node"  ]; then
         export PATH="/opt/bin:$PATH"
 fi
 
+rm -rf $HOME/openfpm_dependencies/openfpm_vcluster/BOOST
+
 if [ ! -d $HOME/openfpm_dependencies/openfpm_vcluster/BOOST ]; then
         if [ x"$hostname" == x"cifarm-mac-node" ]; then
                 echo "Compiling for OSX"
@@ -59,6 +61,7 @@ if [ ! -d $HOME/openfpm_dependencies/openfpm_vcluster/BOOST ]; then
         fi
 fi
 
+./install_CMAKE_on_CI.sh $HOME/openfpm_dependencies/openfpm_vcluster/ 4
 
 if [ ! -d $HOME/openfpm_dependencies/openfpm_vcluster/MPI ]; then
 	./install_MPI.sh $HOME/openfpm_dependencies/openfpm_vcluster/ 4
@@ -78,7 +81,11 @@ source $HOME/.bashrc
 echo "$PATH"
 echo "Compiling general"
 sh ./autogen.sh
-sh ./configure  CXX=mpic++ --with-vcdevel=$HOME/openfpm_dependencies/openfpm_vcluster/VCDEVEL  --with-boost=$HOME/openfpm_dependencies/openfpm_vcluster/BOOST --with-libhilbert=$HOME/openfpm_dependencies/openfpm_vcluster/LIBHILBERT  --enable-cuda-on-cpu
+if [ x"$hostname" == x"cifarm-mac-node" ]; then
+	./configure  CXX=mpic++ --with-vcdevel=$HOME/openfpm_dependencies/openfpm_vcluster/VCDEVEL  --with-boost=$HOME/openfpm_dependencies/openfpm_vcluster/BOOST --with-libhilbert=$HOME/openfpm_dependencies/openfpm_vcluster/LIBHILBERT  --enable-cuda-on-cpu
+else
+	./configure  CXX=mpic++ --with-vcdevel=$HOME/openfpm_dependencies/openfpm_vcluster/VCDEVEL  --with-boost=$HOME/openfpm_dependencies/openfpm_vcluster/BOOST --with-libhilbert=$HOME/openfpm_dependencies/openfpm_vcluster/LIBHILBERT  --with-cuda-on-backend=OpenMP
+fi
 make VERBOSE=1 -j 4
 if [ $? -ne 0 ]; then exit 1 ; fi
 
