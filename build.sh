@@ -52,7 +52,6 @@ fi
 
 if [ x"$hostname" == x"cifarm-mac-node.mpi-cbg.de" ]; then
 	export PATH="$HOME/openfpm_dependencies/openfpm_vcluster/CMAKE/bin:$PATH"
-	rm -rf $HOME/openfpm_dependencies/openfpm_vcluster/BOOST
 fi
 
 
