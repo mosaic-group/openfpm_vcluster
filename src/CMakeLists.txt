@@ -67,6 +67,7 @@ endif()
 
 
 if(CUDA_FOUND)
+	target_include_directories(vcluster_test PUBLIC ${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES})
 	if (CMAKE_CUDA_COMPILER_ID STREQUAL "NVIDIA")
 		target_compile_options(vcluster_test PUBLIC $<$<COMPILE_LANGUAGE:CUDA>: ${WARNING_SUPPRESSION_AND_OPTION_NVCC} >)
         target_compile_options(vcluster PUBLIC $<$<COMPILE_LANGUAGE:CUDA>: ${WARNING_SUPPRESSION_AND_OPTION_NVCC} >)
