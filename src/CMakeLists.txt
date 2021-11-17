@@ -45,6 +45,10 @@ else()
 	add_library(vcluster STATIC VCluster/VCluster.cpp)
 	add_library(vcluster_dl SHARED VCluster/VCluster.cpp)
 
+	set_property(TARGET vcluster_test PROPERTY CUDA_ARCHITECTURES OFF)
+	set_property(TARGET vcluster PROPERTY CUDA_ARCHITECTURES OFF)
+	set_property(TARGET vcluster_dl PROPERTY CUDA_ARCHITECTURES OFF)
+
 endif()
 
 if ( CMAKE_COMPILER_IS_GNUCC )
