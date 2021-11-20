@@ -18,7 +18,7 @@ if (CUDA_ON_BACKEND STREQUAL "OpenMP" OR CUDA_ON_BACKEND STREQUAL "SEQUENTIAL")
 	endif()
 endif()
 
-if ( HIP_ENABLE AND HIP_FOUND )
+if ( CUDA_ON_BACKEND STREQUAL "HIP" AND HIP_FOUND )
 
 	list(APPEND HIP_HIPCC_FLAGS ${CMAKE_CXX_FLAGS_DEBUG})
 
@@ -29,7 +29,6 @@ if ( HIP_ENABLE AND HIP_FOUND )
 	list(APPEND HIP_HIPCC_FLAGS -D__NVCC__ -D__HIP__  -DCUDART_VERSION=11000 -D__CUDACC__ -D__CUDACC_VER_MAJOR__=11 -D__CUDACC_VER_MINOR__=0 -D__CUDACC_VER_BUILD__=0)
         set_source_files_properties(${CUDA_SOURCES} PROPERTIES LANGUAGE CXX)
         
-	set(CMAKE_CXX_COMPILER ${HIP_HIPCC_EXECUTABLE})
 
 	set_source_files_properties(VCluster/VCluster.cpp PROPERTIES HIP_SOURCE_PROPERTY_FORMAT 1)
 
@@ -37,6 +36,11 @@ if ( HIP_ENABLE AND HIP_FOUND )
 
         hip_add_library(vcluster STATIC VCluster/VCluster.cpp)
         hip_add_library(vcluster_dl SHARED VCluster/VCluster.cpp)
+
+        set_property(TARGET vcluster PROPERTY POSITION_INDEPENDENT_CODE ON)
+        set_property(TARGET vcluster_dl PROPERTY POSITION_INDEPENDENT_CODE ON)
+        set_property(TARGET vcluster PROPERTY CMAKE_CXX_FLAGS "-Xcompiler -fPIC")
+        set_property(TARGET vcluster_dl PROPERTY CMAKE_CXX_FLAGS "-Xcompiler -fPIC")
 
 else()
 
@@ -88,10 +92,7 @@ if(CUDA_FOUND)
 endif()
 
 
-add_dependencies(vcluster_test ofpmmemory)
 add_dependencies(vcluster ofpmmemory)
-add_dependencies(vcluster_dl ofpmmemory)
-
 
 target_include_directories (vcluster_test PUBLIC ${CUDA_INCLUDE_DIRS})
 target_include_directories (vcluster_test PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
@@ -102,6 +103,9 @@ target_include_directories (vcluster_test PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/con
 target_include_directories (vcluster_test PUBLIC ${Boost_INCLUDE_DIRS})
 target_include_directories (vcluster_test PUBLIC ${PETSC_INCLUDES})
 target_include_directories (vcluster_test PUBLIC ${ALPAKA_ROOT}/include)
+if (HIP_FOUND)
+        target_include_directories (vcluster_test PUBLIC "${MPI_C_INCLUDE_DIRS}/")
+endif()
 
 target_include_directories (vcluster PUBLIC ${CUDA_INCLUDE_DIRS})
 target_include_directories (vcluster PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
@@ -124,20 +128,33 @@ target_include_directories (vcluster_dl PUBLIC ${ALPAKA_ROOT}/include)
 
 target_link_libraries(vcluster_test ${Boost_LIBRARIES})
 target_link_libraries(vcluster_test ${PETSC_LIBRARIES})
-target_link_libraries(vcluster_test ofpmmemory)
+if (HIP_FOUND)
+	add_dependencies(vcluster_test ofpmmemory_dl)
+	add_dependencies(vcluster_dl ofpmmemory_dl)
+	target_link_libraries(vcluster_test ofpmmemory_dl)
+	target_link_libraries(vcluster_dl ofpmmemory_dl)
+else()
+	add_dependencies(vcluster_test ofpmmemory)
+	add_dependencies(vcluster_dl ofpmmemory)
+	target_link_libraries(vcluster_test ofpmmemory)
+	target_link_libraries(vcluster_dl ofpmmemory)
+endif()
 if (OPENMP_FOUND)
 	target_link_libraries(vcluster_test OpenMP::OpenMP_CXX)
 endif()
 
 target_link_libraries(vcluster ofpmmemory)
-target_link_libraries(vcluster_dl ofpmmemory)
 
+if (HIP_FOUND)
+	target_link_libraries(vcluster_test hip::host)
+	target_link_libraries(vcluster hip::host)
+        target_link_libraries(vcluster_dl hip::host)
+endif()
 
 target_link_libraries(vcluster_dl ${PETSC_LIBRARIES})
 target_link_libraries(vcluster ${PETSC_LIBRARIES})
 target_link_libraries(vcluster ofpmmemory)
 target_link_libraries(vcluster_dl ofpmmemory)
-
 
 if (TEST_COVERAGE)
     target_link_libraries(vcluster_test -lgcov)
