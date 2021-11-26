@@ -94,7 +94,6 @@ endif()
 
 add_dependencies(vcluster ofpmmemory)
 
-target_include_directories (vcluster_test PUBLIC ${CUDA_INCLUDE_DIRS})
 target_include_directories (vcluster_test PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 target_include_directories (vcluster_test PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/../../openfpm_devices/src/)
 target_include_directories (vcluster_test PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/../../openfpm_vcluster/src/)
@@ -107,7 +106,6 @@ if (HIP_FOUND)
         target_include_directories (vcluster_test PUBLIC "${MPI_C_INCLUDE_DIRS}/")
 endif()
 
-target_include_directories (vcluster PUBLIC ${CUDA_INCLUDE_DIRS})
 target_include_directories (vcluster PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 target_include_directories (vcluster PUBLIC ${PETSC_INCLUDES})
 target_include_directories (vcluster PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/config)
@@ -116,7 +114,6 @@ target_include_directories (vcluster PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../../o
 target_include_directories (vcluster PUBLIC ${Boost_INCLUDE_DIRS})
 target_include_directories (vcluster PUBLIC ${ALPAKA_ROOT}/include)
 
-target_include_directories (vcluster_dl PUBLIC ${CUDA_INCLUDE_DIRS})
 target_include_directories (vcluster_dl PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 target_include_directories (vcluster_dl PUBLIC ${PETSC_INCLUDES})
 target_include_directories (vcluster_dl PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/config)
