@@ -16,6 +16,7 @@ centos_run:
   dependencies:
     - centos_build
   script:
+    - export OMP_NUM_THREADS=1
     - ./run.sh $CI_PROJECT_DIR "$CI_RUNNER_TAGS" 3 $CI_COMMIT_REF_NAME
     - ./run.sh $CI_PROJECT_DIR "$CI_RUNNER_TAGS" 4 $CI_COMMIT_REF_NAME
     - ./run.sh $CI_PROJECT_DIR "$CI_RUNNER_TAGS" 5 $CI_COMMIT_REF_NAME
@@ -60,6 +61,7 @@ ubuntu_run:
   dependencies:
     - ubuntu_build
   script:
+    - export OMP_NUM_THREADS=1
     - ./run.sh $CI_PROJECT_DIR "$CI_RUNNER_TAGS" 3 $CI_COMMIT_REF_NAME
     - ./run.sh $CI_PROJECT_DIR "$CI_RUNNER_TAGS" 4 $CI_COMMIT_REF_NAME
     - ./run.sh $CI_PROJECT_DIR "$CI_RUNNER_TAGS" 5 $CI_COMMIT_REF_NAME

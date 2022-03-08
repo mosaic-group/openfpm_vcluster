@@ -24,10 +24,10 @@ mkdir openfpm_vcluster/src/config
 git clone git@git.mpi-cbg.de:/openfpm/openfpm_devices.git openfpm_devices
 git clone git@git.mpi-cbg.de:/openfpm/openfpm_data.git openfpm_data
 cd openfpm_data
-git checkout develop
+git checkout master
 cd ..
 cd openfpm_devices
-git checkout develop
+git checkout master
 cd ..
 
 cd "$workspace/openfpm_vcluster"
@@ -38,14 +38,11 @@ if [ ! -d $HOME/openfpm_dependencies/openfpm_vcluster/LIBHILBERT ]; then
         ./install_LIBHILBERT.sh $HOME/openfpm_dependencies/openfpm_vcluster/ 4
 fi
 
-#if [ x"$hostname" == x"cifarm-mac-node" ]; then
-#	echo "Killing ghost"
-#	kill 73440 87662 87661 73439 51687 51686
-#fi
 
 if [ x"$hostname" == x"cifarm-centos-node.mpi-cbg.de"  ]; then
         echo "CentOS node"
         source /opt/rh/devtoolset-7/enable
+	export PATH="$HOME/openfpm_dependencies/openfpm_vcluster/CMAKE/bin:$PATH"
 fi
 
 if [ x"$hostname" == x"cifarm-ubuntu-node"  ]; then
@@ -53,10 +50,15 @@ if [ x"$hostname" == x"cifarm-ubuntu-node"  ]; then
         export PATH="/opt/bin:$PATH"
 fi
 
+if [ x"$hostname" == x"cifarm-mac-node.mpi-cbg.de" ]; then
+	export PATH="$HOME/openfpm_dependencies/openfpm_vcluster/CMAKE/bin:$PATH"
+fi
+
+
 if [ ! -d $HOME/openfpm_dependencies/openfpm_vcluster/BOOST ]; then
         if [ x"$hostname" == x"cifarm-mac-node" ]; then
                 echo "Compiling for OSX"
-                ./install_BOOST.sh $HOME/openfpm_dependencies/openfpm_vcluster/ 4 darwin
+                ./install_BOOST.sh $HOME/openfpm_dependencies/openfpm_vcluster/ 4 clang
         else
                 echo "Compiling for Linux"
                 ./install_BOOST.sh $HOME/openfpm_dependencies/openfpm_vcluster/ 4 gcc
@@ -82,7 +84,11 @@ source $HOME/.bashrc
 echo "$PATH"
 echo "Compiling general"
 sh ./autogen.sh
-sh ./configure  CXX=mpic++ --with-vcdevel=$HOME/openfpm_dependencies/openfpm_vcluster/VCDEVEL  --with-boost=$HOME/openfpm_dependencies/openfpm_vcluster/BOOST --with-libhilbert=$HOME/openfpm_dependencies/openfpm_vcluster/LIBHILBERT  --enable-cuda-on-cpu
+if [ x"$hostname" == x"cifarm-mac-node.mpi-cbg.de" ]; then
+	./configure  CXX=mpic++ --with-vcdevel=$HOME/openfpm_dependencies/openfpm_vcluster/VCDEVEL  --with-boost=$HOME/openfpm_dependencies/openfpm_vcluster/BOOST --with-libhilbert=$HOME/openfpm_dependencies/openfpm_vcluster/LIBHILBERT  --enable-cuda-on-cpu
+else
+	./configure  CXX=mpic++ --with-vcdevel=$HOME/openfpm_dependencies/openfpm_vcluster/VCDEVEL  --with-boost=$HOME/openfpm_dependencies/openfpm_vcluster/BOOST --with-libhilbert=$HOME/openfpm_dependencies/openfpm_vcluster/LIBHILBERT  --with-cuda-on-backend=OpenMP
+fi
 make VERBOSE=1 -j 4
 if [ $? -ne 0 ]; then exit 1 ; fi
 

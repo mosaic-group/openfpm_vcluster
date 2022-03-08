@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.8 FATAL_ERROR)
 
 ########################### Executables
 
-if (CUDA_FOUND OR CUDA_ON_CPU OR HIP_FOUND)
+if (NOT CUDA_ON_BACKEND STREQUAL "None")
 	set(CUDA_SOURCES VCluster/cuda/VCluster_semantic_unit_cuda_tests.cu VCluster/cuda/VCluster_unit_tests.cu )
 endif()
 
@@ -10,16 +10,15 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "Intel")
 	add_definitions("-DBOOST_MPL_CFG_HAS_TYPEOF")
 endif()
 
-if (CUDA_ON_CPU)
-	add_definitions(-DCUDA_ON_CPU -D__NVCC__ -DCUDART_VERSION=11000)
+if (CUDA_ON_BACKEND STREQUAL "OpenMP" OR CUDA_ON_BACKEND STREQUAL "SEQUENTIAL")
+	add_definitions( -D__NVCC__ -DCUDART_VERSION=11000)
 	set_source_files_properties(${CUDA_SOURCES} PROPERTIES LANGUAGE CXX)
-	# set_source_files_properties(${CUDA_SOURCES} PROPERTIES COMPILE_FLAGS "-D__NVCC__ -DCUDA_GPU -DCUDART_VERSION=11000")
 	if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang" OR CMAKE_CXX_COMPILER_ID STREQUAL "Clang" OR CMAKE_CXX_COMPILER_ID STREQUAL "Intel")
         	add_definitions("-x c++")
-    	endif()
+	endif()
 endif()
 
-if ( HIP_ENABLE AND HIP_FOUND )
+if ( CUDA_ON_BACKEND STREQUAL "HIP" AND HIP_FOUND )
 
 	list(APPEND HIP_HIPCC_FLAGS ${CMAKE_CXX_FLAGS_DEBUG})
 
@@ -30,7 +29,6 @@ if ( HIP_ENABLE AND HIP_FOUND )
 	list(APPEND HIP_HIPCC_FLAGS -D__NVCC__ -D__HIP__  -DCUDART_VERSION=11000 -D__CUDACC__ -D__CUDACC_VER_MAJOR__=11 -D__CUDACC_VER_MINOR__=0 -D__CUDACC_VER_BUILD__=0)
         set_source_files_properties(${CUDA_SOURCES} PROPERTIES LANGUAGE CXX)
         
-	set(CMAKE_CXX_COMPILER ${HIP_HIPCC_EXECUTABLE})
 
 	set_source_files_properties(VCluster/VCluster.cpp PROPERTIES HIP_SOURCE_PROPERTY_FORMAT 1)
 
@@ -39,12 +37,21 @@ if ( HIP_ENABLE AND HIP_FOUND )
         hip_add_library(vcluster STATIC VCluster/VCluster.cpp)
         hip_add_library(vcluster_dl SHARED VCluster/VCluster.cpp)
 
+        set_property(TARGET vcluster PROPERTY POSITION_INDEPENDENT_CODE ON)
+        set_property(TARGET vcluster_dl PROPERTY POSITION_INDEPENDENT_CODE ON)
+        set_property(TARGET vcluster PROPERTY CMAKE_CXX_FLAGS "-Xcompiler -fPIC")
+        set_property(TARGET vcluster_dl PROPERTY CMAKE_CXX_FLAGS "-Xcompiler -fPIC")
+
 else()
 
 	add_executable(vcluster_test main.cpp VCluster/VCluster.cpp VCluster/VCluster_unit_tests.cpp VCluster/VCluster_semantic_unit_tests.cpp ${CUDA_SOURCES})
 
 	add_library(vcluster STATIC VCluster/VCluster.cpp)
 	add_library(vcluster_dl SHARED VCluster/VCluster.cpp)
+
+	set_property(TARGET vcluster_test PROPERTY CUDA_ARCHITECTURES OFF)
+	set_property(TARGET vcluster PROPERTY CUDA_ARCHITECTURES OFF)
+	set_property(TARGET vcluster_dl PROPERTY CUDA_ARCHITECTURES OFF)
 
 endif()
 
@@ -62,16 +69,9 @@ endif()
 ###########################
 
 
-if ( CUDA_FOUND AND NOT CUDA_ON_CPU )
-	### We construct cuda_on_cpu vcluster
-	add_library(vcluster_cuda_on_cpu STATIC VCluster/VCluster_cuda_on_cpu.cpp)
-	add_library(vcluster_dl_cuda_on_cpu SHARED VCluster/VCluster_cuda_on_cpu.cpp)
-
-	target_compile_options(vcluster_cuda_on_cpu PUBLIC -DCUDA_ON_CPU -D__NVCC__ -DCUDART_VERSION=11000)
-	target_compile_options(vcluster_dl_cuda_on_cpu PUBLIC -DCUDA_ON_CPU -D__NVCC__ -DCUDART_VERSION=11000)
-endif()
 
 if(CUDA_FOUND)
+	target_include_directories(vcluster_test PUBLIC ${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES})
 	if (CMAKE_CUDA_COMPILER_ID STREQUAL "NVIDIA")
 		target_compile_options(vcluster_test PUBLIC $<$<COMPILE_LANGUAGE:CUDA>: ${WARNING_SUPPRESSION_AND_OPTION_NVCC} >)
         target_compile_options(vcluster PUBLIC $<$<COMPILE_LANGUAGE:CUDA>: ${WARNING_SUPPRESSION_AND_OPTION_NVCC} >)
@@ -86,17 +86,13 @@ if(CUDA_FOUND)
         target_compile_options(vcluster_test PRIVATE $<$<COMPILE_LANGUAGE:CUDA>: -Xcompiler "-fprofile-arcs -ftest-coverage" >)
     endif()
 
-    if (NOT CUDA_ON_CPU)
+    if (CUDA_ON_BACKEND STREQUAL "CUDA")
         set_source_files_properties(VCluster/VCluster.cpp PROPERTIES LANGUAGE CUDA)
     endif()
 endif()
 
 
-add_dependencies(vcluster_test ofpmmemory)
 add_dependencies(vcluster ofpmmemory)
-add_dependencies(vcluster_dl ofpmmemory)
-
-target_include_directories (vcluster_test PUBLIC ${CUDA_INCLUDE_DIRS})
 target_include_directories (vcluster_test PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 target_include_directories (vcluster_test PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/../../openfpm_devices/src/)
 target_include_directories (vcluster_test PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/../../openfpm_vcluster/src/)
@@ -105,8 +101,10 @@ target_include_directories (vcluster_test PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/con
 target_include_directories (vcluster_test PUBLIC ${Boost_INCLUDE_DIRS})
 target_include_directories (vcluster_test PUBLIC ${PETSC_INCLUDES})
 target_include_directories (vcluster_test PUBLIC ${ALPAKA_ROOT}/include)
+if (HIP_FOUND)
+        target_include_directories (vcluster_test PUBLIC "${MPI_C_INCLUDE_DIRS}/")
+endif()
 
-target_include_directories (vcluster PUBLIC ${CUDA_INCLUDE_DIRS})
 target_include_directories (vcluster PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 target_include_directories (vcluster PUBLIC ${PETSC_INCLUDES})
 target_include_directories (vcluster PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/config)
@@ -115,7 +113,6 @@ target_include_directories (vcluster PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../../o
 target_include_directories (vcluster PUBLIC ${Boost_INCLUDE_DIRS})
 target_include_directories (vcluster PUBLIC ${ALPAKA_ROOT}/include)
 
-target_include_directories (vcluster_dl PUBLIC ${CUDA_INCLUDE_DIRS})
 target_include_directories (vcluster_dl PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 target_include_directories (vcluster_dl PUBLIC ${PETSC_INCLUDES})
 target_include_directories (vcluster_dl PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/config)
@@ -124,38 +121,34 @@ target_include_directories (vcluster_dl PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../.
 target_include_directories (vcluster_dl PUBLIC ${Boost_INCLUDE_DIRS})
 target_include_directories (vcluster_dl PUBLIC ${ALPAKA_ROOT}/include)
 
-if (CUDA_FOUND AND NOT CUDA_ON_CPU)
-	### We construct cuda_on_cpu vcluster
-	target_include_directories (vcluster_cuda_on_cpu PUBLIC ${CUDA_INCLUDE_DIRS})
-	target_include_directories (vcluster_cuda_on_cpu PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
-	target_include_directories (vcluster_cuda_on_cpu PUBLIC ${PETSC_INCLUDES})
-	target_include_directories (vcluster_cuda_on_cpu PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/config)
-	target_include_directories (vcluster_cuda_on_cpu PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../../openfpm_data/src/)
-	target_include_directories (vcluster_cuda_on_cpu PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../../openfpm_devices/src/)
-	target_include_directories (vcluster_cuda_on_cpu PUBLIC ${Boost_INCLUDE_DIRS})
-	target_include_directories (vcluster_cuda_on_cpu PUBLIC ${ALPAKA_ROOT}/include)
-	
-	target_include_directories (vcluster_dl_cuda_on_cpu PUBLIC ${CUDA_INCLUDE_DIRS})
-	target_include_directories (vcluster_dl_cuda_on_cpu PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
-	target_include_directories (vcluster_dl_cuda_on_cpu PUBLIC ${PETSC_INCLUDES})
-	target_include_directories (vcluster_dl_cuda_on_cpu PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/config)
-	target_include_directories (vcluster_dl_cuda_on_cpu PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../../openfpm_data/src/)
-	target_include_directories (vcluster_dl_cuda_on_cpu PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../../openfpm_devices/src/)
-	target_include_directories (vcluster_dl_cuda_on_cpu PUBLIC ${Boost_INCLUDE_DIRS})
-	target_include_directories (vcluster_dl_cuda_on_cpu PUBLIC ${ALPAKA_ROOT}/include)
-endif()
 
 target_link_libraries(vcluster_test ${Boost_LIBRARIES})
 target_link_libraries(vcluster_test ${PETSC_LIBRARIES})
-target_link_libraries(vcluster_test ofpmmemory)
+if (HIP_FOUND)
+	add_dependencies(vcluster_test ofpmmemory_dl)
+	add_dependencies(vcluster_dl ofpmmemory_dl)
+	target_link_libraries(vcluster_test ofpmmemory_dl)
+	target_link_libraries(vcluster_dl ofpmmemory_dl)
+else()
+	add_dependencies(vcluster_test ofpmmemory)
+	add_dependencies(vcluster_dl ofpmmemory)
+	target_link_libraries(vcluster_test ofpmmemory)
+	target_link_libraries(vcluster_dl ofpmmemory)
+endif()
+if (OPENMP_FOUND)
+	target_link_libraries(vcluster_test OpenMP::OpenMP_CXX)
+endif()
 
 target_link_libraries(vcluster ofpmmemory)
-target_link_libraries(vcluster_dl ofpmmemory)
 
+if (HIP_FOUND)
+	target_link_libraries(vcluster_test hip::host)
+	target_link_libraries(vcluster hip::host)
+        target_link_libraries(vcluster_dl hip::host)
+endif()
 
 target_link_libraries(vcluster_dl ${PETSC_LIBRARIES})
 target_link_libraries(vcluster ${PETSC_LIBRARIES})
-
 
 if (TEST_COVERAGE)
     target_link_libraries(vcluster_test -lgcov)
@@ -168,9 +161,6 @@ target_compile_features(vcluster_test PUBLIC cxx_std_11)
 target_link_libraries(vcluster_test ${MPI_C_LIBRARIES})
 target_link_libraries(vcluster_test ${MPI_CXX_LIBRARIES})
 
-if (CUDA_FOUND AND NOT CUDA_ON_CPU)
-	set(ADDITIONAL_OPENFPM_LIBS vcluster_cuda_on_cpu vcluster_dl_cuda_on_cpu)
-endif()
 
 install(TARGETS vcluster vcluster_dl  ${ADDITIONAL_OPENFPM_LIBS}  DESTINATION openfpm_vcluster/lib COMPONENT OpenFPM)
 install(FILES MPI_wrapper/MPI_IallreduceW.hpp

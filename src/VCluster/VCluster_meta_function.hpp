@@ -43,12 +43,12 @@ struct unpack_selector_with_prp
 		{
 			T unp;
 
-			ExtPreAlloc<HeapMemory> & mem = *(new ExtPreAlloc<HeapMemory>(recv_buf.get(i).size(),recv_buf.get(i)));
+			ExtPreAlloc<Memory> & mem = *(new ExtPreAlloc<Memory>(recv_buf.get(i).size(),recv_buf.get(i)));
 			mem.incRef();
 
 			Unpack_stat ps;
 
-			Unpacker<T,HeapMemory>::template unpack<>(mem, unp, ps);
+			Unpacker<T,Memory>::template unpack<>(mem, unp, ps);
 
 			size_t recv_size_old = recv.size();
 			// Merge the information

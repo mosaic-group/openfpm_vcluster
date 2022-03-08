@@ -98,9 +98,7 @@ void openfpm_init_vcl(int *argc, char ***argv)
 	std::cout << "OpenFPM is compiled with debug mode LEVEL:3. Remember to remove SE_CLASS3 when you go in production" << std::endl;
 #endif
 
-#ifdef CUDA_ON_CPU
 	init_wrappers();
-#endif
 
 	// install segmentation fault signal handler
 
@@ -138,16 +136,7 @@ void openfpm_init_vcl(int *argc, char ***argv)
 
 size_t openfpm_vcluster_compilation_mask()
 {
-	size_t compiler_mask = 0;
-
-	#ifdef CUDA_ON_CPU
-	compiler_mask |= 0x1;
-	#endif
-
-
-	#ifdef CUDA_GPU
-	compiler_mask |= 0x04;
-	#endif
+	size_t compiler_mask = CUDA_ON_BACKEND;
 
 	return compiler_mask;
 }
