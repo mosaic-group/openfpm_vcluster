@@ -24,7 +24,14 @@ public:
 	 */
 	static inline void recv(size_t proc , size_t tag ,void * buf, size_t sz, MPI_Request & req)
 	{
-		MPI_SAFE_CALL(MPI_Irecv(buf,sz,MPI_BYTE, proc, tag , MPI_COMM_WORLD,&req));
+		if (sz < 2147483647)
+		{
+			MPI_SAFE_CALL(MPI_Irecv(buf,sz,MPI_BYTE, proc, tag , MPI_COMM_WORLD,&req));
+		}
+		else
+		{
+			MPI_SAFE_CALL(MPI_Irecv(buf,sz >> 8,MPI_DOUBLE, proc, tag , MPI_COMM_WORLD,&req));
+		}
 	}
 };
 
@@ -39,7 +46,14 @@ template<typename T> class MPI_IrecvW
 public:
 	static inline void recv(size_t proc , size_t tag ,openfpm::vector<T> & v, MPI_Request & req)
 	{
-		MPI_SAFE_CALL(MPI_Irecv(v.getPointer(), v.size() * sizeof(T),MPI_BYTE, proc, tag , MPI_COMM_WORLD,&req));
+		if (v.size() * sizeof(T) < 2147483647)
+		{
+			MPI_SAFE_CALL(MPI_Irecv(v.getPointer(), v.size() * sizeof(T),MPI_BYTE, proc, tag , MPI_COMM_WORLD,&req));
+		}
+		else
+		{
+			MPI_SAFE_CALL(MPI_Irecv(v.getPointer(),(v.size() * sizeof(T)) >> 8,MPI_DOUBLE, proc, tag , MPI_COMM_WORLD,&req));
+		}
 	}
 };
 

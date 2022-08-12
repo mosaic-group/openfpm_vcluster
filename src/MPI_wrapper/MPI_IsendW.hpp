@@ -18,7 +18,15 @@ class MPI_IsendWB
 public:
 	static inline void send(size_t proc , size_t tag ,const void * buf, size_t sz, MPI_Request & req)
 	{
-		MPI_Isend(buf, sz,MPI_BYTE, proc, tag , MPI_COMM_WORLD,&req);
+		if (sz <= 2147483647)
+		{
+			MPI_Isend(buf, sz,MPI_BYTE, proc, tag , MPI_COMM_WORLD,&req);
+		}
+		else
+		{
+			MPI_Isend(buf, sz >> 3 ,MPI_DOUBLE, proc, tag , MPI_COMM_WORLD,&req);
+		}
+
 	}
 };
 
@@ -33,7 +41,14 @@ template<typename T, typename Mem, template<typename> class gr> class MPI_IsendW
 public:
 	static inline void send(size_t proc , size_t tag ,openfpm::vector<T,Mem,gr> & v, MPI_Request & req)
 	{
-		MPI_Isend(v.getPointer(), v.size() * sizeof(T),MPI_BYTE, proc, tag , MPI_COMM_WORLD,&req);
+		if (v.size() * sizeof(T) <= 2147483647)
+		{
+			MPI_Isend(v.getPointer(), v.size() * sizeof(T),MPI_BYTE, proc, tag , MPI_COMM_WORLD,&req);
+		}
+		else
+		{
+			MPI_Isend(v.getPointer(), (v.size() * sizeof(T)) >> 3,MPI_DOUBLE, proc, tag , MPI_COMM_WORLD,&req);
+		}
 	}
 };
 
