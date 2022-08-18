@@ -245,7 +245,10 @@ class Vcluster_base
 
 //				std::cout << "TAG: " << SEND_SPARSE + (NBX_cnt + NBX_prc_qcnt)*131072 + i << "   " << NBX_cnt << "   "  << NBX_prc_qcnt << "  " << " rank: " << rank() << "   " << NBX_prc_cnt_base << "  nbx_cycle: " << nbx_cycle << std::endl;
 
-				MPI_SAFE_CALL(MPI_Issend(ptr[i], sz[i], MPI_BYTE, prc[i], SEND_SPARSE + (NBX_cnt + NBX_prc_qcnt)*131072 + i, MPI_COMM_WORLD,&req.last()));
+				if (sz[i] > 2147483647)
+				{MPI_SAFE_CALL(MPI_Issend(ptr[i], (sz[i] >> 3) + 1 , MPI_DOUBLE, prc[i], SEND_SPARSE + (NBX_cnt + NBX_prc_qcnt)*131072 + i, MPI_COMM_WORLD,&req.last()));}
+				else
+				{MPI_SAFE_CALL(MPI_Issend(ptr[i], sz[i], MPI_BYTE, prc[i], SEND_SPARSE + (NBX_cnt + NBX_prc_qcnt)*131072 + i, MPI_COMM_WORLD,&req.last()));}
 				log.logSend(prc[i]);
 			}
 		}
@@ -628,10 +631,23 @@ public:
 			if (i >= NQUEUE || NBX_active[i] == NBX_Type::NBX_UNACTIVE || NBX_active[i] == NBX_Type::NBX_KNOWN  || NBX_active[i] == NBX_Type::NBX_KNOWN_PRC)
 			{return;}
 
-			int msize;
+			int msize_;
+			long int msize;
+			bool big_data = true;			
 
 			// Get the message tag and size
-			MPI_SAFE_CALL(MPI_Get_count(&stat_t,MPI_BYTE,&msize));
+			
+			MPI_SAFE_CALL(MPI_Get_count(&stat_t,MPI_DOUBLE,&msize_));
+			if (msize_ == MPI_UNDEFINED)
+			{
+				big_data = false;
+				MPI_SAFE_CALL(MPI_Get_count(&stat_t,MPI_BYTE,&msize_));
+				msize = msize_;
+			}
+			else
+			{
+				msize = ((size_t)msize_) << 3;
+			}
 
 			// Ok we check if the TAG come from one of our send TAG
 			if (stat_t.MPI_TAG >= (int)(SEND_SPARSE + NBX_prc_cnt_base*131072) && stat_t.MPI_TAG < (int)(SEND_SPARSE + (NBX_prc_cnt_base + NBX_prc_qcnt + 1)*131072))
@@ -664,8 +680,15 @@ public:
 					memset(ptr,0xFF,msize);
 					#endif
 				#endif
-				MPI_SAFE_CALL(MPI_Recv(ptr,msize,MPI_BYTE,stat_t.MPI_SOURCE,stat_t.MPI_TAG,MPI_COMM_WORLD,&stat_t));
-
+				if (big_data == true)
+				{
+					std::cout << "RECEVING BIG MESSAGE " << msize_ << "   "  << msize << std::endl;
+					MPI_SAFE_CALL(MPI_Recv(ptr,msize >> 3,MPI_DOUBLE,stat_t.MPI_SOURCE,stat_t.MPI_TAG,MPI_COMM_WORLD,&stat_t));
+				}
+				else
+				{
+					MPI_SAFE_CALL(MPI_Recv(ptr,msize,MPI_BYTE,stat_t.MPI_SOURCE,stat_t.MPI_TAG,MPI_COMM_WORLD,&stat_t));
+				}
 #ifdef SE_CLASS2
 				check_valid(ptr,msize);
 #endif
