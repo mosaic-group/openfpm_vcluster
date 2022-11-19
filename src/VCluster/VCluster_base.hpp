@@ -682,7 +682,7 @@ public:
 				#endif
 				if (big_data == true)
 				{
-					std::cout << "RECEVING BIG MESSAGE " << msize_ << "   "  << msize << std::endl;
+//					std::cout << "RECEVING BIG MESSAGE " << msize_ << "   "  << msize << std::endl;
 					MPI_SAFE_CALL(MPI_Recv(ptr,msize >> 3,MPI_DOUBLE,stat_t.MPI_SOURCE,stat_t.MPI_TAG,MPI_COMM_WORLD,&stat_t));
 				}
 				else
