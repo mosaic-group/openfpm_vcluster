@@ -93,7 +93,6 @@ endif()
 
 
 add_dependencies(vcluster ofpmmemory)
-
 target_include_directories (vcluster_test PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 target_include_directories (vcluster_test PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/../../openfpm_devices/src/)
 target_include_directories (vcluster_test PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/../../openfpm_vcluster/src/)
@@ -150,8 +149,6 @@ endif()
 
 target_link_libraries(vcluster_dl ${PETSC_LIBRARIES})
 target_link_libraries(vcluster ${PETSC_LIBRARIES})
-target_link_libraries(vcluster ofpmmemory)
-target_link_libraries(vcluster_dl ofpmmemory)
 
 if (TEST_COVERAGE)
     target_link_libraries(vcluster_test -lgcov)
@@ -165,20 +162,20 @@ target_link_libraries(vcluster_test ${MPI_C_LIBRARIES})
 target_link_libraries(vcluster_test ${MPI_CXX_LIBRARIES})
 
 
-install(TARGETS vcluster vcluster_dl DESTINATION openfpm_vcluster/lib COMPONENT OpenFPM)
-install(FILES MPI_wrapper/MPI_IallreduceW.hpp 
-	      MPI_wrapper/MPI_IrecvW.hpp 
-	      MPI_wrapper/MPI_IBcastW.hpp  
-	      MPI_wrapper/MPI_IsendW.hpp 
-	      MPI_wrapper/MPI_util.hpp 
+install(TARGETS vcluster vcluster_dl  ${ADDITIONAL_OPENFPM_LIBS}  DESTINATION openfpm_vcluster/lib COMPONENT OpenFPM)
+install(FILES MPI_wrapper/MPI_IallreduceW.hpp
+	      MPI_wrapper/MPI_IrecvW.hpp
+	      MPI_wrapper/MPI_IBcastW.hpp
+	      MPI_wrapper/MPI_IsendW.hpp
+	      MPI_wrapper/MPI_util.hpp
 	      MPI_wrapper/MPI_IAllGather.hpp
 	      DESTINATION openfpm_vcluster/include/MPI_wrapper
 	      COMPONENT OpenFPM)
 
 install(FILES VCluster/VCluster_base.hpp
-	      VCluster/VCluster.hpp 
+	      VCluster/VCluster.hpp
 	      VCluster/VCluster_meta_function.hpp
-	      DESTINATION openfpm_vcluster/include/VCluster 
+	      DESTINATION openfpm_vcluster/include/VCluster
 	      COMPONENT OpenFPM)
 
 install (FILES util/Vcluster_log.hpp
