@@ -26,7 +26,7 @@
 #include "memory/BHeapMemory.hpp"
 #include "Packer_Unpacker/has_max_prop.hpp"
 #include "data_type/aggregate.hpp"
-#include "util/cuda/ofp_context.hxx"
+#include "util/ofp_context.hpp"
 
 #ifdef HAVE_PETSC
 #include <petscvec.h>
@@ -143,8 +143,8 @@ class Vcluster_base
 	//! vector of functions to execute after all the request has been performed
 	std::vector<int> post_exe;
 
-	//! standard context for mgpu (if cuda is detected otherwise is unused)
-	mgpu::ofp_context_t * context;
+	//! standard context for gpu (if cuda is detected otherwise is unused)
+	gpu::ofp_context_t * context;
 
 	// Single objects
 
@@ -358,9 +358,9 @@ public:
 #ifdef EXTERNAL_SET_GPU
                 int dev;
                 cudaGetDevice(&dev);
-                context = new mgpu::ofp_context_t(mgpu::gpu_context_opt::no_print_props,dev);
+                context = new gpu::ofp_context_t(gpu::gpu_context_opt::no_print_props,dev);
 #else
-                context = new mgpu::ofp_context_t(mgpu::gpu_context_opt::no_print_props,shmrank);
+                context = new gpu::ofp_context_t(gpu::gpu_context_opt::no_print_props,shmrank);
 #endif
 
 
@@ -445,12 +445,12 @@ public:
 
 #endif
 
-	/*! \brief If nvidia cuda is activated return a mgpu context
+	/*! \brief If nvidia cuda is activated return a gpu context
 	 *
 	 * \param iw ignore warning
 	 *
 	 */
-	mgpu::ofp_context_t & getmgpuContext(bool iw = true)
+	gpu::ofp_context_t & getgpuContext(bool iw = true)
 	{
 		if (context == NULL && iw == true)
 		{
