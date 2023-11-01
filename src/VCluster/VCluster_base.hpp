@@ -450,7 +450,7 @@ public:
 	 * \param iw ignore warning
 	 *
 	 */
-	gpu::ofp_context_t& getgpuContext(bool iw = true)
+	gpu::ofp_context_t& getGpuContext(bool iw = true)
 	{
 		if (gpuContext == NULL && iw == true)
 		{
