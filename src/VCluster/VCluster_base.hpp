@@ -144,7 +144,7 @@ class Vcluster_base
 	std::vector<int> post_exe;
 
 	//! standard context for gpu (if cuda is detected otherwise is unused)
-	gpu::ofp_context_t * context;
+	gpu::ofp_context_t* gpuContext;
 
 	// Single objects
 
@@ -287,7 +287,7 @@ public:
 			}
 		}
 
-		delete context;
+		delete gpuContext;
 	}
 
 	/*! \brief Virtual cluster constructor
@@ -358,9 +358,9 @@ public:
 #ifdef EXTERNAL_SET_GPU
                 int dev;
                 cudaGetDevice(&dev);
-                context = new gpu::ofp_context_t(gpu::gpu_context_opt::no_print_props,dev);
+                gpuContext = new gpu::ofp_context_t(gpu::gpu_context_opt::no_print_props,dev);
 #else
-                context = new gpu::ofp_context_t(gpu::gpu_context_opt::no_print_props,shmrank);
+                gpuContext = new gpu::ofp_context_t(gpu::gpu_context_opt::no_print_props,shmrank);
 #endif
 
 
@@ -371,7 +371,7 @@ public:
 
                 MPI_Get_processor_name(node_name,&len);
 
-                std::cout << "Rank: " << m_rank << " on host: " << node_name << " work on GPU: " << context->getDevice() << "/" << context->getNDevice() << std::endl;
+                std::cout << "Rank: " << m_rank << " on host: " << node_name << " work on GPU: " << gpuContext->getDevice() << "/" << gpuContext->getNDevice() << std::endl;
 #endif
 
                 int flag;
@@ -450,15 +450,15 @@ public:
 	 * \param iw ignore warning
 	 *
 	 */
-	gpu::ofp_context_t & getgpuContext(bool iw = true)
+	gpu::ofp_context_t& getgpuContext(bool iw = true)
 	{
-		if (context == NULL && iw == true)
+		if (gpuContext == NULL && iw == true)
 		{
-			std::cout << __FILE__ << ":" << __LINE__ << " Warning: it seem that modern gpu context is not initialized."
+			std::cout << __FILE__ << ":" << __LINE__ << " Warning: it seem that a gpu context is not initialized."
 					                                    "Either a compatible working cuda device has not been found, either openfpm_init has been called in a file that not compiled with NVCC" << std::endl;
 		}
 
-		return *context;
+		return *gpuContext;
 	}
 
 	/*! \brief Get the MPI_Communicator (or processor group) this VCluster is using
