@@ -81,7 +81,6 @@ if(CUDA_FOUND)
         target_compile_options(vcluster PUBLIC $<$<COMPILE_LANGUAGE:CUDA>: -D__NVCC__ -D__CUDACC_VER_MAJOR__=${CUDA_VERSION_MAJOR} -D__CUDACC_VER_MINOR__=${CUDA_VERSION_MINOR} -D__CUDACC_VER_BUILD__=0 >)
 		target_compile_options(vcluster_dl PUBLIC $<$<COMPILE_LANGUAGE:CUDA>: -D__NVCC__ -D__CUDACC_VER_MAJOR__=${CUDA_VERSION_MAJOR} -D__CUDACC_VER_MINOR__=${CUDA_VERSION_MINOR} -D__CUDACC_VER_BUILD__=0 >)
 	endif()
-	target_include_directories (vcluster_test PUBLIC ${MPI_C_INCLUDE_DIRS})
     if (TEST_COVERAGE)
         target_compile_options(vcluster_test PRIVATE $<$<COMPILE_LANGUAGE:CUDA>: -Xcompiler "-fprofile-arcs -ftest-coverage" >)
     endif()
@@ -91,7 +90,6 @@ if(CUDA_FOUND)
     endif()
 endif()
 
-
 add_dependencies(vcluster ofpmmemory)
 target_include_directories (vcluster_test PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 target_include_directories (vcluster_test PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/../../openfpm_devices/src/)
@@ -99,31 +97,36 @@ target_include_directories (vcluster_test PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/../
 target_include_directories (vcluster_test PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/../../openfpm_data/src/)
 target_include_directories (vcluster_test PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/config)
 target_include_directories (vcluster_test PUBLIC ${Boost_INCLUDE_DIRS})
-target_include_directories (vcluster_test PUBLIC ${PETSC_INCLUDES})
 target_include_directories (vcluster_test PUBLIC ${ALPAKA_ROOT}/include)
-if (HIP_FOUND)
-        target_include_directories (vcluster_test PUBLIC "${MPI_C_INCLUDE_DIRS}/")
-endif()
+target_include_directories (vcluster_test PUBLIC ${MPI_C_INCLUDE_DIRS})
 
 target_include_directories (vcluster PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
-target_include_directories (vcluster PUBLIC ${PETSC_INCLUDES})
 target_include_directories (vcluster PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/config)
 target_include_directories (vcluster PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../../openfpm_data/src/)
 target_include_directories (vcluster PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../../openfpm_devices/src/)
-target_include_directories (vcluster PUBLIC ${Boost_INCLUDE_DIRS})
-target_include_directories (vcluster PUBLIC ${ALPAKA_ROOT}/include)
+target_include_directories (vcluster PRIVATE ${Boost_INCLUDE_DIRS})
+target_include_directories (vcluster PRIVATE ${ALPAKA_ROOT}/include)
+target_include_directories (vcluster PRIVATE ${MPI_C_INCLUDE_DIRS})
 
 target_include_directories (vcluster_dl PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
-target_include_directories (vcluster_dl PUBLIC ${PETSC_INCLUDES})
 target_include_directories (vcluster_dl PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/config)
 target_include_directories (vcluster_dl PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../../openfpm_data/src/)
 target_include_directories (vcluster_dl PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../../openfpm_devices/src/)
-target_include_directories (vcluster_dl PUBLIC ${Boost_INCLUDE_DIRS})
-target_include_directories (vcluster_dl PUBLIC ${ALPAKA_ROOT}/include)
+target_include_directories (vcluster_dl PRIVATE ${Boost_INCLUDE_DIRS})
+target_include_directories (vcluster_dl PRIVATE ${ALPAKA_ROOT}/include)
+target_include_directories (vcluster_dl PRIVATE ${MPI_C_INCLUDE_DIRS})
 
+if (ENABLE_NUMERICS)
+	target_include_directories (vcluster_test PUBLIC ${PETSC_INCLUDES})
+	target_include_directories (vcluster_dl PRIVATE ${PETSC_INCLUDES})
+	target_include_directories (vcluster PRIVATE ${PETSC_INCLUDES})
+	target_link_libraries(vcluster_test ${PETSC_LIBRARIES})
+	target_link_libraries(vcluster_dl ${PETSC_LIBRARIES})
+	target_link_libraries(vcluster ${PETSC_LIBRARIES})
+endif()
 
 target_link_libraries(vcluster_test ${Boost_LIBRARIES})
-target_link_libraries(vcluster_test ${PETSC_LIBRARIES})
+
 if (HIP_FOUND)
 	add_dependencies(vcluster_test ofpmmemory_dl)
 	add_dependencies(vcluster_dl ofpmmemory_dl)
@@ -135,6 +138,7 @@ else()
 	target_link_libraries(vcluster_test ofpmmemory)
 	target_link_libraries(vcluster_dl ofpmmemory)
 endif()
+
 if (OPENMP_FOUND)
 	target_link_libraries(vcluster_test OpenMP::OpenMP_CXX)
 endif()
@@ -146,9 +150,6 @@ if (HIP_FOUND)
 	target_link_libraries(vcluster hip::host)
         target_link_libraries(vcluster_dl hip::host)
 endif()
-
-target_link_libraries(vcluster_dl ${PETSC_LIBRARIES})
-target_link_libraries(vcluster ${PETSC_LIBRARIES})
 
 if (TEST_COVERAGE)
     target_link_libraries(vcluster_test -lgcov)
@@ -181,21 +182,4 @@ install(FILES VCluster/VCluster_base.hpp
 install (FILES util/Vcluster_log.hpp
 	 DESTINATION openfpm_vcluster/include/util
 	 COMPONENT OpenFPM)
-
-#if(BUILD_TESTING)
-
-#  add_executable(particle_test test.cu)
-
-#  set_target_properties(particle_test PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
-#  target_link_libraries(particle_test PRIVATE particles)
-
-#  add_test(NAME particles_10k COMMAND particle_test 10000 )
-#  add_test(NAME particles_256k COMMAND particle_test 256000 )
-
-#  if(APPLE)
-    # We need to add the default path to the driver (libcuda.dylib) as an rpath,
-    # so that the static cuda runtime can find it at runtime.
-    #    set_property(TARGET particle_test PROPERTY BUILD_RPATH ${CMAKE_CUDA_IMPLICIT_LINK_DIRECTORIES})
-    #  endif()
-    #endif()
 

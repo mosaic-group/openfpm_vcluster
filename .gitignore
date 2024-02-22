@@ -39,12 +39,6 @@ Thumbs.db
 ###### Other
 
 *.vtk
-AUTHORS
-COPYING
-ChangeLog
-INSTALL
-NEWS
-README
 Makefile
 Makefile.in
 config.status
@@ -52,8 +46,6 @@ configure
 numerics
 **/.deps
 **/src/config
-aclocal.m4
-**/autom4te.cache
 **/doxygen
 vcluster
 libvcluster.a
