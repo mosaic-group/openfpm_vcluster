@@ -14,7 +14,7 @@
 #include "VCluster_meta_function.hpp"
 #include "util/math_util_complex.hpp"
 #include "memory/mem_conf.hpp"
-#include "util/cudify/cudify.hpp"
+#include "util/cuda_util.hpp"
 
 #ifdef CUDA_GPU
 extern CudaMemory mem_tmp;
