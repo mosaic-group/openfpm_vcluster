@@ -78,7 +78,7 @@ double time_spent = 0.0;
 void openfpm_init_vcl(int *argc, char ***argv)
 {
 
-#ifdef HAVE_PETSC
+#if defined (ENABLE_NUMERICS) && defined (HAVE_PETSC)
 
 	PetscInitialize(argc,argv,NULL,NULL);
 
@@ -148,7 +148,7 @@ size_t openfpm_vcluster_compilation_mask()
  */
 void openfpm_finalize()
 {
-#ifdef HAVE_PETSC
+#if defined (ENABLE_NUMERICS) && defined (HAVE_PETSC)
 
 	PetscFinalize();
 

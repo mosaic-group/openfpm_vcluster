@@ -28,7 +28,7 @@
 #include "data_type/aggregate.hpp"
 #include "util/ofp_context.hpp"
 
-#ifdef HAVE_PETSC
+#if defined (ENABLE_NUMERICS) && defined (HAVE_PETSC)
 #include <petscvec.h>
 #endif
 
