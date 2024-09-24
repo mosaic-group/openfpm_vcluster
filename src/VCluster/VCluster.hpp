@@ -1368,13 +1368,13 @@ extern Vcluster<CudaMemory> * global_v_cluster_private_cuda;
  *
  */
 
-static inline void init_global_v_cluster_private(int *argc, char ***argv)
+static inline void init_global_v_cluster_private(int *argc, char ***argv, MPI_Comm ext_comm)
 {
 	if (global_v_cluster_private_heap == NULL)
-	{global_v_cluster_private_heap = new Vcluster<>(argc,argv);}
+	{global_v_cluster_private_heap = new Vcluster<>(argc,argv,ext_comm);}
 
 	if (global_v_cluster_private_cuda == NULL)
-	{global_v_cluster_private_cuda = new Vcluster<CudaMemory>(argc,argv);}
+	{global_v_cluster_private_cuda = new Vcluster<CudaMemory>(argc,argv,ext_comm);}
 }
 
 static inline void delete_global_v_cluster_private()
@@ -1428,7 +1428,7 @@ static inline bool is_openfpm_init()
  * This function MUST be called before any other function
  *
  */
-void openfpm_init_vcl(int *argc, char ***argv);
+void openfpm_init_vcl(int *argc, char ***argv, MPI_Comm ext_comm);
 
 size_t openfpm_vcluster_compilation_mask();
 
@@ -1444,9 +1444,9 @@ void openfpm_finalize();
  * This function MUST be called before any other function
  *
  */
-static void openfpm_init(int *argc, char ***argv)
+static void openfpm_init(int *argc, char ***argv, MPI_Comm ext_comm=MPI_COMM_WORLD)
 {
-	openfpm_init_vcl(argc,argv);
+	openfpm_init_vcl(argc,argv, ext_comm);
 
 	size_t compiler_mask = CUDA_ON_BACKEND;
 

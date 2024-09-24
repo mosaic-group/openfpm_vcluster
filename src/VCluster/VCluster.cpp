@@ -76,7 +76,7 @@ double time_spent = 0.0;
  * This function MUST be called before any other function
  *
  */
-void openfpm_init_vcl(int *argc, char ***argv)
+void openfpm_init_vcl(int *argc, char ***argv, MPI_Comm ext_comm)
 {
 
 #if defined (ENABLE_NUMERICS) && defined (HAVE_PETSC)
@@ -85,7 +85,7 @@ void openfpm_init_vcl(int *argc, char ***argv)
 
 #endif
 
-	init_global_v_cluster_private(argc,argv);
+	init_global_v_cluster_private(argc,argv,ext_comm);
 
 #ifdef SE_CLASS1
 	std::cout << "OpenFPM is compiled with debug mode LEVEL:1. Remember to remove SE_CLASS1 when you go in production" << std::endl;

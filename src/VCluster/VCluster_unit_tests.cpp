@@ -341,5 +341,30 @@ BOOST_AUTO_TEST_CASE( VCluster_use_sendrecv_known_prc_async_multiple )
 	std::cout << "VCluster unit test stop known prc" << "\n";
 }
 
+
+BOOST_AUTO_TEST_CASE( VCluster_communicator_with_external_communicator )
+{
+	std::cout << "VCluster unit test external communicator start" << std::endl;
+
+	MPI_Comm com_compute;
+	int rank = create_vcluster().rank();
+
+	if (rank == 0)
+	{MPI_Comm_split(MPI_COMM_WORLD, MPI_UNDEFINED,rank, &com_compute);}
+	else
+	{MPI_Comm_split(MPI_COMM_WORLD,0,rank-1, &com_compute);}
+
+	auto &v_cl2=create_vcluster();
+
+	if (rank != 0 )
+	{
+		Vcluster v_cl(&boost::unit_test::framework::master_test_suite().argc,&boost::unit_test::framework::master_test_suite().argv, com_compute);
+		test_known_vcl<NBX>(0,v_cl);
+		test_known_vcl<NBX>(RECEIVE_SIZE_UNKNOWN,v_cl);
+	}
+	v_cl2.barrier();
+	std::cout << "VCluster unit test external communicator stop" << std::endl;
+}
+
 BOOST_AUTO_TEST_SUITE_END()
 

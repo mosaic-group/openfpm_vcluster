@@ -185,6 +185,9 @@ public:
 template<typename vect>
 struct bcast_inte_impl
 {
+	//! External Communicator
+	MPI_Comm ext_comm;
+
 	//! vector to broadcast
 	vect & send;
 
@@ -201,8 +204,8 @@ struct bcast_inte_impl
 	 */
 	inline bcast_inte_impl(vect & send,
 						   openfpm::vector<MPI_Request> & req,
-			               size_t root)
-	:send(send),req(req),root(root)
+			               size_t root, MPI_Comm ext_comm=MPI_COMM_WORLD)
+	:send(send),req(req),root(root), ext_comm(ext_comm)
 	{};
 
 	//! It call the copy function for each property
@@ -215,7 +218,7 @@ struct bcast_inte_impl
 		req.add();
 
 		// gather
-		MPI_IBcastWB::bcast(root,&send.template get<T::value>(0),send.size()*sizeof(send_type),req.last());
+		MPI_IBcastWB::bcast(root,&send.template get<T::value>(0),send.size()*sizeof(send_type),req.last(), ext_comm);
 	}
 };
 
@@ -223,15 +226,15 @@ template<bool is_lin_or_inte>
 struct b_cast_helper
 {
 	 template<typename T, typename Mem, template<typename> class layout_base >
-	 static void bcast_(openfpm::vector<MPI_Request> & req,
+ static void bcast_(openfpm::vector<MPI_Request> & req,
 			            openfpm::vector<T,Mem,layout_base> & v,
-			            size_t root)
+			            size_t root, MPI_Comm ext_comm)
 	{
 		// Create one request
 		req.add();
 
 		// gather
-		MPI_IBcastW<T>::bcast(root,v,req.last());
+		MPI_IBcastW<T>::bcast(root,v,req.last(), ext_comm);
 	}
 };
 
@@ -241,9 +244,9 @@ struct b_cast_helper<false>
 	 template<typename T, typename Mem, template<typename> class layout_base >
 	 static void bcast_(openfpm::vector<MPI_Request> & req,
 			            openfpm::vector<T,Mem,layout_base> & v,
-			            size_t root)
+			            size_t root, MPI_Comm ext_comm)
 	{
-		 bcast_inte_impl<openfpm::vector<T,Mem,layout_base>> bc(v,req,root);
+		 bcast_inte_impl<openfpm::vector<T,Mem,layout_base>> bc(v,req,root,ext_comm);
 
 		 boost::mpl::for_each_ref<boost::mpl::range_c<int,0,T::max_prop>>(bc);
 	}

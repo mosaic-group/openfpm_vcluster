@@ -69,7 +69,7 @@ extern size_t tot_recv;
 
 ///////////////////// Post functions /////////////
 
-extern size_t NBX_cnt;
+//extern size_t NBX_cnt;
 
 template<typename T> void assign(T * ptr1, T * ptr2)
 {
@@ -126,6 +126,22 @@ class Vcluster_base
 {
 	//! external communicator
 	MPI_Comm ext_comm;
+
+	//! NBX has a potential pitfall that must be addressed
+	//! NBX Send all the messages and than probe for incoming messages
+	//! If there is an incoming message it receive it producing
+	//! an acknowledge notification on the sending processor.
+	//! when all the sends has been acknowledged the processor call the MPI_Ibarrier
+	//! when all the processor call MPI_Ibarrier all send has been received.
+	//! While the processors are waiting for the MPI_Ibarrier to complete on all processor
+	//! they are still have to probe for incoming message, Unfortunately some processor
+	//! can receive acnoledge from the MPI_Ibarrier before others and this mean that some
+	//! processor can exit the probing status before others, these processor can in theory
+	//! start new communications while the other processor are still in probing status producing
+	//! a wrong send/recv association to
+	//! resolve this problem an incremental NBX_cnt is used as message TAG to distinguish that the
+	//! messages come from other send or subsequent NBX procedures
+	size_t NBX_cnt;
 
 	//! log file
 	Vcluster_log log;
@@ -300,7 +316,7 @@ public:
 	 *
 	 */
 	Vcluster_base(int *argc, char ***argv, MPI_Comm ext_comm)
-	:ext_comm(ext_comm)
+	:ext_comm(ext_comm),NBX_cnt(0)
 	{
 		// reset NBX_Active
 
@@ -1747,7 +1763,7 @@ public:
 		checkType<T>();
 #endif
 
-		b_cast_helper<openfpm::vect_isel<T>::value == STD_VECTOR || is_layout_mlin<layout_base<T>>::value >::bcast_(req,v,root);
+		b_cast_helper<openfpm::vect_isel<T>::value == STD_VECTOR || is_layout_mlin<layout_base<T>>::value >::bcast_(req,v,root, ext_comm);
 
 		return true;
 	}
