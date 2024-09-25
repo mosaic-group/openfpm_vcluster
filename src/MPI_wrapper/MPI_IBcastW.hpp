@@ -3,6 +3,7 @@
  *
  *  Created on: Apr 8, 2017
  *      Author: i-bird
+ *      Modified by: Abhinav Singh
  */
 
 #ifndef OPENFPM_VCLUSTER_SRC_MPI_WRAPPER_MPI_IBCASTW_HPP_
@@ -11,8 +12,6 @@
 
 
 #include <mpi.h>
-
-
 
 /*! \brief Set of wrapping classing for MPI_Irecv
  *
@@ -33,9 +32,9 @@
 class MPI_IBcastWB
 {
 public:
-	static inline void bcast(size_t proc ,void * buf, size_t sz, MPI_Request & req)
+	static inline void bcast(size_t proc ,void * buf, size_t sz, MPI_Request & req, MPI_Comm ext_comm)
 	{
-		MPI_SAFE_CALL(MPI_Ibcast(buf,sz,MPI_BYTE, proc , MPI_COMM_WORLD,&req));
+		MPI_SAFE_CALL(MPI_Ibcast(buf,sz,MPI_BYTE, proc , ext_comm,&req));
 	}
 };
 
@@ -48,9 +47,9 @@ public:
 template<typename T> class MPI_IBcastW
 {
 public:
-	template<typename Memory> static inline void bcast(size_t proc ,openfpm::vector<T,Memory> & v, MPI_Request & req)
+	template<typename Memory>  static inline void bcast(size_t proc ,openfpm::vector<T, Memory> & v, MPI_Request & req, MPI_Comm ext_comm)
 	{
-		MPI_SAFE_CALL(MPI_Ibcast(v.getPointer(), v.size() * sizeof(T),MPI_BYTE, proc , MPI_COMM_WORLD,&req));
+		MPI_SAFE_CALL(MPI_Ibcast(v.getPointer(), v.size() * sizeof(T),MPI_BYTE, proc , ext_comm,&req));
 	}
 };
 
@@ -61,9 +60,9 @@ public:
 template<> class MPI_IBcastW<int>
 {
 public:
-	static inline void bcast(size_t proc ,openfpm::vector<int> & v, MPI_Request & req)
+	static inline void bcast(size_t proc ,openfpm::vector<int> & v, MPI_Request & req, MPI_Comm ext_comm)
 	{
-		MPI_SAFE_CALL(MPI_Ibcast(v.getPointer(), v.size(),MPI_INT, proc , MPI_COMM_WORLD,&req));
+		MPI_SAFE_CALL(MPI_Ibcast(v.getPointer(), v.size(),MPI_INT, proc , ext_comm,&req));
 	}
 };
 
@@ -73,9 +72,9 @@ public:
 template<> class MPI_IBcastW<unsigned int>
 {
 public:
-	static inline void bcast(size_t proc ,openfpm::vector<unsigned int> & v, MPI_Request & req)
+	static inline void bcast(size_t proc ,openfpm::vector<unsigned int> & v, MPI_Request & req, MPI_Comm ext_comm)
 	{
-		MPI_SAFE_CALL(MPI_Ibcast(v.getPointer(), v.size(),MPI_UNSIGNED, proc , MPI_COMM_WORLD,&req));
+		MPI_SAFE_CALL(MPI_Ibcast(v.getPointer(), v.size(),MPI_UNSIGNED, proc , ext_comm,&req));
 	}
 };
 
@@ -85,9 +84,9 @@ public:
 template<> class MPI_IBcastW<short>
 {
 public:
-	static inline void bcast(size_t proc ,openfpm::vector<short> & v, MPI_Request & req)
+	static inline void bcast(size_t proc ,openfpm::vector<short> & v, MPI_Request & req, MPI_Comm ext_comm)
 	{
-		MPI_SAFE_CALL(MPI_Ibcast(v.getPointer(), v.size(),MPI_SHORT, proc , MPI_COMM_WORLD,&req));
+		MPI_SAFE_CALL(MPI_Ibcast(v.getPointer(), v.size(),MPI_SHORT, proc , ext_comm,&req));
 	}
 };
 
@@ -97,9 +96,9 @@ public:
 template<> class MPI_IBcastW<unsigned short>
 {
 public:
-	static inline void bcast(size_t proc ,openfpm::vector<unsigned short> & v, MPI_Request & req)
+	static inline void bcast(size_t proc ,openfpm::vector<unsigned short> & v, MPI_Request & req, MPI_Comm ext_comm)
 	{
-		MPI_SAFE_CALL(MPI_Ibcast(v.getPointer(), v.size(),MPI_UNSIGNED_SHORT, proc , MPI_COMM_WORLD,&req));
+		MPI_SAFE_CALL(MPI_Ibcast(v.getPointer(), v.size(),MPI_UNSIGNED_SHORT, proc , ext_comm,&req));
 	}
 };
 
@@ -109,9 +108,9 @@ public:
 template<> class MPI_IBcastW<char>
 {
 public:
-	static inline void bcast(size_t proc ,openfpm::vector<char> & v, MPI_Request & req)
+	static inline void bcast(size_t proc ,openfpm::vector<char> & v, MPI_Request & req, MPI_Comm ext_comm)
 	{
-		MPI_SAFE_CALL(MPI_Ibcast(v.getPointer(), v.size(),MPI_CHAR, proc , MPI_COMM_WORLD,&req));
+		MPI_SAFE_CALL(MPI_Ibcast(v.getPointer(), v.size(),MPI_CHAR, proc , ext_comm,&req));
 	}
 };
 
@@ -121,9 +120,9 @@ public:
 template<> class MPI_IBcastW<unsigned char>
 {
 public:
-	static inline void bcast(size_t proc ,openfpm::vector<unsigned char> & v, MPI_Request & req)
+	static inline void bcast(size_t proc ,openfpm::vector<unsigned char> & v, MPI_Request & req, MPI_Comm ext_comm)
 	{
-		MPI_SAFE_CALL(MPI_Ibcast(v.getPointer(), v.size(),MPI_UNSIGNED_CHAR, proc , MPI_COMM_WORLD,&req));
+		MPI_SAFE_CALL(MPI_Ibcast(v.getPointer(), v.size(),MPI_UNSIGNED_CHAR, proc , ext_comm,&req));
 	}
 };
 
@@ -133,9 +132,9 @@ public:
 template<> class MPI_IBcastW<size_t>
 {
 public:
-	static inline void bcast(size_t proc ,openfpm::vector<size_t> & v, MPI_Request & req)
+	static inline void bcast(size_t proc ,openfpm::vector<size_t> & v, MPI_Request & req, MPI_Comm ext_comm)
 	{
-		MPI_SAFE_CALL(MPI_Ibcast(v.getPointer(), v.size(),MPI_UNSIGNED_LONG, proc , MPI_COMM_WORLD,&req));
+		MPI_SAFE_CALL(MPI_Ibcast(v.getPointer(), v.size(),MPI_UNSIGNED_LONG, proc , ext_comm,&req));
 	}
 };
 
@@ -145,9 +144,9 @@ public:
 template<> class MPI_IBcastW<long int>
 {
 public:
-	static inline void bcast(size_t proc ,openfpm::vector<long int> & v, MPI_Request & req)
+	static inline void bcast(size_t proc ,openfpm::vector<long int> & v, MPI_Request & req, MPI_Comm ext_comm)
 	{
-		MPI_SAFE_CALL(MPI_Ibcast(v.getPointer(), v.size(),MPI_LONG, proc , MPI_COMM_WORLD,&req));
+		MPI_SAFE_CALL(MPI_Ibcast(v.getPointer(), v.size(),MPI_LONG, proc , ext_comm,&req));
 	}
 };
 
@@ -157,9 +156,9 @@ public:
 template<> class MPI_IBcastW<float>
 {
 public:
-	static inline void bcast(size_t proc ,openfpm::vector<float> & v, MPI_Request & req)
+	static inline void bcast(size_t proc ,openfpm::vector<float> & v, MPI_Request & req, MPI_Comm ext_comm)
 	{
-		MPI_SAFE_CALL(MPI_Ibcast(v.getPointer(), v.size(),MPI_FLOAT, proc , MPI_COMM_WORLD,&req));
+		MPI_SAFE_CALL(MPI_Ibcast(v.getPointer(), v.size(),MPI_FLOAT, proc , ext_comm,&req));
 	}
 };
 
@@ -169,9 +168,9 @@ public:
 template<> class MPI_IBcastW<double>
 {
 public:
-	static inline void bcast(size_t proc ,openfpm::vector<double> & v, MPI_Request & req)
+	static inline void bcast(size_t proc ,openfpm::vector<double> & v, MPI_Request & req, MPI_Comm ext_comm)
 	{
-		MPI_SAFE_CALL(MPI_Ibcast(v.getPointer(), v.size(),MPI_DOUBLE, proc , MPI_COMM_WORLD,&req));
+		MPI_SAFE_CALL(MPI_Ibcast(v.getPointer(), v.size(),MPI_DOUBLE, proc , ext_comm,&req));
 	}
 };
 
@@ -186,6 +185,9 @@ public:
 template<typename vect>
 struct bcast_inte_impl
 {
+	//! External Communicator
+	MPI_Comm ext_comm;
+
 	//! vector to broadcast
 	vect & send;
 
@@ -202,8 +204,8 @@ struct bcast_inte_impl
 	 */
 	inline bcast_inte_impl(vect & send,
 						   openfpm::vector<MPI_Request> & req,
-			               size_t root)
-	:send(send),req(req),root(root)
+			               size_t root, MPI_Comm ext_comm=MPI_COMM_WORLD)
+	:send(send),req(req),root(root), ext_comm(ext_comm)
 	{};
 
 	//! It call the copy function for each property
@@ -216,7 +218,7 @@ struct bcast_inte_impl
 		req.add();
 
 		// gather
-		MPI_IBcastWB::bcast(root,&send.template get<T::value>(0),send.size()*sizeof(send_type),req.last());
+		MPI_IBcastWB::bcast(root,&send.template get<T::value>(0),send.size()*sizeof(send_type),req.last(), ext_comm);
 	}
 };
 
@@ -224,15 +226,15 @@ template<bool is_lin_or_inte>
 struct b_cast_helper
 {
 	 template<typename T, typename Mem, template<typename> class layout_base >
-	 static void bcast_(openfpm::vector<MPI_Request> & req,
+ static void bcast_(openfpm::vector<MPI_Request> & req,
 			            openfpm::vector<T,Mem,layout_base> & v,
-			            size_t root)
+			            size_t root, MPI_Comm ext_comm)
 	{
 		// Create one request
 		req.add();
 
 		// gather
-		MPI_IBcastW<T>::bcast(root,v,req.last());
+		MPI_IBcastW<T>::bcast(root,v,req.last(), ext_comm);
 	}
 };
 
@@ -242,9 +244,9 @@ struct b_cast_helper<false>
 	 template<typename T, typename Mem, template<typename> class layout_base >
 	 static void bcast_(openfpm::vector<MPI_Request> & req,
 			            openfpm::vector<T,Mem,layout_base> & v,
-			            size_t root)
+			            size_t root, MPI_Comm ext_comm)
 	{
-		 bcast_inte_impl<openfpm::vector<T,Mem,layout_base>> bc(v,req,root);
+		 bcast_inte_impl<openfpm::vector<T,Mem,layout_base>> bc(v,req,root,ext_comm);
 
 		 boost::mpl::for_each_ref<boost::mpl::range_c<int,0,T::max_prop>>(bc);
 	}

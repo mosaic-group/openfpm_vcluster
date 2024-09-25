@@ -16,15 +16,15 @@
 class MPI_IsendWB
 {
 public:
-	static inline void send(size_t proc , size_t tag ,const void * buf, size_t sz, MPI_Request & req)
+	static inline void send(size_t proc , size_t tag ,const void * buf, size_t sz, MPI_Request & req, MPI_Comm ext_comm)
 	{
 		if (sz <= 2147483647)
 		{
-			MPI_Isend(buf, sz,MPI_BYTE, proc, tag , MPI_COMM_WORLD,&req);
+			MPI_Isend(buf, sz,MPI_BYTE, proc, tag , ext_comm, &req);
 		}
 		else
 		{
-			MPI_Isend(buf, sz >> 3 ,MPI_DOUBLE, proc, tag , MPI_COMM_WORLD,&req);
+			MPI_Isend(buf, sz >> 3 ,MPI_DOUBLE, proc, tag , ext_comm, &req);
 		}
 
 	}
@@ -39,15 +39,15 @@ public:
 template<typename T, typename Mem, template<typename> class gr> class MPI_IsendW
 {
 public:
-	static inline void send(size_t proc , size_t tag ,openfpm::vector<T,Mem,gr> & v, MPI_Request & req)
+	static inline void send(size_t proc , size_t tag ,openfpm::vector<T,Mem,gr> & v, MPI_Request & req, MPI_Comm ext_comm)
 	{
 		if (v.size() * sizeof(T) <= 2147483647)
 		{
-			MPI_Isend(v.getPointer(), v.size() * sizeof(T),MPI_BYTE, proc, tag , MPI_COMM_WORLD,&req);
+			MPI_Isend(v.getPointer(), v.size() * sizeof(T),MPI_BYTE, proc, tag , ext_comm,&req);
 		}
 		else
 		{
-			MPI_Isend(v.getPointer(), (v.size() * sizeof(T)) >> 3,MPI_DOUBLE, proc, tag , MPI_COMM_WORLD,&req);
+			MPI_Isend(v.getPointer(), (v.size() * sizeof(T)) >> 3,MPI_DOUBLE, proc, tag , ext_comm,&req);
 		}
 	}
 };
@@ -59,9 +59,9 @@ public:
 template<typename Mem, template<typename> class gr> class MPI_IsendW<int,Mem,gr>
 {
 public:
-	static inline void send(size_t proc , size_t tag ,openfpm::vector<int,Mem,gr> & v, MPI_Request & req)
+	static inline void send(size_t proc , size_t tag ,openfpm::vector<int,Mem,gr> & v, MPI_Request & req, MPI_Comm ext_comm)
 	{
-		MPI_Isend(v.getPointer(), v.size(),MPI_INT, proc, tag , MPI_COMM_WORLD,&req);
+		MPI_Isend(v.getPointer(), v.size(),MPI_INT, proc, tag , ext_comm,&req);
 	}
 };
 
@@ -71,9 +71,9 @@ public:
 template<typename Mem, template<typename> class gr> class MPI_IsendW<unsigned int,Mem,gr>
 {
 public:
-	static inline void send(size_t proc , size_t tag ,openfpm::vector<unsigned int,Mem,gr> & v, MPI_Request & req)
+	static inline void send(size_t proc , size_t tag ,openfpm::vector<unsigned int,Mem,gr> & v, MPI_Request & req, MPI_Comm ext_comm)
 	{
-		MPI_Isend(v.getPointer(), v.size(),MPI_UNSIGNED, proc, tag , MPI_COMM_WORLD,&req);
+		MPI_Isend(v.getPointer(), v.size(),MPI_UNSIGNED, proc, tag , ext_comm,&req);
 	}
 };
 
@@ -83,9 +83,9 @@ public:
 template<typename Mem, template<typename> class gr> class MPI_IsendW<short,Mem,gr>
 {
 public:
-	static inline void send(size_t proc , size_t tag ,openfpm::vector<short,Mem,gr> & v, MPI_Request & req)
+	static inline void send(size_t proc , size_t tag ,openfpm::vector<short,Mem,gr> & v, MPI_Request & req, MPI_Comm ext_comm)
 	{
-		MPI_Isend(v.getPointer(), v.size(),MPI_SHORT, proc, tag , MPI_COMM_WORLD,&req);
+		MPI_Isend(v.getPointer(), v.size(),MPI_SHORT, proc, tag , ext_comm,&req);
 	}
 };
 
@@ -95,9 +95,9 @@ public:
 template<typename Mem, template<typename> class gr> class MPI_IsendW<unsigned short,Mem,gr>
 {
 public:
-	static inline void send(size_t proc , size_t tag ,openfpm::vector<unsigned short,Mem,gr> & v, MPI_Request & req)
+	static inline void send(size_t proc , size_t tag ,openfpm::vector<unsigned short,Mem,gr> & v, MPI_Request & req, MPI_Comm ext_comm)
 	{
-		MPI_Isend(v.getPointer(), v.size(),MPI_UNSIGNED_SHORT, proc, tag , MPI_COMM_WORLD,&req);
+		MPI_Isend(v.getPointer(), v.size(),MPI_UNSIGNED_SHORT, proc, tag , ext_comm,&req);
 	}
 };
 
@@ -107,9 +107,9 @@ public:
 template<typename Mem, template<typename> class gr> class MPI_IsendW<char,Mem,gr>
 {
 public:
-	static inline void send(size_t proc , size_t tag ,openfpm::vector<char,Mem,gr> & v, MPI_Request & req)
+	static inline void send(size_t proc , size_t tag ,openfpm::vector<char,Mem,gr> & v, MPI_Request & req, MPI_Comm ext_comm)
 	{
-		MPI_Isend(v.getPointer(), v.size(),MPI_CHAR, proc, tag , MPI_COMM_WORLD,&req);
+		MPI_Isend(v.getPointer(), v.size(),MPI_CHAR, proc, tag , ext_comm,&req);
 	}
 };
 
@@ -119,9 +119,9 @@ public:
 template<typename Mem, template<typename> class gr> class MPI_IsendW<unsigned char,Mem,gr>
 {
 public:
-	static inline void send(size_t proc , size_t tag ,openfpm::vector<unsigned char,Mem,gr> & v, MPI_Request & req)
+	static inline void send(size_t proc , size_t tag ,openfpm::vector<unsigned char,Mem,gr> & v, MPI_Request & req, MPI_Comm ext_comm)
 	{
-		MPI_Isend(v.getPointer(), v.size(),MPI_UNSIGNED_CHAR, proc, tag , MPI_COMM_WORLD,&req);
+		MPI_Isend(v.getPointer(), v.size(),MPI_UNSIGNED_CHAR, proc, tag , ext_comm,&req);
 	}
 };
 
@@ -131,9 +131,9 @@ public:
 template<typename Mem, template<typename> class gr> class MPI_IsendW<size_t,Mem,gr>
 {
 public:
-	static inline void send(size_t proc , size_t tag ,openfpm::vector<size_t,Mem,gr> & v, MPI_Request & req)
+	static inline void send(size_t proc , size_t tag ,openfpm::vector<size_t,Mem,gr> & v, MPI_Request & req, MPI_Comm ext_comm)
 	{
-		MPI_Isend(v.getPointer(), v.size(),MPI_UNSIGNED_LONG, proc, tag , MPI_COMM_WORLD,&req);
+		MPI_Isend(v.getPointer(), v.size(),MPI_UNSIGNED_LONG, proc, tag , ext_comm,&req);
 	}
 };
 
@@ -143,9 +143,9 @@ public:
 template<typename Mem, template<typename> class gr> class MPI_IsendW<long int,Mem,gr>
 {
 public:
-	static inline void send(size_t proc , size_t tag ,openfpm::vector<long int,Mem,gr> & v, MPI_Request & req)
+	static inline void send(size_t proc , size_t tag ,openfpm::vector<long int,Mem,gr> & v, MPI_Request & req, MPI_Comm ext_comm)
 	{
-		MPI_Isend(v.getPointer(), v.size(),MPI_LONG, proc, tag , MPI_COMM_WORLD,&req);
+		MPI_Isend(v.getPointer(), v.size(),MPI_LONG, proc, tag , ext_comm,&req);
 	}
 };
 
@@ -155,9 +155,9 @@ public:
 template<typename Mem, template<typename> class gr> class MPI_IsendW<float,Mem,gr>
 {
 public:
-	static inline void send(size_t proc , size_t tag ,openfpm::vector<float,Mem,gr> & v, MPI_Request & req)
+	static inline void send(size_t proc , size_t tag ,openfpm::vector<float,Mem,gr> & v, MPI_Request & req, MPI_Comm ext_comm)
 	{
-		MPI_Isend(v.getPointer(), v.size(),MPI_FLOAT, proc, tag , MPI_COMM_WORLD,&req);
+		MPI_Isend(v.getPointer(), v.size(),MPI_FLOAT, proc, tag , ext_comm,&req);
 	}
 };
 
@@ -167,9 +167,9 @@ public:
 template<typename Mem, template<typename> class gr> class MPI_IsendW<double,Mem,gr>
 {
 public:
-	static inline void send(size_t proc , size_t tag ,openfpm::vector<double,Mem,gr> & v, MPI_Request & req)
+	static inline void send(size_t proc , size_t tag ,openfpm::vector<double,Mem,gr> & v, MPI_Request & req, MPI_Comm ext_comm)
 	{
-		MPI_Isend(v.getPointer(), v.size(),MPI_DOUBLE, proc, tag , MPI_COMM_WORLD,&req);
+		MPI_Isend(v.getPointer(), v.size(),MPI_DOUBLE, proc, tag , ext_comm,&req);
 	}
 };
 
