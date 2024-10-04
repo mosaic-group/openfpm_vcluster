@@ -265,9 +265,9 @@ class Vcluster_base
 //				std::cout << "TAG: " << SEND_SPARSE + (NBX_cnt + NBX_prc_qcnt)*131072 + i << "   " << NBX_cnt << "   "  << NBX_prc_qcnt << "  " << " rank: " << rank() << "   " << NBX_prc_cnt_base << "  nbx_cycle: " << nbx_cycle << std::endl;
 
 				if (sz[i] > 2147483647)
-				{MPI_SAFE_CALL(MPI_Issend(ptr[i], (sz[i] >> 3) + 1 , MPI_DOUBLE, prc[i], SEND_SPARSE + (NBX_cnt + NBX_prc_qcnt)*131072 + i, MPI_COMM_WORLD,&req.last()));}
+				{MPI_SAFE_CALL(MPI_Issend(ptr[i], (sz[i] >> 3) + 1 , MPI_DOUBLE, prc[i], SEND_SPARSE + (NBX_cnt + NBX_prc_qcnt)*131072 + i, ext_comm,&req.last()));}
 				else
-				{MPI_SAFE_CALL(MPI_Issend(ptr[i], sz[i], MPI_BYTE, prc[i], SEND_SPARSE + (NBX_cnt + NBX_prc_qcnt)*131072 + i, MPI_COMM_WORLD,&req.last()));}
+				{MPI_SAFE_CALL(MPI_Issend(ptr[i], sz[i], MPI_BYTE, prc[i], SEND_SPARSE + (NBX_cnt + NBX_prc_qcnt)*131072 + i, ext_comm,&req.last()));}
 				log.logSend(prc[i]);
 			}
 		}
@@ -398,18 +398,19 @@ public:
                 void *tag_ub_v;
                 int tag_ub;
 
-                MPI_Comm_get_attr(MPI_COMM_WORLD, MPI_TAG_UB, &tag_ub_v, &flag);
-                tag_ub = *(int*)tag_ub_v;
+               MPI_Comm_get_attr(ext_comm, MPI_TAG_UB, &tag_ub_v, &flag);
 
                 if (flag == true)
                 {
+                    tag_ub = *(int*)tag_ub_v;
                 	nbx_cycle = (tag_ub - SEND_SPARSE - 131072 - NQUEUE*131072) / 131072;
 
                 	if (nbx_cycle < NQUEUE*2)
                 	{std::cerr << __FILE__ << ":" << __LINE__ << " Error MPI_TAG_UB is too small for OpenFPM" << std::endl;}
                 }
                 else
-                {nbx_cycle = 2048;}
+                {nbx_cycle = 2048;
+                }
 	}
 
 #ifdef SE_CLASS1
@@ -703,11 +704,11 @@ public:
 				if (big_data == true)
 				{
 //					std::cout << "RECEVING BIG MESSAGE " << msize_ << "   "  << msize << std::endl;
-					MPI_SAFE_CALL(MPI_Recv(ptr,msize >> 3,MPI_DOUBLE,stat_t.MPI_SOURCE,stat_t.MPI_TAG,MPI_COMM_WORLD,&stat_t));
+					MPI_SAFE_CALL(MPI_Recv(ptr,msize >> 3,MPI_DOUBLE,stat_t.MPI_SOURCE,stat_t.MPI_TAG,ext_comm,&stat_t));
 				}
 				else
 				{
-					MPI_SAFE_CALL(MPI_Recv(ptr,msize,MPI_BYTE,stat_t.MPI_SOURCE,stat_t.MPI_TAG,MPI_COMM_WORLD,&stat_t));
+					MPI_SAFE_CALL(MPI_Recv(ptr,msize,MPI_BYTE,stat_t.MPI_SOURCE,stat_t.MPI_TAG,ext_comm,&stat_t));
 				}
 #ifdef SE_CLASS2
 				check_valid(ptr,msize);
@@ -732,7 +733,7 @@ public:
 
 				// If all send has been completed
 				if (flag == true)
-				{MPI_SAFE_CALL(MPI_Ibarrier(MPI_COMM_WORLD,&bar_req));NBX_prc_reached_bar_req[i] = true;}
+				{MPI_SAFE_CALL(MPI_Ibarrier(ext_comm,&bar_req));NBX_prc_reached_bar_req[i] = true;}
 			}
 		}
 	}
