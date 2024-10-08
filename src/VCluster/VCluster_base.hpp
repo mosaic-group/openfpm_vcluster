@@ -398,11 +398,11 @@ public:
                 void *tag_ub_v;
                 int tag_ub;
 
-               MPI_Comm_get_attr(ext_comm, MPI_TAG_UB, &tag_ub_v, &flag);
+				MPI_Comm_get_attr(ext_comm, MPI_TAG_UB, &tag_ub_v, &flag);
 
                 if (flag == true)
                 {
-                    tag_ub = *(int*)tag_ub_v;
+					tag_ub = *(int*)tag_ub_v;
                 	nbx_cycle = (tag_ub - SEND_SPARSE - 131072 - NQUEUE*131072) / 131072;
 
                 	if (nbx_cycle < NQUEUE*2)
