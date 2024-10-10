@@ -588,7 +588,7 @@ class Vcluster: public Vcluster_base<InternalMemory>
 	 */
 	void barrier()
 	{
-		MPI_Barrier(MPI_COMM_WORLD);
+		MPI_Barrier(this->getMPIComm());
 	}
 
 	/*! \brief Semantic Scatter, scatter the data from one processor to the other node
