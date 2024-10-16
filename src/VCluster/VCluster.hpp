@@ -1446,6 +1446,10 @@ void openfpm_finalize();
  */
 static void openfpm_init(int *argc, char ***argv, MPI_Comm ext_comm=MPI_COMM_WORLD)
 {
+    if (ofp_initialized)
+    {
+        return;
+    }
 	openfpm_init_vcl(argc,argv, ext_comm);
 
 	size_t compiler_mask = CUDA_ON_BACKEND;
