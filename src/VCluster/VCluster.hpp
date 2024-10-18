@@ -131,18 +131,21 @@ class Vcluster: public Vcluster_base<InternalMemory>
 	{
 		//! Process the receive buffer
 		template<typename op,
-		         typename T,
-				 typename S,
-				 template <typename> class layout_base = memory_traits_lin>
-		inline static void process_recv(Vcluster & vcl, S & recv, openfpm::vector<size_t> * sz_recv,
-				                        openfpm::vector<size_t> * sz_recv_byte, op & op_param,size_t opt)
-		{
+			typename T,
+			typename S,
+			template <typename> class layout_base = memory_traits_lin>
+		inline static void process_recv(
+			Vcluster & vcl, S & recv,
+			openfpm::vector<size_t> * sz_recv,
+			openfpm::vector<size_t> * sz_recv_byte,
+			op & op_param,size_t opt
+		) {
 			if (opt == MPI_GPU_DIRECT && !std::is_same<InternalMemory,CudaMemory>::value)
 			{
 				// In order to have this option activated InternalMemory must be  CudaMemory
 
 				std::cout << __FILE__ << ":" << __LINE__ << " error: in order to have MPI_GPU_DIRECT VCluster must use CudaMemory internally, the most probable" <<
-						                                    " cause of this problem is that you are using MPI_GPU_DIRECT option with a non-GPU data-structure" << std::endl;
+															" cause of this problem is that you are using MPI_GPU_DIRECT option with a non-GPU data-structure" << std::endl;
 			}
 
 			vcl.process_receive_buffer_with_prp<op,T,S,layout_base,prp...>(recv,sz_recv,sz_recv_byte,op_param,opt);
@@ -168,24 +171,25 @@ class Vcluster: public Vcluster_base<InternalMemory>
 	 *
 	 */
 	template<typename op, typename T, typename S, template <typename> class layout_base>
-	void prepare_send_buffer(openfpm::vector<T> & send,
-			                 S & recv,
-							 openfpm::vector<size_t> & prc_send,
-						     openfpm::vector<size_t> & prc_recv,
-							 openfpm::vector<size_t> & sz_recv,
-							 size_t opt)
-	{
+	void prepare_send_buffer(
+		openfpm::vector<T> & send,
+		S & recv,
+		openfpm::vector<size_t> & prc_send,
+		openfpm::vector<size_t> & prc_recv,
+		openfpm::vector<size_t> & sz_recv,
+		size_t opt
+	) {
 		sz_recv_byte[NBX_prc_scnt].resize(sz_recv.size());
 
 		// Reset the receive buffer
 		reset_recv_buf();
 
-	#ifdef SE_CLASS1
+#ifdef SE_CLASS1
 
 		if (send.size() != prc_send.size())
 			std::cerr << __FILE__ << ":" << __LINE__ << " Error, the number of processor involved \"prc.size()\" must match the number of sending buffers \"send.size()\" " << std::endl;
 
-	#endif
+#endif
 
 		// Prepare the sending buffer
 		send_buf.resize(0);
@@ -395,12 +399,13 @@ class Vcluster: public Vcluster_base<InternalMemory>
 	 *
 	 */
 	template<typename op, typename T, typename S, template <typename> class layout_base ,unsigned int ... prp >
-	void process_receive_buffer_with_prp(S & recv,
-			                             openfpm::vector<size_t> * sz,
-										 openfpm::vector<size_t> * sz_byte,
-										 op & op_param,
-										 size_t opt)
-	{
+	void process_receive_buffer_with_prp(
+		S & recv,
+		openfpm::vector<size_t> * sz,
+		openfpm::vector<size_t> * sz_byte,
+		op & op_param,
+		size_t opt
+	) {
 		if (sz != NULL)
 		{sz->resize(self_base::recv_buf[NBX_prc_pcnt].size());}
 
@@ -490,13 +495,14 @@ class Vcluster: public Vcluster_base<InternalMemory>
 	 *
 	 */
 	template<typename T,
-	         typename S,
-			 template <typename> class layout_base = memory_traits_lin>
-	bool SGather(T & send,
-			     S & recv,
-				 openfpm::vector<size_t> & prc,
-				 openfpm::vector<size_t> & sz,
-				 size_t root)
+		typename S,
+		template <typename> class layout_base = memory_traits_lin>
+	bool SGather(
+		T & send,
+		S & recv,
+		openfpm::vector<size_t> & prc,
+		openfpm::vector<size_t> & sz,
+	size_t root)
 	{
 #ifdef SE_CLASS1
 		if (&send == (T *)&recv)
@@ -588,7 +594,7 @@ class Vcluster: public Vcluster_base<InternalMemory>
 	 */
 	void barrier()
 	{
-		MPI_Barrier(this->getMPIComm());
+		MPI_Barrier(MPI_COMM_WORLD);
 	}
 
 	/*! \brief Semantic Scatter, scatter the data from one processor to the other node
@@ -792,14 +798,15 @@ class Vcluster: public Vcluster_base<InternalMemory>
 	 *
 	 */
 	template<typename T,
-	         typename S,
-			 template <typename> class layout_base = memory_traits_lin>
-	bool SSendRecv(openfpm::vector<T> & send,
-			       S & recv,
-				   openfpm::vector<size_t> & prc_send,
-				   openfpm::vector<size_t> & prc_recv,
-				   openfpm::vector<size_t> & sz_recv,
-				   size_t opt = NONE)
+		typename S,
+		template <typename> class layout_base = memory_traits_lin>
+	bool SSendRecv(
+		openfpm::vector<T> & send,
+		S & recv,
+		openfpm::vector<size_t> & prc_send,
+		openfpm::vector<size_t> & prc_recv,
+		openfpm::vector<size_t> & sz_recv,
+		size_t opt = NONE)
 	{
 		prepare_send_buffer<op_ssend_recv_add<void>,T,S,layout_base>(send,recv,prc_send,prc_recv,sz_recv,opt);
 
@@ -853,15 +860,16 @@ class Vcluster: public Vcluster_base<InternalMemory>
 	 *
 	 */
 	template<typename T,
-	         typename S,
-			 template <typename> class layout_base = memory_traits_lin>
-	bool SSendRecvAsync(openfpm::vector<T> & send,
-			       S & recv,
-				   openfpm::vector<size_t> & prc_send,
-				   openfpm::vector<size_t> & prc_recv,
-				   openfpm::vector<size_t> & sz_recv,
-				   size_t opt = NONE)
-	{
+		typename S,
+		template <typename> class layout_base = memory_traits_lin>
+	bool SSendRecvAsync(
+		openfpm::vector<T> & send,
+		S & recv,
+		openfpm::vector<size_t> & prc_send,
+		openfpm::vector<size_t> & prc_recv,
+		openfpm::vector<size_t> & sz_recv,
+		size_t opt = NONE
+	) {
 		prepare_send_buffer<op_ssend_recv_add<void>,T,S,layout_base>(send,recv,prc_send,prc_recv,sz_recv,opt);
 
 		NBX_prc_scnt++;
@@ -898,14 +906,15 @@ class Vcluster: public Vcluster_base<InternalMemory>
 	 *
 	 */
 	template<typename T, typename S, template <typename> class layout_base, int ... prp>
-	bool SSendRecvP(openfpm::vector<T> & send,
-			                                                      S & recv,
-																  openfpm::vector<size_t> & prc_send,
-																  openfpm::vector<size_t> & prc_recv,
-																  openfpm::vector<size_t> & sz_recv,
-																  openfpm::vector<size_t> & sz_recv_byte_out,
-																  size_t opt = NONE)
-	{
+	bool SSendRecvP(
+		openfpm::vector<T> & send,
+		S & recv,
+		openfpm::vector<size_t> & prc_send,
+		openfpm::vector<size_t> & prc_recv,
+		openfpm::vector<size_t> & sz_recv,
+		openfpm::vector<size_t> & sz_recv_byte_out,
+		size_t opt = NONE
+	) {
 		prepare_send_buffer<op_ssend_recv_add<void>,T,S,layout_base>(send,recv,prc_send,prc_recv,sz_recv,opt);
 
 		self_base::sendrecvMultipleMessagesNBXWait();
@@ -958,14 +967,15 @@ class Vcluster: public Vcluster_base<InternalMemory>
 	 *
 	 */
 	template<typename T, typename S, template <typename> class layout_base, int ... prp>
-	bool SSendRecvPAsync(openfpm::vector<T> & send,
-			                                                      S & recv,
-																  openfpm::vector<size_t> & prc_send,
-																  openfpm::vector<size_t> & prc_recv,
-																  openfpm::vector<size_t> & sz_recv,
-																  openfpm::vector<size_t> & sz_recv_byte_out,
-																  size_t opt = NONE)
-	{
+	bool SSendRecvPAsync(
+		openfpm::vector<T> & send,
+		S & recv,
+		openfpm::vector<size_t> & prc_send,
+		openfpm::vector<size_t> & prc_recv,
+		openfpm::vector<size_t> & sz_recv,
+		openfpm::vector<size_t> & sz_recv_byte_out,
+		size_t opt = NONE
+	) {
 		prepare_send_buffer<op_ssend_recv_add<void>,T,S,layout_base>(send,recv,prc_send,prc_recv,sz_recv,opt);
 
 		NBX_prc_scnt++;
@@ -1001,13 +1011,14 @@ class Vcluster: public Vcluster_base<InternalMemory>
 	 *
 	 */
 	template<typename T, typename S, template <typename> class layout_base, int ... prp>
-	bool SSendRecvP(openfpm::vector<T> & send,
-			        S & recv,
-					openfpm::vector<size_t> & prc_send,
-			    	openfpm::vector<size_t> & prc_recv,
-					openfpm::vector<size_t> & sz_recv,
-					size_t opt = NONE)
-	{
+	bool SSendRecvP(
+		openfpm::vector<T> & send,
+		S & recv,
+		openfpm::vector<size_t> & prc_send,
+		openfpm::vector<size_t> & prc_recv,
+		openfpm::vector<size_t> & sz_recv,
+		size_t opt = NONE
+	) {
 		prepare_send_buffer<op_ssend_recv_add<void>,T,S,layout_base>(send,recv,prc_send,prc_recv,sz_recv,opt);
 
 		self_base::sendrecvMultipleMessagesNBXWait();
@@ -1059,13 +1070,14 @@ class Vcluster: public Vcluster_base<InternalMemory>
 	 *
 	 */
 	template<typename T, typename S, template <typename> class layout_base, int ... prp>
-	bool SSendRecvPAsync(openfpm::vector<T> & send,
-			        S & recv,
-					openfpm::vector<size_t> & prc_send,
-			    	openfpm::vector<size_t> & prc_recv,
-					openfpm::vector<size_t> & sz_recv,
-					size_t opt = NONE)
-	{
+	bool SSendRecvPAsync(
+		openfpm::vector<T> & send,
+		S & recv,
+		openfpm::vector<size_t> & prc_send,
+		openfpm::vector<size_t> & prc_recv,
+		openfpm::vector<size_t> & sz_recv,
+		size_t opt = NONE
+	) {
 		prepare_send_buffer<op_ssend_recv_add<void>,T,S,layout_base>(send,recv,prc_send,prc_recv,sz_recv,opt);
 
 		NBX_prc_scnt++;
@@ -1110,18 +1122,19 @@ class Vcluster: public Vcluster_base<InternalMemory>
 	 *
 	 */
 	template<typename op,
-	         typename T,
-			 typename S,
-			 template <typename> class layout_base,
-			 int ... prp>
-	bool SSendRecvP_op(openfpm::vector<T> & send,
-			           S & recv,
-					   openfpm::vector<size_t> & prc_send,
-					   op & op_param,
-					   openfpm::vector<size_t> & prc_recv,
-					   openfpm::vector<size_t> & recv_sz,
-				 	   size_t opt = NONE)
-	{
+		typename T,
+		typename S,
+		template <typename> class layout_base,
+		int ... prp>
+	bool SSendRecvP_op(
+		openfpm::vector<T> & send,
+		S & recv,
+		openfpm::vector<size_t> & prc_send,
+		op & op_param,
+		openfpm::vector<size_t> & prc_recv,
+		openfpm::vector<size_t> & recv_sz,
+		size_t opt = NONE
+	) {
 		prepare_send_buffer<op,T,S,layout_base>(send,recv,prc_send,prc_recv,recv_sz,opt);
 
 		self_base::sendrecvMultipleMessagesNBXWait();
@@ -1178,18 +1191,19 @@ class Vcluster: public Vcluster_base<InternalMemory>
 	 *
 	 */
 	template<typename op,
-	         typename T,
-			 typename S,
-			 template <typename> class layout_base,
-			 int ... prp>
-	bool SSendRecvP_opAsync(openfpm::vector<T> & send,
-			           S & recv,
-					   openfpm::vector<size_t> & prc_send,
-					   op & op_param,
-					   openfpm::vector<size_t> & prc_recv,
-					   openfpm::vector<size_t> & recv_sz,
-				 	   size_t opt = NONE)
-	{
+		typename T,
+		typename S,
+		template <typename> class layout_base,
+		int ... prp>
+	bool SSendRecvP_opAsync(
+		openfpm::vector<T> & send,
+		S & recv,
+		openfpm::vector<size_t> & prc_send,
+		op & op_param,
+		openfpm::vector<size_t> & prc_recv,
+		openfpm::vector<size_t> & recv_sz,
+		size_t opt = NONE
+	) {
 		prepare_send_buffer<op,T,S,layout_base>(send,recv,prc_send,prc_recv,recv_sz,opt);
 
 		NBX_prc_scnt++;
@@ -1203,15 +1217,16 @@ class Vcluster: public Vcluster_base<InternalMemory>
 	 *
 	 */
 	template<typename T,
-	         typename S,
-			 template <typename> class layout_base = memory_traits_lin>
-	bool SSendRecvWait(openfpm::vector<T> & send,
-		       S & recv,
-			   openfpm::vector<size_t> & prc_send,
-			   openfpm::vector<size_t> & prc_recv,
-			   openfpm::vector<size_t> & sz_recv,
-			   size_t opt = NONE)
-	{
+		typename S,
+		template <typename> class layout_base = memory_traits_lin>
+	bool SSendRecvWait(
+		openfpm::vector<T> & send,
+		S & recv,
+		openfpm::vector<size_t> & prc_send,
+		openfpm::vector<size_t> & prc_recv,
+		openfpm::vector<size_t> & sz_recv,
+		size_t opt = NONE
+	) {
 		self_base::sendrecvMultipleMessagesNBXWait();
 
 		// Reorder the buffer
@@ -1244,14 +1259,15 @@ class Vcluster: public Vcluster_base<InternalMemory>
 	 *
 	 */
 	template<typename T, typename S, template <typename> class layout_base, int ... prp>
-	bool SSendRecvPWait(openfpm::vector<T> & send,
-			                                                      S & recv,
-																  openfpm::vector<size_t> & prc_send,
-																  openfpm::vector<size_t> & prc_recv,
-																  openfpm::vector<size_t> & sz_recv,
-																  openfpm::vector<size_t> & sz_recv_byte_out,
-																  size_t opt = NONE)
-	{
+	bool SSendRecvPWait(
+		openfpm::vector<T> & send,
+		S & recv,
+		openfpm::vector<size_t> & prc_send,
+		openfpm::vector<size_t> & prc_recv,
+		openfpm::vector<size_t> & sz_recv,
+		openfpm::vector<size_t> & sz_recv_byte_out,
+		size_t opt = NONE
+	) {
 		self_base::sendrecvMultipleMessagesNBXWait();
 
 		// Reorder the buffer
@@ -1283,13 +1299,14 @@ class Vcluster: public Vcluster_base<InternalMemory>
 	 *
 	 */
 	template<typename T, typename S, template <typename> class layout_base, int ... prp>
-	bool SSendRecvPWait(openfpm::vector<T> & send,
-			        S & recv,
-					openfpm::vector<size_t> & prc_send,
-			    	openfpm::vector<size_t> & prc_recv,
-					openfpm::vector<size_t> & sz_recv,
-					size_t opt = NONE)
-	{
+	bool SSendRecvPWait(
+		openfpm::vector<T> & send,
+		S & recv,
+		openfpm::vector<size_t> & prc_send,
+		openfpm::vector<size_t> & prc_recv,
+		openfpm::vector<size_t> & sz_recv,
+		size_t opt = NONE
+	) {
 		self_base::sendrecvMultipleMessagesNBXWait();
 
 		// Reorder the buffer
@@ -1321,18 +1338,19 @@ class Vcluster: public Vcluster_base<InternalMemory>
 	 *
 	 */
 	template<typename op,
-	         typename T,
-			 typename S,
-			 template <typename> class layout_base,
-			 int ... prp>
-	bool SSendRecvP_opWait(openfpm::vector<T> & send,
-			           S & recv,
-					   openfpm::vector<size_t> & prc_send,
-					   op & op_param,
-					   openfpm::vector<size_t> & prc_recv,
-					   openfpm::vector<size_t> & recv_sz,
-				 	   size_t opt = NONE)
-	{
+		typename T,
+		typename S,
+		template <typename> class layout_base,
+		int ... prp>
+	bool SSendRecvP_opWait(
+		openfpm::vector<T> & send,
+		S & recv,
+		openfpm::vector<size_t> & prc_send,
+		op & op_param,
+		openfpm::vector<size_t> & prc_recv,
+		openfpm::vector<size_t> & recv_sz,
+		size_t opt = NONE
+	) {
 		self_base::sendrecvMultipleMessagesNBXWait();
 
 		// Reorder the buffer
@@ -1454,12 +1472,12 @@ static void openfpm_init(int *argc, char ***argv, MPI_Comm ext_comm=MPI_COMM_WOR
 
 	size_t compiler_mask = CUDA_ON_BACKEND;
 
-    init_wrappers();
+	init_wrappers();
 
 	if (compiler_mask != openfpm_vcluster_compilation_mask() || compiler_mask != openfpm_ofpmmemory_compilation_mask())
 	{
 		std::cout << __FILE__ << ":" << __LINE__ << " Error: the program has been compiled with CUDA_ON_BACKEND: " << compiler_mask << " but libvcluster has been compiled with CUDA_ON_BACKEND: " <<
-		                                            openfpm_vcluster_compilation_mask() << ", and libofpmmemory has been compiled with CUDA_ON_BACKEND: " << openfpm_ofpmmemory_compilation_mask() <<
+													openfpm_vcluster_compilation_mask() << ", and libofpmmemory has been compiled with CUDA_ON_BACKEND: " << openfpm_ofpmmemory_compilation_mask() <<
 													" recompile the library with the right CUDA_ON_BACKEND" << std::endl;
 	}
 }

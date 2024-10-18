@@ -237,7 +237,7 @@ class Vcluster_base
 	{};
 
 	void queue_all_sends(size_t n_send , size_t sz[],
-            			 size_t prc[], void * ptr[])
+						 size_t prc[], void * ptr[])
 	{
 		if (stat.size() != 0 || (req.size() != 0 && NBX_prc_qcnt == 0))
 		{std::cerr << "Error: " << __FILE__ << ":" << __LINE__ << " this function must be called when no other requests are in progress. Please remember that if you use function like max(),sum(),send(),recv() check that you did not miss to call the function execute() \n";}
@@ -265,9 +265,9 @@ class Vcluster_base
 //				std::cout << "TAG: " << SEND_SPARSE + (NBX_cnt + NBX_prc_qcnt)*131072 + i << "   " << NBX_cnt << "   "  << NBX_prc_qcnt << "  " << " rank: " << rank() << "   " << NBX_prc_cnt_base << "  nbx_cycle: " << nbx_cycle << std::endl;
 
 				if (sz[i] > 2147483647)
-				{MPI_SAFE_CALL(MPI_Issend(ptr[i], (sz[i] >> 3) + 1 , MPI_DOUBLE, prc[i], SEND_SPARSE + (NBX_cnt + NBX_prc_qcnt)*131072 + i, ext_comm,&req.last()));}
+				{MPI_SAFE_CALL(MPI_Issend(ptr[i], (sz[i] >> 3) + 1 , MPI_DOUBLE, prc[i], SEND_SPARSE + (NBX_cnt + NBX_prc_qcnt)*131072 + i, MPI_COMM_WORLD,&req.last()));}
 				else
-				{MPI_SAFE_CALL(MPI_Issend(ptr[i], sz[i], MPI_BYTE, prc[i], SEND_SPARSE + (NBX_cnt + NBX_prc_qcnt)*131072 + i, ext_comm,&req.last()));}
+				{MPI_SAFE_CALL(MPI_Issend(ptr[i], sz[i], MPI_BYTE, prc[i], SEND_SPARSE + (NBX_cnt + NBX_prc_qcnt)*131072 + i, MPI_COMM_WORLD,&req.last()));}
 				log.logSend(prc[i]);
 			}
 		}
@@ -343,7 +343,7 @@ public:
 
 		MPI_Comm shmcomm;
 		MPI_Comm_split_type(ext_comm, MPI_COMM_TYPE_SHARED, 0,
-		                    MPI_INFO_NULL, &shmcomm);
+							MPI_INFO_NULL, &shmcomm);
 
 		MPI_Comm_rank(shmcomm, &shmrank);
 		MPI_Comm_free(&shmcomm);
@@ -374,41 +374,43 @@ public:
 		bar_stat = MPI_Status();
 
 #ifdef EXTERNAL_SET_GPU
-                int dev;
-                cudaGetDevice(&dev);
-                gpuContext = new gpu::ofp_context_t(gpu::gpu_context_opt::no_print_props,dev);
+		int dev;
+		cudaGetDevice(&dev);
+		gpuContext = new gpu::ofp_context_t(gpu::gpu_context_opt::no_print_props,dev);
 #else
-                gpuContext = new gpu::ofp_context_t(gpu::gpu_context_opt::no_print_props,shmrank);
+		gpuContext = new gpu::ofp_context_t(gpu::gpu_context_opt::no_print_props,shmrank);
 #endif
 
 
 #if defined(PRINT_RANK_TO_GPU) && defined(CUDA_GPU)
 
-                char node_name[MPI_MAX_PROCESSOR_NAME];
-                int len;
+		char node_name[MPI_MAX_PROCESSOR_NAME];
+		int len;
 
-                MPI_Get_processor_name(node_name,&len);
+		MPI_Get_processor_name(node_name,&len);
 
-                std::cout << "Rank: " << m_rank << " on host: " << node_name << " work on GPU: " << gpuContext->getDevice() << "/" << gpuContext->getNDevice() << std::endl;
+		std::cout << "Rank: " << m_rank << " on host: " << node_name << " work on GPU: " << gpuContext->getDevice() << "/" << gpuContext->getNDevice() << std::endl;
 #endif
 
-                int flag;
-                void *tag_ub_v;
-                int tag_ub;
+		int flag;
+		void *tag_ub_v;
+		int tag_ub;
 
-				MPI_Comm_get_attr(ext_comm, MPI_TAG_UB, &tag_ub_v, &flag);
+		MPI_Comm_get_attr(MPI_COMM_WORLD, MPI_TAG_UB, &tag_ub_v, &flag);
 
-                if (flag == true)
-                {
-					tag_ub = *(int*)tag_ub_v;
-                	nbx_cycle = (tag_ub - SEND_SPARSE - 131072 - NQUEUE*131072) / 131072;
+		if (flag == true)
+		{
+			tag_ub = *(int*)tag_ub_v;
+			nbx_cycle = (tag_ub - SEND_SPARSE - 131072 - NQUEUE*131072) / 131072;
 
-                	if (nbx_cycle < NQUEUE*2)
-                	{std::cerr << __FILE__ << ":" << __LINE__ << " Error MPI_TAG_UB is too small for OpenFPM" << std::endl;}
-                }
-                else
-                {nbx_cycle = 2048;
-                }
+			if (nbx_cycle < NQUEUE*2) {
+				std::cerr << __FILE__ << ":" << __LINE__ << " Error MPI_TAG_UB is too small for OpenFPM" << std::endl;
+			}
+		}
+		else
+		{
+			nbx_cycle = 2048;
+		}
 	}
 
 #ifdef SE_CLASS1
@@ -474,7 +476,7 @@ public:
 		if (gpuContext == NULL && iw == true)
 		{
 			std::cout << __FILE__ << ":" << __LINE__ << " Warning: it seem that a gpu context is not initialized."
-					                                    "Either a compatible working cuda device has not been found, either openfpm_init has been called in a file that not compiled with NVCC" << std::endl;
+														"Either a compatible working cuda device has not been found, either openfpm_init has been called in a file that not compiled with NVCC" << std::endl;
 		}
 
 		return *gpuContext;
@@ -684,8 +686,8 @@ public:
 				check_valid(ptr,msize);
 #endif
 				tot_recv += msize;
-				#ifdef VCLUSTER_GARBAGE_INJECTOR
-					#if defined (__NVCC__) && !defined(CUDA_ON_CPU)
+#ifdef VCLUSTER_GARBAGE_INJECTOR
+#if defined (__NVCC__) && !defined(CUDA_ON_CPU)
 					cudaPointerAttributes cpa;
 					auto error = cudaPointerGetAttributes(&cpa,ptr);
 					if (error == cudaSuccess)
@@ -695,18 +697,18 @@ public:
 						else
 						{memset(ptr,0xFF,msize);}
 					}
-					#else
+#else
 					memset(ptr,0xFF,msize);
-					#endif
-				#endif
+#endif
+#endif
 				if (big_data == true)
 				{
 //					std::cout << "RECEVING BIG MESSAGE " << msize_ << "   "  << msize << std::endl;
-					MPI_SAFE_CALL(MPI_Recv(ptr,msize >> 3,MPI_DOUBLE,stat_t.MPI_SOURCE,stat_t.MPI_TAG,ext_comm,&stat_t));
+					MPI_SAFE_CALL(MPI_Recv(ptr,msize >> 3,MPI_DOUBLE,stat_t.MPI_SOURCE,stat_t.MPI_TAG,MPI_COMM_WORLD,&stat_t));
 				}
 				else
 				{
-					MPI_SAFE_CALL(MPI_Recv(ptr,msize,MPI_BYTE,stat_t.MPI_SOURCE,stat_t.MPI_TAG,ext_comm,&stat_t));
+					MPI_SAFE_CALL(MPI_Recv(ptr,msize,MPI_BYTE,stat_t.MPI_SOURCE,stat_t.MPI_TAG,MPI_COMM_WORLD,&stat_t));
 				}
 #ifdef SE_CLASS2
 				check_valid(ptr,msize);
@@ -731,7 +733,7 @@ public:
 
 				// If all send has been completed
 				if (flag == true)
-				{MPI_SAFE_CALL(MPI_Ibarrier(ext_comm,&bar_req));NBX_prc_reached_bar_req[i] = true;}
+				{MPI_SAFE_CALL(MPI_Ibarrier(MPI_COMM_WORLD,&bar_req));NBX_prc_reached_bar_req[i] = true;}
 			}
 		}
 	}
@@ -779,19 +781,20 @@ public:
 	 * \param opt options, NONE (ignored in this moment)
 	 *
 	 */
-	template<typename T> void sendrecvMultipleMessagesNBX(openfpm::vector< size_t > & prc,
-			                                              openfpm::vector< T > & data,
-														  openfpm::vector< size_t > & prc_recv,
-														  openfpm::vector< size_t > & recv_sz ,
-														  void * (* msg_alloc)(size_t,size_t,size_t,size_t,size_t,size_t,void *),
-														  void * ptr_arg,
-														  long int opt=NONE)
-	{
-		#ifdef VCLUSTER_PERF_REPORT
+	template<typename T> void sendrecvMultipleMessagesNBX(
+		openfpm::vector< size_t > & prc,
+		openfpm::vector< T > & data,
+		openfpm::vector< size_t > & prc_recv,
+		openfpm::vector< size_t > & recv_sz ,
+		void * (* msg_alloc)(size_t,size_t,size_t,size_t,size_t,size_t,void *),
+		void * ptr_arg,
+		long int opt=NONE
+	) {
+#ifdef VCLUSTER_PERF_REPORT
 		timer nbx_timer;
 		nbx_timer.start();
 
-		#endif
+#endif
 
 		// Allocate the buffers
 
@@ -810,10 +813,10 @@ public:
 		// Circular counter
 		NBX_cnt = (NBX_cnt + 1) % nbx_cycle;
 
-		#ifdef VCLUSTER_PERF_REPORT
+#ifdef VCLUSTER_PERF_REPORT
 		nbx_timer.stop();
 		time_spent += nbx_timer.getwct();
-		#endif
+#endif
 	}
 
 	/*! \brief Send and receive multiple messages asynchronous version
@@ -859,14 +862,15 @@ public:
 	 * \param opt options, NONE (ignored in this moment)
 	 *
 	 */
-	template<typename T> void sendrecvMultipleMessagesNBXAsync(openfpm::vector< size_t > & prc,
-			                                              openfpm::vector< T > & data,
-														  openfpm::vector< size_t > & prc_recv,
-														  openfpm::vector< size_t > & recv_sz ,
-														  void * (* msg_alloc)(size_t,size_t,size_t,size_t,size_t,size_t,void *),
-														  void * ptr_arg,
-														  long int opt=NONE)
-	{
+	template<typename T> void sendrecvMultipleMessagesNBXAsync(
+		openfpm::vector< size_t > & prc,
+		openfpm::vector< T > & data,
+		openfpm::vector< size_t > & prc_recv,
+		openfpm::vector< size_t > & recv_sz ,
+		void * (* msg_alloc)(size_t,size_t,size_t,size_t,size_t,size_t,void *),
+		void * ptr_arg,
+		long int opt=NONE
+	) {
 		NBX_prc_qcnt++;
 		if (NBX_prc_qcnt >= NQUEUE)
 		{
@@ -927,10 +931,11 @@ public:
 	 *
 	 */
 	template<typename T>
-	void sendrecvMultipleMessagesNBX(openfpm::vector< size_t > & prc,
-									 openfpm::vector< T > & data,
-									 void * (* msg_alloc)(size_t,size_t,size_t,size_t,size_t,size_t,void *),
-									 void * ptr_arg, long int opt=NONE)
+	void sendrecvMultipleMessagesNBX(
+		openfpm::vector< size_t > & prc,
+		openfpm::vector< T > & data,
+		void * (* msg_alloc)(size_t,size_t,size_t,size_t,size_t,size_t,void *),
+		void * ptr_arg, long int opt=NONE)
 	{
 #ifdef SE_CLASS1
 		checkType<typename T::value_type>();
@@ -1054,16 +1059,16 @@ public:
 	 *
 	 */
 	void sendrecvMultipleMessagesNBX(size_t n_send , size_t sz[],
-			                         size_t prc[] , void * ptr[],
-			                         size_t n_recv, size_t prc_recv[] ,
-			                         size_t sz_recv[] ,void * (* msg_alloc)(size_t,size_t,size_t,size_t,size_t, size_t,void *),
-			                         void * ptr_arg, long int opt=NONE)
+									 size_t prc[] , void * ptr[],
+									 size_t n_recv, size_t prc_recv[] ,
+									 size_t sz_recv[] ,void * (* msg_alloc)(size_t,size_t,size_t,size_t,size_t, size_t,void *),
+									 void * ptr_arg, long int opt=NONE)
 	{
-		#ifdef VCLUSTER_PERF_REPORT
+#ifdef VCLUSTER_PERF_REPORT
 		timer nbx_timer;
 		nbx_timer.start();
 
-		#endif
+#endif
 
 		// Allocate the buffers
 
@@ -1082,10 +1087,10 @@ public:
 		// Circular counter
 		NBX_cnt = (NBX_cnt + 1) % nbx_cycle;
 
-		#ifdef VCLUSTER_PERF_REPORT
+#ifdef VCLUSTER_PERF_REPORT
 		nbx_timer.stop();
 		time_spent += nbx_timer.getwct();
-		#endif
+#endif
 	}
 
 	/*! \brief Send and receive multiple messages asynchronous version
@@ -1132,10 +1137,10 @@ public:
 	 *
 	 */
 	void sendrecvMultipleMessagesNBXAsync(size_t n_send , size_t sz[],
-			                         size_t prc[] , void * ptr[],
-			                         size_t n_recv, size_t prc_recv[] ,
-			                         size_t sz_recv[] ,void * (* msg_alloc)(size_t,size_t,size_t,size_t,size_t, size_t,void *),
-			                         void * ptr_arg, long int opt=NONE)
+									 size_t prc[] , void * ptr[],
+									 size_t n_recv, size_t prc_recv[] ,
+									 size_t sz_recv[] ,void * (* msg_alloc)(size_t,size_t,size_t,size_t,size_t, size_t,void *),
+									 void * ptr_arg, long int opt=NONE)
 	{
 		NBX_prc_qcnt++;
 		if (NBX_prc_qcnt >= NQUEUE)
@@ -1210,10 +1215,10 @@ public:
 									 void * (* msg_alloc)(size_t,size_t,size_t,size_t,size_t,size_t,void *),
 									 void * ptr_arg, long int opt=NONE)
 	{
-		#ifdef VCLUSTER_PERF_REPORT
+#ifdef VCLUSTER_PERF_REPORT
 		timer nbx_timer;
 		nbx_timer.start();
-		#endif
+#endif
 
 		sz_recv_tmp.resize(n_recv);
 
@@ -1247,10 +1252,10 @@ public:
 		// Circular counter
 		NBX_cnt = (NBX_cnt + 1) % nbx_cycle;
 
-		#ifdef VCLUSTER_PERF_REPORT
+#ifdef VCLUSTER_PERF_REPORT
 		nbx_timer.stop();
 		time_spent += nbx_timer.getwct();
-		#endif
+#endif
 	}
 
 	/*! \brief Send and receive multiple messages asynchronous version
@@ -1374,15 +1379,15 @@ public:
 	 *
 	 */
 	void sendrecvMultipleMessagesNBX(size_t n_send , size_t sz[],
-			                         size_t prc[] , void * ptr[],
-			                         void * (* msg_alloc)(size_t,size_t,size_t,size_t,size_t,size_t,void *),
-			                         void * ptr_arg, long int opt = NONE)
+									 size_t prc[] , void * ptr[],
+									 void * (* msg_alloc)(size_t,size_t,size_t,size_t,size_t,size_t,void *),
+									 void * ptr_arg, long int opt = NONE)
 	{
-		#ifdef VCLUSTER_PERF_REPORT
+#ifdef VCLUSTER_PERF_REPORT
 		timer nbx_timer;
 		nbx_timer.start();
 
-		#endif
+#endif
 
 		NBX_prc_qcnt++;
 		if (NBX_prc_qcnt != 0)
@@ -1429,10 +1434,10 @@ public:
 		NBX_cnt = (NBX_cnt + 1) % nbx_cycle;
 		NBX_prc_qcnt = -1;
 
-		#ifdef VCLUSTER_PERF_REPORT
+#ifdef VCLUSTER_PERF_REPORT
 		nbx_timer.stop();
 		time_spent += nbx_timer.getwct();
-		#endif
+#endif
 	}
 
 	/*! \brief Send and receive multiple messages Asynchronous version
@@ -1480,9 +1485,9 @@ public:
 	 *
 	 */
 	void sendrecvMultipleMessagesNBXAsync(size_t n_send , size_t sz[],
-			                         size_t prc[] , void * ptr[],
-			                         void * (* msg_alloc)(size_t,size_t,size_t,size_t,size_t,size_t,void *),
-			                         void * ptr_arg, long int opt = NONE)
+									 size_t prc[] , void * ptr[],
+									 void * (* msg_alloc)(size_t,size_t,size_t,size_t,size_t,size_t,void *),
+									 void * ptr_arg, long int opt = NONE)
 	{
 		NBX_prc_qcnt++;
 		queue_all_sends(n_send,sz,prc,ptr);
@@ -1675,39 +1680,39 @@ public:
 		return true;
 	}
 
-    /*! \brief Recv data from a processor
-     *
-     * \warning In order to avoid deadlock every recv must be coupled with a send
-     *          in case you want to send data without knowledge from the other side
-     *          consider to use sendrecvMultipleMessagesNBX
-     *
-     * \warning operation is asynchronous execute must be called to ensure they are executed
-     *
-     * \see sendrecvMultipleMessagesNBX
-     *
-     * \param proc processor id
-     * \param tag id
-     * \param v vector to send
-     *
-     * \return true if succeed false otherwise
-     *
-     */
-    template<typename T, typename Mem, template<typename> class gr> bool recv(size_t proc, size_t tag, openfpm::vector<T,Mem,gr> & v)
-    {
+	/*! \brief Recv data from a processor
+	 *
+	 * \warning In order to avoid deadlock every recv must be coupled with a send
+	 *          in case you want to send data without knowledge from the other side
+	 *          consider to use sendrecvMultipleMessagesNBX
+	 *
+	 * \warning operation is asynchronous execute must be called to ensure they are executed
+	 *
+	 * \see sendrecvMultipleMessagesNBX
+	 *
+	 * \param proc processor id
+	 * \param tag id
+	 * \param v vector to send
+	 *
+	 * \return true if succeed false otherwise
+	 *
+	 */
+	template<typename T, typename Mem, template<typename> class gr> bool recv(size_t proc, size_t tag, openfpm::vector<T,Mem,gr> & v)
+	{
 #ifdef SE_CLASS1
-            checkType<T>();
+			checkType<T>();
 #endif
 
-            // recv over MPI
+			// recv over MPI
 
-            // Create one request
-            req.add();
+			// Create one request
+			req.add();
 
-            // receive
-            MPI_IrecvW<T>::recv(proc,SEND_RECV_BASE + tag,v,req.last(),ext_comm);
+			// receive
+			MPI_IrecvW<T>::recv(proc,SEND_RECV_BASE + tag,v,req.last(),ext_comm);
 
-            return true;
-    }
+			return true;
+	}
 
 	/*! \brief Gather the data from all processors
 	 *
