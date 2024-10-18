@@ -594,7 +594,7 @@ class Vcluster: public Vcluster_base<InternalMemory>
 	 */
 	void barrier()
 	{
-		MPI_Barrier(MPI_COMM_WORLD);
+		MPI_Barrier(this->getMPIComm());
 	}
 
 	/*! \brief Semantic Scatter, scatter the data from one processor to the other node
@@ -1464,6 +1464,10 @@ void openfpm_finalize();
  */
 static void openfpm_init(int *argc, char ***argv, MPI_Comm ext_comm=MPI_COMM_WORLD)
 {
+    if (ofp_initialized)
+    {
+        return;
+    }
 	openfpm_init_vcl(argc,argv, ext_comm);
 
 	size_t compiler_mask = CUDA_ON_BACKEND;
