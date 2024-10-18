@@ -6,6 +6,7 @@
 #include <execinfo.h>
 #endif
 
+#include "../../../openfpm_numerics/src/util/petsc_util.hpp"
 #include "util/print_stack.hpp"
 #include "util/math_util_complex.hpp"
 
@@ -64,9 +65,16 @@ void openfpm_init_vcl(int *argc, char ***argv, MPI_Comm ext_comm)
 {
 
 #if defined (ENABLE_NUMERICS) && defined (HAVE_PETSC)
-    if (ext_comm != MPI_COMM_WORLD)
-        {PETSC_COMM_WORLD = ext_comm;}
-    PetscInitialize(argc,argv,NULL,NULL);
+    if (ext_comm!=MPI_COMM_WORLD)
+	{
+		PETSC_COMM_WORLD = ext_comm;
+	}
+    PetscBool initialized;
+    PETSC_SAFE_CALL(PetscInitialized(&initialized))
+    if(initialized==PETSC_FALSE)
+    {
+    	PETSC_SAFE_CALL(PetscInitialize(argc,argv,NULL,NULL));
+    }
 #endif
 
 	init_global_v_cluster_private(argc,argv,ext_comm);
