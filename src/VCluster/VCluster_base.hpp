@@ -292,21 +292,22 @@ public:
 		n_vcluster--;
 
 		// if there are no other vcluster instances finalize
-            if (n_vcluster == 0)
-            {
-                int already_finalised;
+		if (n_vcluster == 0)
+		{
+			int already_finalised;
 
-                MPI_Finalized(&already_finalised);
-                if (!already_finalised && ext_comm == MPI_COMM_WORLD)
-                {
-                    if (MPI_Finalize() != 0)
-                    {
-                        std::cerr << __FILE__ << ":" << __LINE__  << " MPI_Finalize FAILED \n";
-                    }
-                }
-            }
-            delete gpuContext;
-        }
+			MPI_Finalized(&already_finalised);
+			if (!already_finalised && ext_comm == MPI_COMM_WORLD)
+			{
+				if (MPI_Finalize() != 0)
+				{
+					std::cerr << __FILE__ << ":" << __LINE__  << " MPI_Finalize FAILED \n";
+				}
+			}
+		}
+
+		delete gpuContext;
+	}
 	/*! \brief Virtual cluster constructor
 	 *
 	 * \param argc pointer to arguments counts passed to the program
