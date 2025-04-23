@@ -2,9 +2,6 @@
 
 #include "config.h"
 #include "VCluster.hpp"
-#ifndef __CYGWIN__
-#include <execinfo.h>
-#endif
 
 #include "util/print_stack.hpp"
 #include "util/math_util_complex.hpp"
