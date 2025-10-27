@@ -158,6 +158,8 @@ endif()
 target_compile_features(vcluster_test PUBLIC cxx_std_17)
 target_link_libraries(vcluster_test ${MPI_C_LIBRARIES})
 target_link_libraries(vcluster_test ${MPI_CXX_LIBRARIES})
+target_link_libraries(vcluster_dl ${MPI_C_LIBRARIES})
+target_link_libraries(vcluster_dl ${MPI_CXX_LIBRARIES})
 
 install(TARGETS vcluster vcluster_dl  ${ADDITIONAL_OPENFPM_LIBS}  DESTINATION openfpm_vcluster/lib COMPONENT OpenFPM)
 install(FILES MPI_wrapper/MPI_IallreduceW.hpp
