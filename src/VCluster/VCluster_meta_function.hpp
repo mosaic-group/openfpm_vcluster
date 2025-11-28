@@ -788,6 +788,8 @@ struct op_ssend_gg_recv_merge_impl
 	inline static void execute(D & recv,S & v2,size_t i,size_t & start)
 	{
 		// Merge the information
+                if ((start + v2.size()) > recv.size())
+			recv.resize(start + v2.size());
 		recv.template merge_prp_v<replace_,
 		                          typename T::value_type,
 								  PtrMemory,
