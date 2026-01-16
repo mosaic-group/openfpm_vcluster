@@ -41,13 +41,13 @@ void bt_sighandler(int sig, siginfo_t * info, void * ctx);
  * processors, or Dynamic Sparse Data Exchange (DSDE)
  *
  * ## Vcluster Min max sum
- * \snippet VCluster_unit_tests.hpp max min sum
+ * \snippet VCluster_unit_tests.cpp max min sum
  *
  * ## Vcluster all gather
  * \snippet VCluster_unit_test_util.hpp allGather numbers
  *
  * ## Dynamic sparse data exchange with complex objects
- * \snippet VCluster_semantic_unit_tests.hpp dsde with complex objects1
+ * \snippet VCluster_semantic_unit_tests.cpp dsde with complex objects1
  *
  * ## Dynamic sparse data exchange with buffers
  * \snippet VCluster_unit_test_util.hpp dsde
@@ -437,10 +437,10 @@ class Vcluster: public Vcluster_base<InternalMemory>
 	 * In order to work S must implement the interface S.add(T).
 	 *
 	 * ### Example send a vector of structures, and merge all together in one vector
-	 * \snippet VCluster_semantic_unit_tests.hpp Gather the data on master
+	 * \snippet VCluster_semantic_unit_tests.cpp Gather the data on master
 	 *
 	 * ### Example send a vector of structures, and merge all together in one vector
-	 * \snippet VCluster_semantic_unit_tests.hpp Gather the data on master complex
+	 * \snippet VCluster_semantic_unit_tests.cpp Gather the data on master complex
 	 *
 	 * \tparam T type of sending object
 	 * \tparam S type of receiving object
@@ -477,10 +477,10 @@ class Vcluster: public Vcluster_base<InternalMemory>
 	 * In order to work S must implement the interface S.add(T).
 	 *
 	 * ### Example send a vector of structures, and merge all together in one vector
-	 * \snippet VCluster_semantic_unit_tests.hpp Gather the data on master
+	 * \snippet VCluster_semantic_unit_tests.cpp Gather the data on master
 	 *
 	 * ### Example send a vector of structures, and merge all together in one vector
-	 * \snippet VCluster_semantic_unit_tests.hpp Gather the data on master complex
+	 * \snippet VCluster_semantic_unit_tests.cpp Gather the data on master complex
 	 *
 	 * \tparam T type of sending object
 	 * \tparam S type of receiving object
@@ -609,7 +609,7 @@ class Vcluster: public Vcluster_base<InternalMemory>
 	 * In order to work S must implement the interface S.add(T).
 	 *
 	 * ### Example scatter a vector of structures, to other processors
-	 * \snippet VCluster_semantic_unit_tests.hpp Scatter the data from master
+	 * \snippet VCluster_semantic_unit_tests.cpp Scatter the data from master
 	 *
 	 * \tparam T type of sending object
 	 * \tparam S type of receiving object
@@ -782,7 +782,7 @@ class Vcluster: public Vcluster_base<InternalMemory>
 	 * In order to work S must implement the interface S.add(T).
 	 *
 	 * ### Example scatter a vector of structures, to other processors
-	 * \snippet VCluster_semantic_unit_tests.hpp dsde with complex objects1
+	 * \snippet VCluster_semantic_unit_tests.cpp dsde with complex objects1
 	 *
 	 * \tparam T type of sending object
 	 * \tparam S type of receiving object
@@ -844,7 +844,7 @@ class Vcluster: public Vcluster_base<InternalMemory>
 	 * In order to work S must implement the interface S.add(T).
 	 *
 	 * ### Example scatter a vector of structures, to other processors
-	 * \snippet VCluster_semantic_unit_tests.hpp dsde with complex objects1
+	 * \snippet VCluster_semantic_unit_tests.cpp dsde with complex objects1
 	 *
 	 * \tparam T type of sending object
 	 * \tparam S type of receiving object
@@ -889,7 +889,7 @@ class Vcluster: public Vcluster_base<InternalMemory>
 	 * In order to work S must implement the interface S.add<prp...>(T).
 	 *
 	 * ### Example scatter a vector of structures, to other processors
-	 * \snippet VCluster_semantic_unit_tests.hpp Scatter the data from master
+	 * \snippet VCluster_semantic_unit_tests.cpp Scatter the data from master
 	 *
 	 * \tparam T type of sending object
 	 * \tparam S type of receiving object
@@ -950,7 +950,7 @@ class Vcluster: public Vcluster_base<InternalMemory>
 	 * In order to work S must implement the interface S.add<prp...>(T).
 	 *
 	 * ### Example scatter a vector of structures, to other processors
-	 * \snippet VCluster_semantic_unit_tests.hpp Scatter the data from master
+	 * \snippet VCluster_semantic_unit_tests.cpp Scatter the data from master
 	 *
 	 * \tparam T type of sending object
 	 * \tparam S type of receiving object
@@ -995,7 +995,7 @@ class Vcluster: public Vcluster_base<InternalMemory>
 	 * In order to work S must implement the interface S.add<prp...>(T).
 	 *
 	 * ### Example scatter a vector of structures, to other processors
-	 * \snippet VCluster_semantic_unit_tests.hpp Scatter the data from master
+	 * \snippet VCluster_semantic_unit_tests.cpp Scatter the data from master
 	 *
 	 * \tparam T type of sending object
 	 * \tparam S type of receiving object
@@ -1054,7 +1054,7 @@ class Vcluster: public Vcluster_base<InternalMemory>
 	 * In order to work S must implement the interface S.add<prp...>(T).
 	 *
 	 * ### Example scatter a vector of structures, to other processors
-	 * \snippet VCluster_semantic_unit_tests.hpp Scatter the data from master
+	 * \snippet VCluster_semantic_unit_tests.cpp Scatter the data from master
 	 *
 	 * \tparam T type of sending object
 	 * \tparam S type of receiving object
@@ -1097,7 +1097,7 @@ class Vcluster: public Vcluster_base<InternalMemory>
 	 * In order to work S must implement the interface S.add<prp...>(T).
 	 *
 	 * ### Example scatter a vector of structures, to other processors
-	 * \snippet VCluster_semantic_unit_tests.hpp Scatter the data from master
+	 * \snippet VCluster_semantic_unit_tests.cpp Scatter the data from master
 	 *
 	 * \tparam op type of operation
 	 * \tparam T type of sending object
@@ -1166,7 +1166,7 @@ class Vcluster: public Vcluster_base<InternalMemory>
 	 * In order to work S must implement the interface S.add<prp...>(T).
 	 *
 	 * ### Example scatter a vector of structures, to other processors
-	 * \snippet VCluster_semantic_unit_tests.hpp Scatter the data from master
+	 * \snippet VCluster_semantic_unit_tests.cpp Scatter the data from master
 	 *
 	 * \tparam op type of operation
 	 * \tparam T type of sending object
