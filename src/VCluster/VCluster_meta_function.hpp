@@ -17,7 +17,8 @@
  */
 static inline bool is_mpi_rdma_cuda_active()
 {
-#if defined(MPIX_CUDA_AWARE_SUPPORT) && MPIX_CUDA_AWARE_SUPPORT
+#if defined(MPIX_CUDA_AWARE_SUPPORT) && MPIX_CUDA_AWARE_SUPPORT && \
+	!defined(CUDIFY_USE_METAL)
 			return true;
 #else
 			return false;
@@ -189,9 +190,17 @@ struct process_receive_mem_traits_inte
 
 		if (opt & MPI_GPU_DIRECT)
 		{
-#if defined(MPIX_CUDA_AWARE_SUPPORT) && MPIX_CUDA_AWARE_SUPPORT
+#if defined(MPIX_CUDA_AWARE_SUPPORT) && MPIX_CUDA_AWARE_SUPPORT && \
+	!defined(CUDIFY_USE_METAL)
 			// add the received particles to the vector
 			ptr1 = new PtrMemory(recv_buf.get(i).getDevicePointer(),recv_buf.get(i).size());
+#elif defined(CUDIFY_USE_METAL)
+			// MPI writes into MoltenVKMemory's ordinary host staging pointer.
+			// Publish those bytes to the Vulkan allocation, then expose its
+			// physical device address to the unchanged GPU merge kernel.
+			recv_buf.get(i).hostToDevice();
+			ptr1 = new PtrMemory(recv_buf.get(i).getPointer(),
+				recv_buf.get(i).getDevicePointer(),recv_buf.get(i).size());
 #else
 			// add the received particles to the vector
 			ptr1 = new PtrMemory(recv_buf.get(i).getPointer(),recv_buf.get(i).size());
@@ -383,7 +392,8 @@ struct set_buf_pointer_for_each_prop
 		// If we have GPU direct activated use directly the cuda buffer
 		if (opt & MPI_GPU_DIRECT)
 		{
-#if defined(MPIX_CUDA_AWARE_SUPPORT) && MPIX_CUDA_AWARE_SUPPORT
+#if defined(MPIX_CUDA_AWARE_SUPPORT) && MPIX_CUDA_AWARE_SUPPORT && \
+	!defined(CUDIFY_USE_METAL)
 			send_buf.add(v.template getDeviceBuffer<T::value>());
 #else
 			v.template deviceToHost<T::value>();
@@ -552,7 +562,8 @@ struct op_ssend_recv_add_sr
 	{
 		if (opt & MPI_GPU_DIRECT)
 		{
-#if defined(MPIX_CUDA_AWARE_SUPPORT) && MPIX_CUDA_AWARE_SUPPORT
+#if defined(MPIX_CUDA_AWARE_SUPPORT) && MPIX_CUDA_AWARE_SUPPORT && \
+	!defined(CUDIFY_USE_METAL)
 
 			// Merge the information
 			recv.template add_prp_device<typename T::value_type,
