@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.8 FATAL_ERROR)
 
 ########################### Executables
 
-if (NOT CUDA_ON_BACKEND STREQUAL "None")
+if (NOT CUDA_ON_BACKEND STREQUAL "NONE")
 	set(CUDA_SOURCES VCluster/cuda/VCluster_semantic_unit_cuda_tests.cu VCluster/cuda/VCluster_unit_tests.cu )
 endif()
 
@@ -246,4 +246,3 @@ install(FILES VCluster/VCluster_base.hpp
 install (FILES util/Vcluster_log.hpp
 	DESTINATION openfpm_vcluster/include/util
 	COMPONENT OpenFPM)
-
