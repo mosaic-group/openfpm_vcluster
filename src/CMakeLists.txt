@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.8 FATAL_ERROR)
 
 ########################### Executables
 
-if (NOT CUDA_ON_BACKEND STREQUAL "None")
+if (NOT CUDA_ON_BACKEND STREQUAL "NONE")
 	set(CUDA_SOURCES VCluster/cuda/VCluster_semantic_unit_cuda_tests.cu VCluster/cuda/VCluster_unit_tests.cu )
 endif()
 
@@ -161,6 +161,72 @@ target_link_libraries(vcluster_test ${MPI_CXX_LIBRARIES})
 target_link_libraries(vcluster_dl ${MPI_C_LIBRARIES})
 target_link_libraries(vcluster_dl ${MPI_CXX_LIBRARIES})
 
+# Metal consumes the same HIP/CUDA test translation units as the native GPU
+# backends.  HIP Clang emits their arm64 host objects and exact kernel handles;
+# the shared helper lowers every instantiated device entry to embedded SPIR-V.
+if (CUDA_ON_BACKEND STREQUAL "METAL")
+	include("${CMAKE_CURRENT_SOURCE_DIR}/../../openfpm_devices/cmake/OpenFPMMoltenVK.cmake")
+	set(_openfpm_vcluster_mpi_includes ${MPI_C_INCLUDE_DIRS}
+		${MPI_CXX_INCLUDE_DIRS} ${MPI_C_COMPILER_INCLUDE_DIRS}
+		${MPI_CXX_COMPILER_INCLUDE_DIRS})
+	if (TARGET MPI::MPI_CXX)
+		get_target_property(_openfpm_vcluster_mpi_target_includes MPI::MPI_CXX
+			INTERFACE_INCLUDE_DIRECTORIES)
+		if (_openfpm_vcluster_mpi_target_includes)
+			list(APPEND _openfpm_vcluster_mpi_includes
+				${_openfpm_vcluster_mpi_target_includes})
+		endif()
+	endif()
+	# The superbuild commonly uses mpicxx as CMAKE_CXX_COMPILER. Its MPI include
+	# path is implicit to that wrapper and therefore absent from FindMPI's legacy
+	# variables, but the separate HIP device compiler must receive it explicitly.
+	if (MPI_CXX_COMPILER)
+		execute_process(COMMAND "${MPI_CXX_COMPILER}" --showme:incdirs
+			OUTPUT_VARIABLE _openfpm_vcluster_mpi_wrapper_include_text
+			OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_QUIET
+			RESULT_VARIABLE _openfpm_vcluster_mpi_wrapper_result)
+		if (_openfpm_vcluster_mpi_wrapper_result EQUAL 0 AND
+			NOT _openfpm_vcluster_mpi_wrapper_include_text STREQUAL "")
+			separate_arguments(_openfpm_vcluster_mpi_wrapper_includes UNIX_COMMAND
+				"${_openfpm_vcluster_mpi_wrapper_include_text}")
+			list(APPEND _openfpm_vcluster_mpi_includes
+				${_openfpm_vcluster_mpi_wrapper_includes})
+		endif()
+	endif()
+	list(REMOVE_DUPLICATES _openfpm_vcluster_mpi_includes)
+	set(_openfpm_vcluster_metal_includes
+		"${CMAKE_CURRENT_SOURCE_DIR}"
+		"${CMAKE_CURRENT_SOURCE_DIR}/../../openfpm_devices/src"
+		"${CMAKE_CURRENT_SOURCE_DIR}/../../openfpm_data/src"
+		"${CMAKE_BINARY_DIR}/config"
+		${VULKAN_INCLUDE_DIR} ${Boost_INCLUDE_DIRS}
+		${_openfpm_vcluster_mpi_includes})
+	if (ALPAKA_ROOT)
+		list(APPEND _openfpm_vcluster_metal_includes
+			"${ALPAKA_ROOT}/include")
+	endif()
+	if (ENABLE_NUMERICS)
+		list(APPEND _openfpm_vcluster_metal_includes ${PETSC_INCLUDES})
+	endif()
+	list(REMOVE_DUPLICATES _openfpm_vcluster_metal_includes)
+	foreach(_openfpm_vcluster_cuda_source IN LISTS CUDA_SOURCES)
+		openfpm_add_moltenvk_kernels(
+			TARGET vcluster_test
+			SOURCE "${_openfpm_vcluster_cuda_source}"
+			HIP_CLANG "${OPENFPM_MOLTENVK_HIP_CLANG}"
+			LLVM_OPT "${OPENFPM_MOLTENVK_LLVM_OPT}"
+			LLVM_LINK "${OPENFPM_MOLTENVK_LLVM_LINK}"
+			CLSPV "${OPENFPM_MOLTENVK_CLSPV}"
+			SPIRV_VAL "${OPENFPM_MOLTENVK_SPIRV_VAL}"
+			ABI_TOOL "${OPENFPM_MOLTENVK_ABI_TOOL}"
+			CHIPSTAR_ROOT "${OPENFPM_CHIPSTAR_ROOT}"
+			CHIPSTAR_GENERATED_INCLUDE "${OPENFPM_CHIPSTAR_GENERATED_INCLUDE}"
+			COMPILE_DEFINITIONS CUDIFY_USE_METAL CUDA_GPU
+				BOOST_ALLOW_DEPRECATED_HEADERS ${MPI_VENDOR}
+			INCLUDE_DIRECTORIES ${_openfpm_vcluster_metal_includes})
+	endforeach()
+endif()
+
 install(TARGETS vcluster vcluster_dl  ${ADDITIONAL_OPENFPM_LIBS}  DESTINATION openfpm_vcluster/lib COMPONENT OpenFPM)
 install(FILES MPI_wrapper/MPI_IallreduceW.hpp
 	MPI_wrapper/MPI_IrecvW.hpp
@@ -180,4 +246,3 @@ install(FILES VCluster/VCluster_base.hpp
 install (FILES util/Vcluster_log.hpp
 	DESTINATION openfpm_vcluster/include/util
 	COMPONENT OpenFPM)
-

@@ -343,7 +343,8 @@ class Vcluster: public Vcluster_base<InternalMemory>
 		// If we have GPU direct activated use directly the cuda buffer
 		if (rinfo.opt & MPI_GPU_DIRECT)
 		{
-#if defined(MPIX_CUDA_AWARE_SUPPORT) && MPIX_CUDA_AWARE_SUPPORT
+#if defined(MPIX_CUDA_AWARE_SUPPORT) && MPIX_CUDA_AWARE_SUPPORT && \
+	!defined(CUDIFY_USE_METAL)
 			return rinfo.recv_buf->last().getDevicePointer();
 #else
 			return rinfo.recv_buf->last().getPointer();
